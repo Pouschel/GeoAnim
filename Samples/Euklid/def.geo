@@ -21,3 +21,7 @@ var opt_h3 color orange
 
 # Ergebnisobjekte
 var opt_r1 color violet  width 3 
+
+# Animation 
+var opt_ani1 color red 
+

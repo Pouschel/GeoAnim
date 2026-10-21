@@ -183,7 +183,8 @@ internal sealed class Parser
                 List<Statement> body = ParseBlock(word, out _);
                 return new TogetherStatement(l, c, body, togetherOptions);
             default:
-                throw Error(word, $"Unknown command \"{word.Text}\".");
+                statement = ParseUseWithoutKind(word) ?? throw Error(word, $"Unknown command \"{word.Text}\".");
+                break;
         }
         ExpectLineEnd();
         return statement;
@@ -204,6 +205,38 @@ internal sealed class Parser
             throw Error(kind, "An input is one object with a value for running the file alone, like \"input point A = 0 0\".");
         }
         return new InputStatement(word.Line, word.Column, define);
+    }
+
+    // "D s = use file A B": the outputs of the file in their order, whatever their kinds ("_" skips one)
+    private DefineStatement? ParseUseWithoutKind(Token word)
+    {
+        int start = position - 1;
+        int look = start;
+        while (tokens[look].Kind == TokenKind.Name)
+        {
+            look++;
+        }
+        if (!(tokens[look].Kind == TokenKind.Symbol && tokens[look].Text == "=" && tokens[look + 1].Is("use")))
+        {
+            return null;
+        }
+        position = start;
+        var names = new List<NameRef>();
+        while (Current.Kind == TokenKind.Name)
+        {
+            names.Add(Current.Text == "_" ? new NameRef("_", Current.Line, Current.Column) : null!);
+            if (Current.Text == "_")
+            {
+                position++;
+            }
+            else
+            {
+                names[^1] = ExpectNewName();
+            }
+        }
+        ExpectSymbol("=");
+        UseDefinition use = TryParseUse()!;
+        return new DefineStatement(word.Line, word.Column, "", names, use, ParseOptions());
     }
 
     // after "=": "use file A B [draw|steps]"
@@ -458,6 +491,16 @@ internal sealed class Parser
         if (Current.Kind == TokenKind.Number && tokens[position + 1].Kind != TokenKind.Number)
         {
             return new MoveStatement(word.Line, word.Column, point, null, ExpectNumber("the target"), ParseOptions());
+        }
+        // a point: where it is at that moment
+        if (Current.Kind == TokenKind.Name && !IsOption(Current.Text))
+        {
+            NameRef targetPoint = ExpectName();
+            return new MoveStatement(word.Line, word.Column, point, null, null, ParseOptions(), targetPoint);
+        }
+        if (Current.Kind != TokenKind.Number)
+        {
+            throw Error(Current, $"Expected coordinates like 2 3, an angle or position like 90, or a point after \"to\", not {Current.Describe()}.");
         }
         Vec target = ParseCoordinates();
         return new MoveStatement(word.Line, word.Column, point, target, null, ParseOptions());

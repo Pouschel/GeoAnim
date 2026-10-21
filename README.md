@@ -96,6 +96,7 @@ Koordinaten sind mathematisch: die y-Achse zeigt nach oben. Der Maßstab ist in 
 | `hide k1 k2` | blendet Objekte aus |
 | `move A to 4 5` | bewegt einen freien Punkt |
 | `move P to 150` | bewegt einen Punkt auf seinem Kreis (Winkel) bzw. seiner Strecke (Position) |
+| `move C1 to P` | bewegt einen freien Punkt dorthin, wo der Punkt P in diesem Moment ist (P kann konstruiert sein; bewegt sich P später, bleibt C1, wo er ist) |
 | `pause 300` | wartet (Standard 500 ms) |
 | `together` … `end` | alles dazwischen beginnt gleichzeitig; der Block dauert so lange wie die längste Aktion |
 | `together duration 2500` … `end` | ebenso, aber der Block dauert genau 2,5 s: alle Aktionen darin werden im selben Verhältnis gestreckt oder gestaucht |
@@ -166,7 +167,17 @@ point D = use Prop1.geo A B draw offset 0 0.2
 ```
 
 - Läuft die Datei allein, ist `input` eine gewöhnliche Definition und `output` wird übergangen – sie animiert sich wie immer.
-- Beim `use` stehen die Objekte des Aufrufers (in der Reihenfolge der `input`-Zeilen, von passender Art) für die Eingaben; die Ergebnisse bekommen die Namen links vom `=` (`point S T = use …` für zwei Ergebnisse; auch `segment`, `line`, `ray`, `circle`, `polygon`). Optionen beim `use` gelten für die Ergebnisse, zusätzlich zu den Voreinstellungen des Aufrufers.
+- Beim `use` stehen die Objekte des Aufrufers (in der Reihenfolge der `input`-Zeilen, von passender Art) für die Eingaben; die Ergebnisse bekommen die Namen links vom `=`. Optionen beim `use` gelten für die Ergebnisse, zusätzlich zu den Voreinstellungen des Aufrufers.
+- Welche Ergebnisse man abholt, sagt die Art vorne. Bei `output L res` (ein Punkt, eine Strecke):
+
+  ```
+  point D = use Prop2.geo A B C        # die Ausgaben der Art point der Reihe nach: L
+  segment s = use Prop2.geo A B C      # die Ausgaben der Art segment: res
+  D s = use Prop2.geo A B C            # ohne Art: alle Ausgaben der Reihe nach
+  _ s = use Prop2.geo A B C            # _ überspringt eine Ausgabe
+  ```
+
+  Hinten dürfen Namen fehlen. Ohne Art gelten Optionen nur für die Ergebnisse, zu denen sie passen. Nicht abgeholte Ergebnisse werden trotzdem konstruiert, zählen aber zu den Hilfsobjekten.
 - Alle anderen Objekte der Datei bleiben in ihr: Sie bekommen intern eigene Namen und sind für den Aufrufer unsichtbar, Namen können also nicht kollidieren. Die Abhängigkeiten sind echt: Bewegt sich später eine Eingabe, folgen die Ergebnisse.
 - Titel, `view`, `grid`, `axes`, `background` und `speed` der Datei gelten nur, wenn sie allein läuft. Ihre Voreinstellungen, Vars und `include`s gelten für sie selbst.
 - Was man sieht:

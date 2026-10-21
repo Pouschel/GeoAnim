@@ -287,6 +287,16 @@ public sealed class Construction
         }
     }
 
+    /// <summary>Moves a free point to where <paramref name="target"/> is now (it does not follow it later).</summary>
+    public void Move(GeoPoint point, GeoPoint target, double? duration = null, Easing? easing = null)
+    {
+        if (!target.IsDefined)
+        {
+            throw new GeoException($"{target} does not exist for the current positions.");
+        }
+        Move(point, target.Position, duration, easing);
+    }
+
     /// <summary>Moves a free point to <paramref name="target"/>; dependent objects follow.</summary>
     public void Move(GeoPoint point, Vec target, double? duration = null, Easing? easing = null)
     {

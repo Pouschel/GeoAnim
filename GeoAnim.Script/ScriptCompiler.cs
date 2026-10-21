@@ -181,7 +181,11 @@ public static class ScriptCompiler
                         GeoPoint point = NotInput(s.Point, "move") as GeoPoint
                             ?? throw new ScriptError(s.Point.Line, s.Point.Column, $"{s.Point.Name} is a {Resolve(s.Point).Kind}, not a point.");
                         Options options = ToOptions(s.Options, "move", ["duration", "easing"]);
-                        if (s.Target != null)
+                        if (s.TargetPoint != null)
+                        {
+                            c.Move(point, ResolvePoint(s.TargetPoint), options.Duration, options.Easing);
+                        }
+                        else if (s.Target != null)
                         {
                             c.Move(point, s.Target.Value, options.Duration, options.Easing);
                         }
@@ -307,7 +311,7 @@ public static class ScriptCompiler
 
         private void Define(DefineStatement s)
         {
-            foreach (NameRef name in s.Names)
+            foreach (NameRef name in s.Names.Where(n => n.Name != "_"))
             {
                 if (c.Objects.ContainsKey(Global(name.Name)) || (module != null && module.Inputs.ContainsKey(name.Name)))
                 {
@@ -429,11 +433,23 @@ public static class ScriptCompiler
             {
                 throw AtPath($"{d.Path} has no \"output\" line, so it gives no results.");
             }
-            if (s.Names.Count != outputs.Count)
+            // which outputs the names take: with a kind ("point D = use …") those of that kind, without ("D s = use …") all,
+            // in their order; "_" skips one, names may be missing at the end
+            Dictionary<string, string> kinds = OutputKinds(statements);
+            List<NameRef> offered = s.Kind == ""
+                ? outputs
+                : outputs.Where(o => KindOf(kinds, o.Name) is var kind && (kind == s.Kind || kind == "object")).ToList();
+            string described = string.Join(", ", outputs.Select(o => $"{KindOf(kinds, o.Name)} {o.Name}"));
+            if (offered.Count == 0)
             {
-                throw new ScriptError(s.Names[0].Line, s.Names[0].Column,
-                    $"{d.Path} gives {Count(outputs.Count, "result")} ({string.Join(" ", outputs.Select(o => o.Name))}); give as many names.");
+                throw new ScriptError(s.Line, s.Column, $"{d.Path} has no {s.Kind} among its results ({described}).");
             }
+            if (s.Names.Count > offered.Count)
+            {
+                throw new ScriptError(s.Names[offered.Count].Line, s.Names[offered.Count].Column,
+                    $"{d.Path} gives only {Count(offered.Count, s.Kind == "" ? "result" : s.Kind)} ({described}).");
+            }
+            List<(NameRef Output, NameRef Name)> taken = offered.Zip(s.Names).Where(p => p.Second.Name != "_").ToList();
             if (d.Arguments.Count != inputs.Count)
             {
                 throw AtPath($"{d.Path} needs {Count(inputs.Count, "input")} ({string.Join(" ", inputs.Select(i => i.Kind + " " + i.Names[0].Name))}), not {d.Arguments.Count}.");
@@ -452,12 +468,14 @@ public static class ScriptCompiler
                 bound[inputs[i].Names[0].Name] = argument;
             }
 
-            // outputs: the caller's names and options (inside a used file, as that file's names and options)
-            Options callerOptions = ToOptions(s.Options, s.Kind, AllowedOptions(s.Kind));
+            // outputs: the caller's names and options (inside a used file, as that file's names and options); without a
+            // kind, options that do not fit a result are left out for it
             var results = new Dictionary<string, (string Name, Options Options)>(StringComparer.Ordinal);
-            for (int i = 0; i < outputs.Count; i++)
+            foreach ((NameRef output, NameRef name) in taken)
             {
-                results[outputs[i].Name] = (Global(s.Names[i].Name), FinalOptions(s.Names[i].Name, callerOptions, s.Kind));
+                string kind = KindOf(kinds, output.Name) is "object" && s.Kind != "" ? s.Kind : KindOf(kinds, output.Name);
+                OptionList list = s.Kind == "" ? new OptionList(s.Options.Values.Select(v => v with { Var = v.Var ?? "use" }).ToList()) : s.Options;
+                results[output.Name] = (Global(name.Name), FinalOptions(name.Name, ToOptions(list, kind, AllowedOptions(kind)), kind));
             }
 
             // within "use … " (only the result) everything used inside shows only its result, too
@@ -476,19 +494,17 @@ public static class ScriptCompiler
                 }
             }
 
-            for (int i = 0; i < outputs.Count; i++)
+            foreach ((NameRef output, NameRef name) in taken)
             {
-                if (!c.Objects.TryGetValue(results[outputs[i].Name].Name, out GeoObject? result))
+                if (!c.Objects.TryGetValue(results[output.Name].Name, out GeoObject? result))
                 {
-                    throw AtPath($"{d.Path} does not define its output {outputs[i].Name}.");
+                    throw AtPath($"{d.Path} does not define its output {output.Name}.");
                 }
-                string expected = s.Kind;
-                if (result.Kind != expected)
+                if (s.Kind != "" && result.Kind != s.Kind)
                 {
-                    throw new ScriptError(s.Names[i].Line, s.Names[i].Column,
-                        $"The output {outputs[i].Name} of {d.Path} is a {result.Kind}, not a {expected}.");
+                    throw new ScriptError(name.Line, name.Column, $"The output {output.Name} of {d.Path} is a {result.Kind}, not a {s.Kind}.");
                 }
-                Remember(s.Names[i].Name, result);
+                Remember(name.Name, result);
             }
             if (mode != UseMode.Result)
             {
@@ -497,6 +513,37 @@ public static class ScriptCompiler
             }
             // a later "hide" of an internal object of the used file is not possible: its names are its own
         }
+
+        /// <summary>The kinds of the objects a file defines (looked up before it runs): name → "point", "segment", …</summary>
+        private static Dictionary<string, string> OutputKinds(IEnumerable<Statement> statements)
+        {
+            var kinds = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (Statement statement in statements)
+            {
+                switch (statement)
+                {
+                    case InputStatement input:
+                        kinds[input.Define.Names[0].Name] = input.Define.Kind;
+                        break;
+                    case DefineStatement { Kind: not "" } define:
+                        foreach (NameRef name in define.Names)
+                        {
+                            kinds[name.Name] = define.Kind;
+                        }
+                        break;
+                    case TogetherStatement together:
+                        foreach ((string name, string kind) in OutputKinds(together.Body))
+                        {
+                            kinds[name] = kind;
+                        }
+                        break;
+                }
+            }
+            return kinds;
+        }
+
+        // the kind of an output; one taken without a kind from another file ("D s = use …") is unknown here
+        private static string KindOf(Dictionary<string, string> kinds, string name) => kinds.GetValueOrDefault(name, "object");
 
         // an error inside a used file, reported at the "use" with the file and line where it happened
         private static ScriptError InModule(UseDefinition d, ScriptSource? moduleSource, ScriptError e, string? prefix = null)

@@ -160,6 +160,33 @@ public class ScriptTests
     }
 
     [Fact]
+    public void PointsMoveToWhereOtherPointsAre()
+    {
+        var c = ScriptCompiler.CompileConstruction("""
+            point A = 0 0
+            point B = 4 0
+            point M = midpoint A B
+            circle k = center A through B
+            point P = on k at 90
+            point C1 = 5 5
+            point C2 = 6 5
+            step zur Zielstrecke
+              together duration 1500
+                move C1 to M
+                move C2 to P
+              end
+              move B to 6 0
+            """);
+        // C1 went to where M was then and stays there when M moves on
+        Assert.Equal(new Vec(2, 0), ((GeoPoint)c.Objects["C1"]).Position);
+        Assert.Equal(0, ((GeoPoint)c.Objects["C2"]).Position.X, 9);
+        Assert.Equal(4, ((GeoPoint)c.Objects["C2"]).Position.Y, 9);
+        ErrorAt("point A = 0 0\npoint B = 1 1\nstep s\n  move A to", 4, 12, "Expected coordinates like 2 3, an angle or position like 90, or a point");
+        ErrorAt("point A = 0 0\ncircle k = center A radius 1\nstep s\n  move A to k", 4, 13, "k is a circle, not a point");
+        ErrorAt("point A = 0 0\npoint B = 1 1\npoint M = midpoint A B\nstep s\n  move M to A", 5, 3, "constructed from other objects");
+    }
+
+    [Fact]
     public void EmptyTogetherBlocksTakeNoTime()
     {
         AnimationData animation = ScriptCompiler.Compile("""

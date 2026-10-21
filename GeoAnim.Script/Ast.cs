@@ -32,8 +32,12 @@ internal sealed record OutputStatement(int Line, int Column, IReadOnlyList<NameR
 
 internal sealed record ShowStatement(int Line, int Column, bool Show, IReadOnlyList<NameRef> Targets, OptionList Options) : Statement(Line, Column);
 
-/// <summary>"move P to (x, y)" (Target) or "move P to 90" (Parameter: angle or position on a path).</summary>
-internal sealed record MoveStatement(int Line, int Column, NameRef Point, Vec? Target, double? Parameter, OptionList Options) : Statement(Line, Column);
+/// <summary>
+/// "move P to x y" (Target), "move P to 90" (Parameter: angle or position on a path) or "move P to Q" (TargetPoint: where
+/// Q is at that moment).
+/// </summary>
+internal sealed record MoveStatement(int Line, int Column, NameRef Point, Vec? Target, double? Parameter, OptionList Options, NameRef? TargetPoint = null)
+    : Statement(Line, Column);
 
 internal sealed record PauseStatement(int Line, int Column, double Duration) : Statement(Line, Column);
 

@@ -121,15 +121,42 @@ public sealed class UseTests : IDisposable
     }
 
     [Fact]
+    public void TheKindChoosesAmongSeveralOutputs()
+    {
+        File.WriteAllText(Path.Combine(folder, "two.geo"), """
+            input point A = 0 0
+            input point B = 2 0
+            output C side
+            point C = use equilateral.geo A B
+            segment side = A C
+            """);
+        // with a kind: the outputs of that kind
+        var c = Compile("point P = 0 0\npoint Q = 2 0\npoint R = use two.geo P Q color red\nsegment s = use two.geo Q P");
+        Assert.Equal(Color.Parse("red"), c.Objects["R"].Options.Color);
+        Assert.IsType<GeoStraight>(c.Objects["s"]);
+        // the result not taken is a hidden helper
+        Assert.Contains(c.Objects.Values, o => o.Name.EndsWith(".side", StringComparison.Ordinal) && o.Options.Hidden);
+        // without a kind: all outputs in their order; "_" skips one; options only where they fit
+        var both = Compile("point P = 0 0\npoint Q = 2 0\nR s = use two.geo P Q width 3 size 6\n_ t = use two.geo Q P");
+        Assert.IsType<GeoPoint>(both.Objects["R"]);
+        Assert.Equal((6.0, (double?)null), (both.Objects["R"].Options.Size!.Value, both.Objects["R"].Options.Width));
+        Assert.Equal(3.0, both.Objects["s"].Options.Width);
+        Assert.IsType<GeoStraight>(both.Objects["t"]);
+        Assert.DoesNotContain("_", both.Objects.Keys);
+        Assert.Contains("gives only 2 results (point C, segment side)", Error("point P = 0 0\npoint Q = 2 0\nR s t = use two.geo P Q").Message);
+        Assert.Equal("Line 1, column 1: Unknown command \"R\".", Error("R s = 1 2").ToString());
+    }
+
+    [Fact]
     public void MistakesAreReportedAtTheUse()
     {
         Assert.Equal("Line 3, column 15: equilateral.geo needs 2 inputs (point A point B), not 1.",
             Error("point P = 0 0\npoint Q = 2 0\npoint R = use equilateral.geo P").ToString());
         Assert.Equal("Line 3, column 31: The input A of equilateral.geo is a point; k is a circle.",
             Error("point P = 0 0\ncircle k = center P radius 1\npoint R = use equilateral.geo k P").ToString());
-        Assert.Contains("gives 1 result (C); give as many names",
+        Assert.Contains("gives only 1 point (point C)",
             Error("point P = 0 0\npoint Q = 2 0\npoint R S = use equilateral.geo P Q").Message);
-        Assert.Contains("The output C of equilateral.geo is a point, not a circle",
+        Assert.Contains("equilateral.geo has no circle among its results (point C)",
             Error("point P = 0 0\npoint Q = 2 0\ncircle k = use equilateral.geo P Q").Message);
         Assert.StartsWith("Line 1, column 15: File not found: missing.geo", Error("point R = use missing.geo").ToString());
         // an error inside the file: with its line, without the internal names
