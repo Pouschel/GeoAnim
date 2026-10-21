@@ -11,8 +11,8 @@ default color grey
 # Definietionen für Objekttypen
 
 # gegebene Objekte
-var opt_gg color blue width 3 size 3 
-var opt_gg2 color green width 3 size 3
+var opt_gg color blue width 3 
+var opt_gg2 color green width 3 
 
 # Hilfsobjekte
 var opt_h1 color grey
@@ -20,4 +20,4 @@ var opt_h2 color cyan
 var opt_h3 color orange
 
 # Ergebnisobjekte
-var opt_r1 color violet  width 3 size 3
+var opt_r1 color violet  width 3 

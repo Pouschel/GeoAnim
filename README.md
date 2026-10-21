@@ -110,9 +110,11 @@ Hinter einer Anweisung, in beliebiger Reihenfolge:
 | `color red` / `color #1565c0` | alle Objekte | Farbe |
 | `width 3` | Strecke, Gerade, Strahl, Kreis, Vieleck | Linienbreite in Punkt |
 | `size 6` | Punkt (Radius), Text (Schriftgröße) | Größe in Punkt |
-| `labelsize 20` | Punkt | Schriftgröße der Beschriftung in Punkt (Standard 24) |
+| `labelsize 20` | Punkt, Strecke, Strahl, Gerade | Schriftgröße der Beschriftung in Punkt (Standard 24) |
 | `label "$A'$"` / `nolabel` | Punkt | Beschriftung (Standard: der Name als Formel) bzw. keine |
-| `offset 0.3 -0.5` | Punkt (Beschriftung), Text | Lage in Koordinateneinheiten relativ zum Punkt: dort beginnt die Grundlinie des Textes (bei Text an festen Koordinaten: seine Mitte); ohne `offset` steht die Beschriftung knapp rechts oberhalb |
+| `label "$a$"` | Strecke, Strahl, Gerade | Beschriftung, die mit dem Objekt wandert; standardmäßig in der Mitte, knapp rechts von der Richtung A → B (beim gegen den Uhrzeigersinn benannten Dreieck also außen) |
+| `labelpos 0.3` | Strecke, Strahl, Gerade | Lage der Beschriftung bei A + 0.3·(B − A) (Standard 0.5); beim Strahl auch über 1, bei der Geraden beliebig |
+| `offset 0.3 -0.5` | Punkt (Beschriftung), Text, Strecke/Strahl/Gerade (Beschriftung) | Lage in Koordinateneinheiten relativ zum Punkt bzw. zur Stelle `labelpos`: dort beginnt die Grundlinie des Textes (bei Text an festen Koordinaten und bei Linien: ihre Mitte); ohne `offset` steht die Beschriftung knapp daneben |
 | `fill lightblue` | Vieleck | Füllfarbe (Standard: die Linienfarbe) |
 | `opacity 0.3` | Vieleck | Deckkraft der Füllung (Standard 0.2) |
 | `hidden` | Objekte | nur definieren, nicht zeigen |

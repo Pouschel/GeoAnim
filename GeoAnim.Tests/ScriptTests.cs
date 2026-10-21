@@ -219,6 +219,43 @@ public class ScriptTests
     }
 
     [Fact]
+    public void SegmentsRaysAndLinesCanHaveLabels()
+    {
+        JsonElement primitives = JsonDocument.Parse(ScriptCompiler.Compile("""
+            point A = 0 0 nolabel
+            point B = 4 0 nolabel
+            point C = 0 3 nolabel
+            segment a = A B label "$a$"
+            segment b = A C label "$b$" labelsize 20
+            ray r = A B label "r" labelpos 2
+            line g = C B label "g" offset 0.5 0.5
+            segment s = B A labelpos 0.25 label "s"
+            """).ToJson()).RootElement.GetProperty("primitives");
+        JsonElement Label(string text) => primitives.EnumerateArray().Single(p => p.GetProperty("type").GetString() == "text"
+            && p.GetProperty("tracks").GetProperty("text")[0][1].GetString() == text);
+        double First(JsonElement p, string track) => p.GetProperty("tracks").GetProperty(track)[0][1].GetDouble();
+        // A → B to the right: in the middle, below (the normal to the right points down; the player keeps the gap)
+        JsonElement a = Label("$a$");
+        Assert.Equal((2.0, 0.0, 0.0, -1.0, 8.0), (First(a, "x"), First(a, "y"), First(a, "nx"), First(a, "ny"), First(a, "gap")));
+        // A → C upwards: to the right
+        JsonElement b = Label("$b$");
+        Assert.Equal((0.0, 1.5, 1.0, 0.0, 20.0), (First(b, "x"), First(b, "y"), First(b, "nx"), First(b, "ny"), First(b, "size")));
+        // beyond B on the ray
+        Assert.Equal(8.0, First(Label("r"), "x"));
+        // an offset in coordinates from the middle
+        JsonElement g = Label("g");
+        Assert.Equal((2.5, 2.0), (First(g, "x"), First(g, "y")));
+        Assert.False(g.GetProperty("tracks").TryGetProperty("nx", out _));
+        // B → A to the left: above, a quarter of the way from B
+        JsonElement s = Label("s");
+        Assert.Equal((3.0, 1.0), (First(s, "x"), First(s, "ny")));
+
+        ErrorAt("point A = 0 0\ncircle k = center A radius 1 label \"k\"", 2, 30, "\"label\" is not possible for circle");
+        ErrorAt("point A = 0 0 labelpos 0.5", 1, 15, "\"labelpos\" is not possible for point");
+        ErrorAt("point A = 0 0\npoint B = 1 0\nsegment s = A B label \"$a\"", 3, 1, "no closing $");
+    }
+
+    [Fact]
     public void OffsetIsInCoordinates()
     {
         JsonElement primitives = JsonDocument.Parse(ScriptCompiler.Compile("point A = 1 2 offset 0.5 -0.25\ntext t = \"x\" at A offset 1 1").ToJson())

@@ -164,9 +164,18 @@
         element.layoutKey = key
       }
       let x = toX(v.x) + (v.dx || 0) * unit
-      const y = toY(v.y) - (v.dy || 0) * unit
-      if (v.anchor === 'middle') {
+      let y = toY(v.y) - (v.dy || 0) * unit
+      if (v.nx !== undefined) {
+        // the label of a line: its box moved along the normal (nx, ny) until it is gap points away from the line
+        const width = element.layoutWidth
+        const height = 0.7 * size
+        const reach = Math.abs(v.nx) * width / 2 + Math.abs(v.ny) * height / 2 + v.gap * unit
+        x += v.nx * reach - width / 2
+        y += -v.ny * reach + height / 2
+      } else if (v.anchor === 'middle') {
         x -= element.layoutWidth / 2
+      } else if (v.anchor === 'end') {
+        x -= element.layoutWidth
       }
       element.setAttribute('transform', `translate(${x} ${y})`)
       element.setAttribute('fill', v.color)
@@ -368,6 +377,24 @@
 
   const formatNumber = n => String(Math.round(n * 1000) / 1000).replace('-', '−')
 
+  // the description below the picture keeps the height of the tallest one (formulas, several lines), so that the
+  // picture does not change its size while the animation plays
+  function reserveCaptionSpace () {
+    if (!animation) {
+      return
+    }
+    const box = $('caption')
+    const current = box.richText || ''
+    box.style.minHeight = ''
+    let height = box.offsetHeight
+    for (const step of steps()) {
+      setRichText(box, step.caption)
+      height = Math.max(height, box.offsetHeight)
+    }
+    setRichText(box, current)
+    box.style.minHeight = height + 'px'
+  }
+
   // the picture gets the shape of the view, as large as the window allows
   function layout () {
     if (!animation) {
@@ -536,6 +563,7 @@
     if (!keepPosition) {
       pause()
     }
+    reserveCaptionSpace()
     layout()
   }
 
@@ -667,7 +695,10 @@
     }
   })
 
-  window.addEventListener('resize', layout)
+  window.addEventListener('resize', () => {
+    reserveCaptionSpace()
+    layout()
+  })
 
   async function start () {
     // the fonts first: the labels are measured with them

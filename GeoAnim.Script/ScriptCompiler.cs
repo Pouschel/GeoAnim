@@ -263,11 +263,12 @@ public static class ScriptCompiler
             "point" => ["color", "size", "labelsize", "label", "offset", "draw"],
             "polygon" => ["color", "width", "fill", "opacity", "draw"],
             "text" => ["color", "size", "offset", "draw"],
+            "segment" or "line" or "ray" => ["color", "width", "label", "labelsize", "labelpos", "offset", "draw"],
             _ => ["color", "width", "draw"],
         };
 
         /// <summary>The options of an object of this file: an output gets the caller's options on top; with "use … " (only the result) the rest is hidden.</summary>
-        private Options FinalOptions(string name, Options own)
+        private Options FinalOptions(string name, Options own, string kind)
         {
             if (module == null)
             {
@@ -284,8 +285,9 @@ public static class ScriptCompiler
                     FillOpacity = caller.FillOpacity ?? own.FillOpacity,
                     Size = caller.Size ?? own.Size,
                     LabelSize = caller.LabelSize ?? own.LabelSize,
-                    // the label follows the caller's name
-                    Label = caller.Label,
+                    LabelPosition = caller.LabelPosition ?? own.LabelPosition,
+                    // a point's label follows the caller's name
+                    Label = kind == "point" ? caller.Label : caller.Label ?? own.Label,
                     NoLabel = caller.NoLabel || (own.NoLabel && caller.Label == null),
                     Offset = caller.Offset ?? own.Offset,
                     Hidden = caller.Hidden || (own.Hidden && module.Mode != UseMode.Result),
@@ -293,8 +295,11 @@ public static class ScriptCompiler
                     Easing = caller.Easing ?? own.Easing,
                 };
             }
-            // the label shows the name in the file, not the name of its own ("Prop1#1.C")
-            own = own with { Label = own.Label ?? "$" + name + "$" };
+            // a point's label shows its name in the file, not the name of its own ("Prop1#1.C")
+            if (kind == "point")
+            {
+                own = own with { Label = own.Label ?? "$" + name + "$" };
+            }
             return module.Mode == UseMode.Result ? own with { Hidden = true } : own;
         }
 
@@ -315,7 +320,7 @@ public static class ScriptCompiler
             }
             string local0 = s.Names[0].Name;
             string name0 = Global(local0);
-            Options options = FinalOptions(local0, ToOptions(s.Options, s.Kind, AllowedOptions(s.Kind)));
+            Options options = FinalOptions(local0, ToOptions(s.Options, s.Kind, AllowedOptions(s.Kind)), s.Kind);
             GeoObject created;
             switch (s.Definition)
             {
@@ -342,7 +347,7 @@ public static class ScriptCompiler
                         Options own = ToOptions(s.Options, "point", AllowedOptions("point"));
                         IReadOnlyList<GeoPoint> points = c.Intersect(
                             s.Names.Select(n => Global(n.Name)).ToList(), Resolve(d.A), Resolve(d.B),
-                            s.Names.Select(n => FinalOptions(n.Name, own)).ToList());
+                            s.Names.Select(n => FinalOptions(n.Name, own, "point")).ToList());
                         foreach ((NameRef name, GeoPoint point) in s.Names.Zip(points))
                         {
                             Remember(name.Name, point);
@@ -450,7 +455,7 @@ public static class ScriptCompiler
             var results = new Dictionary<string, (string Name, Options Options)>(StringComparer.Ordinal);
             for (int i = 0; i < outputs.Count; i++)
             {
-                results[outputs[i].Name] = (Global(s.Names[i].Name), FinalOptions(s.Names[i].Name, callerOptions));
+                results[outputs[i].Name] = (Global(s.Names[i].Name), FinalOptions(s.Names[i].Name, callerOptions, s.Kind));
             }
 
             // within "use … " (only the result) everything used inside shows only its result, too
@@ -542,6 +547,7 @@ public static class ScriptCompiler
                     "opacity" => options with { FillOpacity = (double)option.Value! },
                     "size" => options with { Size = (double)option.Value! },
                     "labelsize" => options with { LabelSize = (double)option.Value! },
+                    "labelpos" => options with { LabelPosition = (double)option.Value! },
                     "label" => options with { Label = (string)option.Value! },
                     "nolabel" => options with { NoLabel = true },
                     "offset" => options with { Offset = (Vec)option.Value! },

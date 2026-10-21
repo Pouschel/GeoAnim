@@ -7,7 +7,7 @@ grid 0.5
 speed 0.5
 
 step Gegeben ist der Punkt $A$
-input point A = -1.5 2 opt_gg2
+input point A = -1.5 2 opt_gg2 offset -0.3 0.1
 
 step Gegeben ist die Verbindungsstrecke durch die Punkte $B$ und $C$
 input point B = 0 0 offset -0.4 -0.3 opt_gg
@@ -45,3 +45,9 @@ pause 300
 
 step Die Strecke $bar(AL)$ ist genauso lang wie die Strecke $bar(BC)$
 segment res = A L opt_r1
+
+step Animation der Konstruktion
+together  # duration 1000 not yet supported
+  move A to -2 1
+  move C to 4 0
+end

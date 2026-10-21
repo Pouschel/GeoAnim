@@ -4,6 +4,7 @@ namespace GeoAnim;
 public sealed class GeoStraight : GeoObject
 {
     private Primitive? line;
+    private Primitive? label;
 
     internal GeoStraight(StraightKind straightKind, string name, GeoPoint a, GeoPoint b, Options options)
         : base(name, options, a, b)
@@ -82,6 +83,48 @@ public sealed class GeoStraight : GeoObject
         }
         line.Animate("color", span, ColorOr(Defaults.LineColor).ToHex());
         line.Animate("width", span, WidthOr(Defaults.LineWidth));
+        if (Options.Label != null && !Options.NoLabel)
+        {
+            RenderLabel(context, span, part != null);
+        }
+    }
+
+    /// <summary>Distance of a label from its line, in points.</summary>
+    private const double LabelDistance = 8;
+
+    // the label at A + t·(B − A): by default a little to the right of the direction A → B (outside a triangle ABC
+    // named counterclockwise), with an offset at that offset
+    private void RenderLabel(RenderContext context, Span span, bool visible)
+    {
+        double size = Options.LabelSize ?? Defaults.LabelSize;
+        if (label == null)
+        {
+            label = context.Scene.Create("text", Layers.Label);
+            label.Animate("text", span, Options.Label!);
+        }
+        label.Animate("opacity", span, visible ? Opacity * Reveal : 0);
+        if (IsDefined)
+        {
+            Vec at = A.Position + (Options.LabelPosition ?? 0.5) * Direction;
+            if (Options.Offset is { } offset)
+            {
+                at += offset;
+            }
+            else
+            {
+                // the normal to the right: the player moves the text along it until it keeps the gap to the line
+                Vec d = Direction;
+                Vec normal = (1 / d.Length) * new Vec(d.Y, -d.X);
+                label.Animate("nx", span, normal.X);
+                label.Animate("ny", span, normal.Y);
+                label.Animate("gap", span, LabelDistance);
+            }
+            label.Animate("x", span, at.X);
+            label.Animate("y", span, at.Y);
+            label.Animate("anchor", span, "middle");
+        }
+        label.Animate("size", span, size);
+        label.Animate("color", span, ColorOr(Defaults.LineColor).ToHex());
     }
 }
 

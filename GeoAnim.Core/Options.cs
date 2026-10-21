@@ -20,10 +20,15 @@ public sealed record Options
     /// <summary>Radius of a point or font size of a text and of a point's label, in points.</summary>
     public double? Size { get; init; }
 
-    /// <summary>Font size of a point's label, in points.</summary>
+    /// <summary>
+    /// Where the label of a segment, ray or line sits: at A + t·(B − A) (default 0.5, the middle of AB).
+    /// </summary>
+    public double? LabelPosition { get; init; }
+
+    /// <summary>Font size of the label of a point, segment, ray or line, in points.</summary>
     public double? LabelSize { get; init; }
 
-    /// <summary>The label of a point (default: its name).</summary>
+    /// <summary>The label of a point (default: its name) or of a segment, ray or line (default: none).</summary>
     public string? Label { get; init; }
 
     /// <summary>A point without label.</summary>

@@ -79,6 +79,7 @@ h1 {
 }
 
 #caption {
+  box-sizing: border-box;
   min-height: 1.4em;
   padding: 10px 16px 6px;
   font-size: 20px;

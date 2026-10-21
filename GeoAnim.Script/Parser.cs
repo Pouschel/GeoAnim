@@ -10,13 +10,13 @@ internal sealed class Parser
         "draw", "steps", "step", "point", "segment", "line", "ray", "circle", "polygon",
         "text", "show", "hide", "move", "pause", "together", "end", "midpoint", "intersect", "center", "through",
         "radius", "at", "to", "on", "x", "y",
-        "duration", "color", "width", "fill", "opacity", "size", "labelsize", "label", "nolabel", "hidden", "offset",
+        "duration", "color", "width", "fill", "opacity", "size", "labelsize", "labelpos", "label", "nolabel", "hidden", "offset",
         "linear", "ease", "easein", "easeout", "easeinout",
     };
 
     private static readonly HashSet<string> OptionNames = new(StringComparer.Ordinal)
     {
-        "duration", "color", "width", "fill", "opacity", "size", "labelsize", "label", "nolabel", "hidden", "offset",
+        "duration", "color", "width", "fill", "opacity", "size", "labelsize", "labelpos", "label", "nolabel", "hidden", "offset",
         "linear", "ease", "easein", "easeout", "easeinout",
     };
 
@@ -486,6 +486,7 @@ internal sealed class Parser
                 "width" => ExpectNonNegative("the line width"),
                 "size" => ExpectPositive("the size"),
                 "labelsize" => ExpectPositive("the label size"),
+                "labelpos" => ExpectNumber("the position of the label (0 at A, 1 at B)"),
                 "opacity" => ExpectOpacity(),
                 "color" or "fill" => ExpectColor(),
                 "label" => ExpectString("the label"),
