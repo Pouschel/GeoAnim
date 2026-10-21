@@ -31,7 +31,7 @@ public class ScriptTests
     [MemberData(nameof(Samples))]
     public void SamplesCompile(string sample)
     {
-        AnimationData animation = ScriptCompiler.Compile(File.ReadAllText(Repository.PathOf(["Samples", .. sample.Split('/')])));
+        AnimationData animation = ScriptCompiler.CompileFile(Repository.PathOf(["Samples", .. sample.Split('/')]));
         JsonDocument.Parse(animation.ToJson());
     }
 
@@ -149,6 +149,73 @@ public class ScriptTests
             """);
         // the first step is empty (500 ms by default), the second takes as long as the segment
         Assert.Equal([(0.0, 500.0), (500.0, 1300.0)], animation.Steps.Select(s => (s.Start, s.End)));
+    }
+
+    [Fact]
+    public void DefaultsComeBeforeTheOptionsOfEachObject()
+    {
+        var c = ScriptCompiler.CompileConstruction("""
+            default point size 3 labelsize 18 color navy
+            default segment line ray circle width 1.5
+            default color gray
+            point A = 0 0
+            point B = 4 0 size 6
+            segment s = A B
+            circle k = center A through B width 3
+            text t = "x" at 1 1
+            default point color red
+            point C = 1 2
+            """);
+        Options a = c.Objects["A"].Options;
+        // the default for all kinds comes first, then the one for the kind, then the object's own options
+        Assert.Equal((3.0, 18.0, Color.Parse("navy")), (a.Size!.Value, a.LabelSize!.Value, a.Color));
+        Assert.Equal(6.0, c.Objects["B"].Options.Size);
+        Assert.Equal((1.5, Color.Parse("gray")), (c.Objects["s"].Options.Width!.Value, c.Objects["s"].Options.Color));
+        Assert.Equal(3.0, c.Objects["k"].Options.Width);
+        Assert.Equal(Color.Parse("gray"), c.Objects["t"].Options.Color);
+        Assert.Null(c.Objects["t"].Options.Width);
+        Assert.Equal(Color.Parse("red"), c.Objects["C"].Options.Color);
+        ErrorAt("default point", 1, 14, "needs options");
+        ErrorAt("default points size 3", 1, 9, "neither a kind of object");
+    }
+
+    [Fact]
+    public void IncludeInsertsAnotherFile()
+    {
+        string folder = Directory.CreateTempSubdirectory("geoanim-include").FullName;
+        try
+        {
+            Directory.CreateDirectory(Path.Combine(folder, "lib"));
+            File.WriteAllText(Path.Combine(folder, "lib", "styles.geo"), "default point size 3\nvar help color gray\ninclude more.geo");
+            File.WriteAllText(Path.Combine(folder, "lib", "more.geo"), "# nothing but\ndefault segment width 1");
+            string main = Path.Combine(folder, "main.geo");
+            File.WriteAllText(main, "include lib/styles.geo\npoint A = 0 0\npoint B = 1 0\nsegment s = A B help");
+            ScriptSource source = ScriptSource.FromFile(main);
+            Assert.Equal([main, Path.Combine(folder, "lib", "styles.geo"), Path.Combine(folder, "lib", "more.geo")], source.Files);
+            var c = ScriptCompiler.CompileConstruction(source);
+            Assert.Equal((1.0, Color.Parse("gray")), (c.Objects["s"].Options.Width!.Value, c.Objects["s"].Options.Color));
+            Assert.Equal(3.0, c.Objects["A"].Options.Size);
+
+            // errors name the file and its line; errors of the script itself keep their line
+            File.WriteAllText(Path.Combine(folder, "lib", "more.geo"), "default segment width 1\npont X = 1 1");
+            Assert.Equal("lib/more.geo, line 2, column 1: Unknown command \"pont\".",
+                Assert.Throws<ScriptError>(() => ScriptCompiler.CompileFile(main)).ToString());
+            File.WriteAllText(Path.Combine(folder, "lib", "more.geo"), "");
+            File.WriteAllText(main, "include lib/styles.geo\npoint A = 0 0\nsegment s = A C");
+            Assert.Equal("Line 3, column 15: Unknown object \"C\".", Assert.Throws<ScriptError>(() => ScriptCompiler.CompileFile(main)).ToString());
+
+            File.WriteAllText(main, "point A = 0 0\n  include missing.geo");
+            Assert.StartsWith("Line 2, column 11: File not found: missing.geo", Assert.Throws<ScriptError>(() => ScriptCompiler.CompileFile(main)).ToString());
+            File.WriteAllText(Path.Combine(folder, "lib", "more.geo"), "include styles.geo");
+            File.WriteAllText(main, "include lib/styles.geo");
+            Assert.Equal("lib/more.geo, line 1, column 9: styles.geo is already being included (circle: main.geo → lib/styles.geo → lib/more.geo → lib/styles.geo).",
+                Assert.Throws<ScriptError>(() => ScriptCompiler.CompileFile(main)).ToString());
+            ErrorAt("include", 1, 1, "needs a file name");
+        }
+        finally
+        {
+            Directory.Delete(folder, recursive: true);
+        }
     }
 
     [Fact]

@@ -15,6 +15,9 @@ internal sealed record AxesStatement(int Line, int Column) : Statement(Line, Col
 
 internal sealed record SpeedStatement(int Line, int Column, double Speed) : Statement(Line, Column);
 
+/// <summary>"default point size 4": options for all later objects of the kinds (no kind: all kinds).</summary>
+internal sealed record DefaultStatement(int Line, int Column, IReadOnlyList<string> Kinds, OptionList Options) : Statement(Line, Column);
+
 internal sealed record StepStatement(int Line, int Column, string Caption) : Statement(Line, Column);
 
 /// <summary>A definition: point, segment, line, ray, circle, polygon, text.</summary>

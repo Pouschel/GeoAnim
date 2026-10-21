@@ -131,7 +131,7 @@ public sealed class GeoPoint : GeoObject
             }
             label.Animate("dx", span, distance.X);
             label.Animate("dy", span, distance.Y);
-            label.Animate("size", span, Defaults.LabelSize);
+            label.Animate("size", span, Options.LabelSize ?? Defaults.LabelSize);
             label.Animate("color", span, color.ToHex());
         }
     }

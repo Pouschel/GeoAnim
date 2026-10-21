@@ -4,13 +4,17 @@ view x -10 .. 10 y -7 .. 7
 grid 0.5
 speed 0.6
 
+var opt_gg color blue  # gegebene Objekte
+var opt_gg2 color green 
+var opt_h1 color grey
+
 step Gegeben ist der Punkt $A$
-point A = -2 2 color green
+point A = -2 2 opt_gg2
 
 step Gegeben ist die Verbindungsstrecke durch die Punkte $B$ und $C$
-point B = 0 0 offset -0.4 0
-point C = 3 0
-segment s = B C color blue
+point B = 0 0 offset -0.4 0 opt_gg
+point C = 3 0 opt_gg
+segment s = B C opt_gg
 
 step Zeichne die Strecke $AB$
 segment AB = A B color grey
@@ -18,7 +22,7 @@ segment AB = A B color grey
 step Zeichne auf $AB$ ein gleichseitiges Dreieck $ABD$ (Prop1.html)
 together
   circle k1 = center A through B
-  circle k2= center B through A
+  circle k2 = center B through A
 end
 point D = intersect k1 k2 offset 0 0.2
 polygon ABD = A B D

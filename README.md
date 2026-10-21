@@ -60,6 +60,8 @@ Koordinaten sind mathematisch: die y-Achse zeigt nach oben. Der Maßstab ist in 
 | `background white` | Hintergrundfarbe |
 | `grid` / `grid 0.5` | Gitter mit Abstand 1 bzw. 0.5 |
 | `axes` | Koordinatenachsen mit Zahlen |
+| `default point size 4 labelsize 20` | Voreinstellung: Optionen, die für alle folgenden Objekte der genannten Arten zuerst gelten (siehe unten) |
+| `include styles.geo` | bindet eine andere Datei an dieser Stelle ein (siehe unten) |
 | `speed 0.5` | Tempo der ganzen Animation: 1 wie angegeben, 0.5 halb so schnell (alles dauert doppelt so lange), 2 doppelt so schnell |
 
 ### Objekte
@@ -107,6 +109,7 @@ Hinter einer Anweisung, in beliebiger Reihenfolge:
 | `color red` / `color #1565c0` | alle Objekte | Farbe |
 | `width 3` | Strecke, Gerade, Strahl, Kreis, Vieleck | Linienbreite in Punkt |
 | `size 6` | Punkt (Radius), Text (Schriftgröße) | Größe in Punkt |
+| `labelsize 20` | Punkt | Schriftgröße der Beschriftung in Punkt (Standard 24) |
 | `label "$A'$"` / `nolabel` | Punkt | Beschriftung (Standard: der Name als Formel) bzw. keine |
 | `offset 0.3 -0.5` | Punkt (Beschriftung), Text | Lage in Koordinateneinheiten relativ zum Punkt: dort beginnt die Grundlinie des Textes (bei Text an festen Koordinaten: seine Mitte); ohne `offset` steht die Beschriftung knapp rechts oberhalb |
 | `fill lightblue` | Vieleck | Füllfarbe (Standard: die Linienfarbe) |
@@ -128,6 +131,20 @@ line m = S T rot width 3
 ```
 
 Eine Var gilt ab ihrer Zeile (eine spätere `var` mit demselben Namen ersetzt sie für die folgenden Zeilen) und darf andere Vars enthalten. Optionen gelten der Reihe nach, die spätere gewinnt: `rot color blue` ist blau mit allem Übrigen aus `rot`. Was aus einer Var für ein Objekt nicht passt, wird übergangen (ein Punkt mit `hilfs` nimmt die Farbe, ignoriert `width`); direkt geschriebene Optionen, die nicht passen, bleiben ein Fehler. Vars und Objekte haben verschiedene Namen.
+
+**Voreinstellungen:** `default arten… optionen…` legt Optionen für alle folgenden Objekte fest, damit nicht jedes einzelne sie braucht. Arten: `point`, `segment`, `line`, `ray`, `circle`, `polygon`, `text`, `show`, `hide`, `move`; ohne Art gilt die Voreinstellung für alle.
+
+```
+default point size 4 labelsize 20
+default segment line ray circle polygon width 2
+default text size 22
+default move duration 1500
+default color navy
+```
+
+Es gilt der Reihe nach: Voreinstellungen ohne Art, dann die für die Art, dann die Optionen des Objekts selbst – die spätere gewinnt. Eine weitere `default`-Zeile ergänzt die bisherigen für die folgenden Objekte. Wie bei einer Var wird übergangen, was nicht passt (`default width 2` betrifft keine Punkte). Vorsicht bei `size` ohne Art: das ist bei Punkten der Radius, bei Texten die Schriftgröße. Vars sind auch hier möglich: `default circle hilfs`.
+
+**Dateien einbinden:** `include pfad` (Rest der Zeile, relativ zur einbindenden Datei) setzt den Inhalt einer anderen Datei an dieser Stelle ein, als stünde er dort – typisch für gemeinsame Voreinstellungen und Vars (`include ../styles.geo`). Eingebundene Dateien dürfen selbst einbinden, aber nicht im Kreis. Fehler darin werden mit Datei und Zeile gemeldet (`styles.geo, line 3, column 1: …`), und `geoanim serve` übersetzt auch neu, wenn eine eingebundene Datei gespeichert wird. Hinweis: Tests und `exportdir` behandeln jede `.geo`-Datei als eigenes Skript; eine Datei nur mit Voreinstellungen und Vars ist das auch (mit leerer Animation).
 
 **Farben:** `black`, `white`, `gray`, `lightgray`, `red`, `darkred`, `green`, `lightgreen`, `blue`, `lightblue`, `navy`, `orange`, `yellow`, `purple`, `violet`, `pink`, `brown`, `teal`, `cyan`, `magenta` oder `#rgb` / `#rrggbb`.
 

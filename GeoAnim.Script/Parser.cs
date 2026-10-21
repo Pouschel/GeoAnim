@@ -6,17 +6,23 @@ internal sealed class Parser
     /// <summary>Words that cannot be names of objects.</summary>
     internal static readonly HashSet<string> Keywords = new(StringComparer.Ordinal)
     {
-        "title", "view", "background", "grid", "axes", "speed", "var", "step", "point", "segment", "line", "ray", "circle", "polygon",
+        "title", "view", "background", "grid", "axes", "speed", "var", "default", "include", "step", "point", "segment", "line", "ray", "circle", "polygon",
         "text", "show", "hide", "move", "pause", "together", "end", "midpoint", "intersect", "center", "through",
         "radius", "at", "to", "on", "x", "y",
-        "duration", "color", "width", "fill", "opacity", "size", "label", "nolabel", "hidden", "offset",
+        "duration", "color", "width", "fill", "opacity", "size", "labelsize", "label", "nolabel", "hidden", "offset",
         "linear", "ease", "easein", "easeout", "easeinout",
     };
 
     private static readonly HashSet<string> OptionNames = new(StringComparer.Ordinal)
     {
-        "duration", "color", "width", "fill", "opacity", "size", "label", "nolabel", "hidden", "offset",
+        "duration", "color", "width", "fill", "opacity", "size", "labelsize", "label", "nolabel", "hidden", "offset",
         "linear", "ease", "easein", "easeout", "easeinout",
+    };
+
+    /// <summary>The kinds a "default" can name.</summary>
+    private static readonly HashSet<string> DefaultKinds = new(StringComparer.Ordinal)
+    {
+        "point", "segment", "line", "ray", "circle", "polygon", "text", "show", "hide", "move",
     };
 
     private readonly List<Token> tokens;
@@ -112,6 +118,9 @@ internal sealed class Parser
                 ParseVar();
                 ExpectLineEnd();
                 return null;
+            case "default":
+                statement = ParseDefault(word);
+                break;
             case "step":
                 if (inTogether)
                 {
@@ -159,6 +168,25 @@ internal sealed class Parser
         }
         ExpectLineEnd();
         return statement;
+    }
+
+    private DefaultStatement ParseDefault(Token word)
+    {
+        var kinds = new List<string>();
+        while (Current.Kind == TokenKind.Name && DefaultKinds.Contains(Current.Text))
+        {
+            kinds.Add(Next().Text);
+        }
+        if (Current.Kind == TokenKind.Name && !IsOption(Current.Text))
+        {
+            throw Error(Current, $"\"{Current.Text}\" is neither a kind of object ({string.Join(", ", DefaultKinds)}) nor an option.");
+        }
+        OptionList options = ParseOptions();
+        if (options.Values.Count == 0)
+        {
+            throw Error(Current, "\"default\" needs options, like \"default point size 4\" or \"default width 2\".");
+        }
+        return new DefaultStatement(word.Line, word.Column, kinds, options);
     }
 
     private void ParseVar()
@@ -379,6 +407,7 @@ internal sealed class Parser
                 "duration" => ExpectNonNegative("the duration in milliseconds"),
                 "width" => ExpectNonNegative("the line width"),
                 "size" => ExpectPositive("the size"),
+                "labelsize" => ExpectPositive("the label size"),
                 "opacity" => ExpectOpacity(),
                 "color" or "fill" => ExpectColor(),
                 "label" => ExpectString("the label"),

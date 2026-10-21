@@ -63,6 +63,20 @@ public sealed class CliTests : IDisposable
     }
 
     [Fact]
+    public async Task LiveScriptNoticesChangedIncludes()
+    {
+        string styles = Write("styles.geo", "title one");
+        string path = Write("main.geo", "include styles.geo\npoint A = 1 1");
+        using var script = new LiveScript(path);
+        Assert.Equal([path, styles], script.WatchedFiles.Order(StringComparer.Ordinal));
+        var compiled = new TaskCompletionSource();
+        script.Compiled += _ => compiled.TrySetResult();
+        await File.WriteAllTextAsync(styles, "title two");
+        await compiled.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        Assert.Equal("two", State(script).GetProperty("animation").GetProperty("title").GetString());
+    }
+
+    [Fact]
     public async Task LiveScriptNoticesSavedFiles()
     {
         string path = Write("b.geo", "title one");

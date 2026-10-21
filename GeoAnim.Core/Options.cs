@@ -20,6 +20,9 @@ public sealed record Options
     /// <summary>Radius of a point or font size of a text and of a point's label, in points.</summary>
     public double? Size { get; init; }
 
+    /// <summary>Font size of a point's label, in points.</summary>
+    public double? LabelSize { get; init; }
+
     /// <summary>The label of a point (default: its name).</summary>
     public string? Label { get; init; }
 

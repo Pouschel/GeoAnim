@@ -4,24 +4,53 @@ namespace GeoAnim.Script;
 public static class ScriptCompiler
 {
     /// <summary>Compiles the script; throws <see cref="ScriptError"/> with line and column for any mistake.</summary>
-    public static AnimationData Compile(string source) => CompileConstruction(source).Build();
+    public static AnimationData Compile(string source) => Compile(ScriptSource.FromText(source));
+
+    /// <summary>Compiles a script file (with the files it includes).</summary>
+    public static AnimationData CompileFile(string path) => Compile(ScriptSource.FromFile(path));
+
+    public static AnimationData Compile(ScriptSource source)
+    {
+        Construction construction = CompileConstruction(source);
+        try
+        {
+            return construction.Build();
+        }
+        catch (GeoException e)
+        {
+            // building renders the formulas; their texts were checked before
+            throw new ScriptError(1, 1, e.Message);
+        }
+    }
 
     /// <summary>Compiles the script into a construction that is not yet built.</summary>
-    public static Construction CompileConstruction(string source)
+    public static Construction CompileConstruction(string source) => CompileConstruction(ScriptSource.FromText(source));
+
+    public static Construction CompileConstruction(ScriptSource source)
     {
-        List<Statement> statements = Parser.Parse(source);
-        var construction = new Construction();
-        var executor = new Executor(construction);
-        foreach (Statement statement in statements)
+        try
         {
-            executor.Execute(statement);
+            List<Statement> statements = Parser.Parse(source.Text);
+            var construction = new Construction();
+            var executor = new Executor(construction);
+            foreach (Statement statement in statements)
+            {
+                executor.Execute(statement);
+            }
+            return construction;
         }
-        return construction;
+        catch (ScriptError e)
+        {
+            throw source.Locate(e);
+        }
     }
 
     private sealed class Executor(Construction c)
     {
         private bool hadObject;
+
+        // "default kind… options": options that come first for every object of the kind ("" for all kinds)
+        private readonly Dictionary<string, List<OptionValue>> defaults = new(StringComparer.Ordinal);
 
         public void Execute(Statement statement)
         {
@@ -61,6 +90,17 @@ public static class ScriptCompiler
                 case AxesStatement s:
                     RequireSetup(s, "axes");
                     c.Axes = true;
+                    break;
+                case DefaultStatement s:
+                    foreach (string kind in s.Kinds.Count == 0 ? [""] : s.Kinds)
+                    {
+                        if (!defaults.TryGetValue(kind, out List<OptionValue>? list))
+                        {
+                            defaults[kind] = list = new List<OptionValue>();
+                        }
+                        // like a var: what does not fit an object is left out
+                        list.AddRange(s.Options.Values.Select(v => v with { Var = v.Var ?? "default" }));
+                    }
                     break;
                 case SpeedStatement s:
                     RequireSetup(s, "speed");
@@ -211,13 +251,19 @@ public static class ScriptCompiler
             }
         }
 
-        private static Options PointOptions(DefineStatement s) => ToOptions(s.Options, "point", ["color", "size", "label", "offset", "draw"]);
+        private Options PointOptions(DefineStatement s) => ToOptions(s.Options, "point", ["color", "size", "labelsize", "label", "offset", "draw"]);
 
-        /// <summary>The options of a statement; <paramref name="allowed"/> names groups ("draw" = duration, easing, hidden).</summary>
-        private static Options ToOptions(OptionList list, string what, string[] allowed)
+        /// <summary>
+        /// The options of a statement after the defaults for all kinds and for <paramref name="what"/>;
+        /// <paramref name="allowed"/> names groups ("draw" = duration, easing, hidden).
+        /// </summary>
+        private Options ToOptions(OptionList list, string what, string[] allowed)
         {
             var options = new Options();
-            foreach (OptionValue option in list.Values)
+            IEnumerable<OptionValue> values = defaults.GetValueOrDefault("", [])
+                .Concat(defaults.GetValueOrDefault(what, []))
+                .Concat(list.Values);
+            foreach (OptionValue option in values)
             {
                 string group = option.Name switch
                 {
@@ -244,6 +290,7 @@ public static class ScriptCompiler
                     "fill" => options with { Fill = (Color)option.Value! },
                     "opacity" => options with { FillOpacity = (double)option.Value! },
                     "size" => options with { Size = (double)option.Value! },
+                    "labelsize" => options with { LabelSize = (double)option.Value! },
                     "label" => options with { Label = (string)option.Value! },
                     "nolabel" => options with { NoLabel = true },
                     "offset" => options with { Offset = (Vec)option.Value! },

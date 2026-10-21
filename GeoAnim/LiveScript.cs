@@ -5,14 +5,16 @@ using GeoAnim.Script;
 namespace GeoAnim.Cli;
 
 /// <summary>
-/// A script file and its latest compilation, compiled again whenever the file changes. After a mistake the last good
-/// animation stays, together with the error message.
+/// A script file and its latest compilation, compiled again whenever the file or a file it includes changes. After a
+/// mistake the last good animation stays, together with the error message.
 /// </summary>
 internal sealed class LiveScript : IDisposable
 {
     private readonly object gate = new();
-    private readonly FileSystemWatcher watcher;
+    // one watcher per file read (the script and its includes)
+    private readonly Dictionary<string, FileSystemWatcher> watchers = new(StringComparer.OrdinalIgnoreCase);
     private readonly Timer debounce;
+    private bool disposed;
     private string? animationJson;
     private string? error;
     private int version;
@@ -20,16 +22,49 @@ internal sealed class LiveScript : IDisposable
     public LiveScript(string path)
     {
         FilePath = Path.GetFullPath(path);
-        Compile();
         debounce = new Timer(_ => Compile(), null, Timeout.Infinite, Timeout.Infinite);
-        watcher = new FileSystemWatcher(Path.GetDirectoryName(FilePath)!, Path.GetFileName(FilePath))
+        Compile();
+    }
+
+    /// <summary>The files watched: the script and the files it included at the last compilation.</summary>
+    public IReadOnlyCollection<string> WatchedFiles
+    {
+        get
         {
-            NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.Size | NotifyFilters.CreationTime,
-        };
-        watcher.Changed += (_, _) => Schedule();
-        watcher.Created += (_, _) => Schedule();
-        watcher.Renamed += (_, _) => Schedule();
-        watcher.EnableRaisingEvents = true;
+            lock (gate)
+            {
+                return watchers.Keys.ToList();
+            }
+        }
+    }
+
+    private void Watch(IEnumerable<string> files)
+    {
+        lock (gate)
+        {
+            if (disposed)
+            {
+                return;
+            }
+            var wanted = new HashSet<string>(files.Prepend(FilePath), StringComparer.OrdinalIgnoreCase);
+            foreach (string file in watchers.Keys.Where(f => !wanted.Contains(f)).ToList())
+            {
+                watchers[file].Dispose();
+                watchers.Remove(file);
+            }
+            foreach (string file in wanted.Where(f => !watchers.ContainsKey(f) && Directory.Exists(Path.GetDirectoryName(f))))
+            {
+                var watcher = new FileSystemWatcher(Path.GetDirectoryName(file)!, Path.GetFileName(file))
+                {
+                    NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.Size | NotifyFilters.CreationTime,
+                };
+                watcher.Changed += (_, _) => Schedule();
+                watcher.Created += (_, _) => Schedule();
+                watcher.Renamed += (_, _) => Schedule();
+                watcher.EnableRaisingEvents = true;
+                watchers[file] = watcher;
+            }
+        }
     }
 
     public string FilePath { get; }
@@ -57,9 +92,11 @@ internal sealed class LiveScript : IDisposable
     {
         string? newJson = null;
         string? newError = null;
+        IEnumerable<string>? files = null;
         try
         {
-            string source = ReadWithRetry();
+            ScriptSource source = ReadWithRetry();
+            files = source.Files;
             newJson = ScriptCompiler.Compile(source).ToJson();
         }
         catch (ScriptError e)
@@ -74,6 +111,8 @@ internal sealed class LiveScript : IDisposable
         {
             newError = "Cannot read " + Path.GetFileName(FilePath) + ": " + e.Message;
         }
+        // after a failed include, keep watching the files of before (so that fixing them is noticed)
+        Watch(files ?? WatchedFiles);
         bool changed;
         lock (gate)
         {
@@ -92,13 +131,13 @@ internal sealed class LiveScript : IDisposable
         }
     }
 
-    private string ReadWithRetry()
+    private ScriptSource ReadWithRetry()
     {
         for (int attempt = 0; ; attempt++)
         {
             try
             {
-                return File.ReadAllText(FilePath);
+                return ScriptSource.FromFile(FilePath);
             }
             catch (IOException) when (attempt < 10 && File.Exists(FilePath))
             {
@@ -123,7 +162,15 @@ internal sealed class LiveScript : IDisposable
 
     public void Dispose()
     {
-        watcher.Dispose();
+        lock (gate)
+        {
+            disposed = true;
+            foreach (FileSystemWatcher watcher in watchers.Values)
+            {
+                watcher.Dispose();
+            }
+            watchers.Clear();
+        }
         debounce.Dispose();
     }
 }

@@ -94,7 +94,7 @@ internal static class Program
     {
         try
         {
-            AnimationData animation = ScriptCompiler.Compile(File.ReadAllText(file));
+            AnimationData animation = ScriptCompiler.CompileFile(file);
             File.WriteAllText(output, HtmlExporter.Export(animation), new UTF8Encoding(false));
             Console.WriteLine($"Written: {output} ({animation.Steps.Count} steps, {animation.Duration / 1000:0.0} s)");
             return true;
