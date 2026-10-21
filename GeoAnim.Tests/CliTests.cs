@@ -31,7 +31,7 @@ public sealed class CliTests : IDisposable
         script.Compile();
         JsonElement state = State(script);
         Assert.Equal(2, script.Version);
-        Assert.Equal("Line 2, column 15: Unknown option \"colour\"", state.GetProperty("error").GetString()!.Split(" (")[0]);
+        Assert.Equal("Line 2, column 15: Unknown option or var \"colour\"", state.GetProperty("error").GetString()!.Split(" (")[0]);
         Assert.Equal("one", state.GetProperty("animation").GetProperty("title").GetString());
 
         // no change, no new version

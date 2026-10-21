@@ -60,4 +60,5 @@ internal sealed record OptionList(IReadOnlyList<OptionValue> Values)
     public static OptionList Empty { get; } = new([]);
 }
 
-internal sealed record OptionValue(string Name, object? Value, int Line, int Column);
+/// <summary>An option; <paramref name="Var"/> names the var it came from (such options are skipped where they do not fit).</summary>
+internal sealed record OptionValue(string Name, object? Value, int Line, int Column, string? Var = null);

@@ -229,6 +229,11 @@ public static class ScriptCompiler
                 };
                 if (!allowed.Contains(group))
                 {
+                    if (option.Var != null)
+                    {
+                        // a var serves objects of all kinds: what does not fit is left out
+                        continue;
+                    }
                     throw new ScriptError(option.Line, option.Column, $"The option \"{option.Name}\" is not possible for {what}.");
                 }
                 options = option.Name switch

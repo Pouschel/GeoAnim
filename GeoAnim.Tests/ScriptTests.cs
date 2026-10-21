@@ -82,6 +82,38 @@ public class ScriptTests
     }
 
     [Fact]
+    public void VarsGiveGroupsTheSameOptions()
+    {
+        var c = ScriptCompiler.CompileConstruction("""
+            var thin color gray width 1.5 duration 300
+            var mark thin color red size 7
+            point A = 0 0 mark
+            point B = 4 0 mark color blue
+            point C = 2 3 nolabel
+            segment s = A B thin
+            polygon P = A B C fill yellow thin
+            """);
+        // a point takes colour and size; width does not fit and is left out
+        Assert.Equal((Color.Parse("red"), 7.0, 300.0), (c.Objects["A"].Options.Color, c.Objects["A"].Options.Size!.Value, c.Objects["A"].Options.Duration!.Value));
+        Assert.Null(c.Objects["A"].Options.Width);
+        Assert.Equal(Color.Parse("blue"), c.Objects["B"].Options.Color);
+        Assert.Equal((Color.Parse("gray"), 1.5), (c.Objects["s"].Options.Color, c.Objects["s"].Options.Width!.Value));
+        Assert.Equal(Color.Parse("yellow"), c.Objects["P"].Options.Fill);
+
+        // a var only from its line on, and only with options
+        ErrorAt("point A = 0 0 red\nvar red color red", 1, 15, "Unknown option or var \"red\"");
+        ErrorAt("var u", 1, 6, "needs options");
+        ErrorAt("var u color red point", 1, 17, "Unknown option or var");
+        ErrorAt("var u blue", 1, 7, "a var holds options");
+        // written directly, an option that does not fit is still an error
+        ErrorAt("var u color red\npoint A = 0 0 u width 2", 2, 17, "\"width\" is not possible for point");
+        // vars and objects have different names
+        ErrorAt("point A = 0 0\nvar A color red", 2, 5, "already the name of an object");
+        ErrorAt("var k color red\npoint A = 0 0\ncircle k = center A radius 1", 3, 8, "already the name of a var");
+        ErrorAt("var var color red", 1, 5, "keyword");
+    }
+
+    [Fact]
     public void OffsetIsInCoordinates()
     {
         JsonElement primitives = JsonDocument.Parse(ScriptCompiler.Compile("point A = 1 2 offset 0.5 -0.25\ntext t = \"x\" at A offset 1 1").ToJson())

@@ -6,7 +6,7 @@ internal sealed class Parser
     /// <summary>Words that cannot be names of objects.</summary>
     internal static readonly HashSet<string> Keywords = new(StringComparer.Ordinal)
     {
-        "title", "view", "background", "grid", "axes", "speed", "step", "point", "segment", "line", "ray", "circle", "polygon",
+        "title", "view", "background", "grid", "axes", "speed", "var", "step", "point", "segment", "line", "ray", "circle", "polygon",
         "text", "show", "hide", "move", "pause", "together", "end", "midpoint", "intersect", "center", "through",
         "radius", "at", "to", "on", "x", "y",
         "duration", "color", "width", "fill", "opacity", "size", "label", "nolabel", "hidden", "offset",
@@ -21,6 +21,12 @@ internal sealed class Parser
 
     private readonly List<Token> tokens;
     private int position;
+
+    // "var name options…": named groups of options, valid from their line on
+    private readonly Dictionary<string, List<OptionValue>> vars = new(StringComparer.Ordinal);
+
+    // names given to objects so far (a var cannot take one of them, and the other way round)
+    private readonly HashSet<string> objectNames = new(StringComparer.Ordinal);
 
     private Parser(List<Token> tokens) => this.tokens = tokens;
 
@@ -63,11 +69,16 @@ internal sealed class Parser
                 ExpectLineEnd();
                 return statements;
             }
-            statements.Add(ParseStatement(inTogether));
+            Statement? statement = ParseStatement(inTogether);
+            if (statement != null)
+            {
+                statements.Add(statement);
+            }
         }
     }
 
-    private Statement ParseStatement(bool inTogether)
+    /// <summary>The next statement, or null for a line that only defines a var.</summary>
+    private Statement? ParseStatement(bool inTogether)
     {
         Token word = Next();
         if (word.Kind != TokenKind.Name)
@@ -97,6 +108,10 @@ internal sealed class Parser
             case "speed":
                 statement = new SpeedStatement(l, c, ExpectPositive("the speed"));
                 break;
+            case "var":
+                ParseVar();
+                ExpectLineEnd();
+                return null;
             case "step":
                 if (inTogether)
                 {
@@ -144,6 +159,26 @@ internal sealed class Parser
         }
         ExpectLineEnd();
         return statement;
+    }
+
+    private void ParseVar()
+    {
+        Token token = Current;
+        NameRef name = ExpectName();
+        if (objectNames.Contains(name.Name))
+        {
+            throw Error(token, $"{name.Name} is already the name of an object.");
+        }
+        if (Current.Kind == TokenKind.Name && !OptionNames.Contains(Current.Text) && !vars.ContainsKey(Current.Text))
+        {
+            throw Error(Current, $"Unknown option \"{Current.Text}\" (a var holds options like \"color red width 3\").");
+        }
+        List<OptionValue> values = ParseOptions().Values.Select(v => v with { Var = v.Var ?? name.Name }).ToList();
+        if (values.Count == 0)
+        {
+            throw Error(Current, $"The var {name.Name} needs options, like \"var {name.Name} color red width 3\".");
+        }
+        vars[name.Name] = values;
     }
 
     private ViewStatement ParseView(Token word)
@@ -237,6 +272,7 @@ internal sealed class Parser
             a = first;
             b = ExpectName();
             name = new NameRef(a.Name + b.Name, a.Line, a.Column);
+            CheckNewName(name);
         }
         return new DefineStatement(word.Line, word.Column, word.Text, [name], new TwoPointsDefinition(a, b), ParseOptions());
     }
@@ -270,7 +306,7 @@ internal sealed class Parser
         NameRef name = ExpectNewName();
         ExpectSymbol("=");
         var vertices = new List<NameRef>();
-        while (Current.Kind == TokenKind.Name && !OptionNames.Contains(Current.Text))
+        while (Current.Kind == TokenKind.Name && !IsOption(Current.Text))
         {
             vertices.Add(ExpectName());
         }
@@ -296,7 +332,7 @@ internal sealed class Parser
     private ShowStatement ParseShow(Token word)
     {
         var targets = new List<NameRef>();
-        while (Current.Kind == TokenKind.Name && !OptionNames.Contains(Current.Text))
+        while (Current.Kind == TokenKind.Name && !IsOption(Current.Text))
         {
             targets.Add(ExpectName());
         }
@@ -333,6 +369,11 @@ internal sealed class Parser
         while (Current.Kind == TokenKind.Name)
         {
             Token option = Next();
+            if (vars.TryGetValue(option.Text, out List<OptionValue>? group))
+            {
+                values.AddRange(group);
+                continue;
+            }
             object? value = option.Text switch
             {
                 "duration" => ExpectNonNegative("the duration in milliseconds"),
@@ -343,7 +384,7 @@ internal sealed class Parser
                 "label" => ExpectString("the label"),
                 "offset" => ParseCoordinates(),
                 "nolabel" or "hidden" or "linear" or "ease" or "easein" or "easeout" or "easeinout" => null,
-                _ => throw Error(option, $"Unknown option \"{option.Text}\" (possible: {string.Join(", ", OptionNames.Order())})."),
+                _ => throw Error(option, $"Unknown option or var \"{option.Text}\" (possible options: {string.Join(", ", OptionNames.Order())})."),
             };
             values.Add(new OptionValue(option.Text, value, option.Line, option.Column));
         }
@@ -397,7 +438,23 @@ internal sealed class Parser
         return new NameRef(token.Text, token.Line, token.Column);
     }
 
-    private NameRef ExpectNewName() => ExpectName();
+    private bool IsOption(string word) => OptionNames.Contains(word) || vars.ContainsKey(word);
+
+    private NameRef ExpectNewName()
+    {
+        NameRef name = ExpectName();
+        CheckNewName(name);
+        return name;
+    }
+
+    private void CheckNewName(NameRef name)
+    {
+        if (vars.ContainsKey(name.Name))
+        {
+            throw Error(name, $"{name.Name} is already the name of a var.");
+        }
+        objectNames.Add(name.Name);
+    }
 
     private string ExpectString(string what)
     {

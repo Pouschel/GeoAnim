@@ -2,7 +2,7 @@
   "profiles": {
     "serve sample": {
       "commandName": "Project",
-      "commandLineArgs": "serve Samples/Euklid/Book1/Prop1.geo",
+      "commandLineArgs": "serve Samples/Euklid/Book1/Prop2.geo",
       "workingDirectory": "$(ProjectDir).."
     },
     "export sample": {

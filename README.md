@@ -115,6 +115,18 @@ Hinter einer Anweisung, in beliebiger Reihenfolge:
 
 Ein Punkt (pt) ist ein Pixel bei 1280 Pixel Bildbreite; Linien und Schriften wachsen mit dem Player.
 
+**Vars – Optionen mit Namen:** `var name optionen…` gibt einer Gruppe von Optionen einen Namen; danach steht der Name überall, wo Optionen stehen können, für diese Optionen.
+
+```
+var hilfs color gray width 1.5
+var rot hilfs color red size 6 offset 0.2 0.2
+circle k1 = center A through B hilfs
+point S T = intersect k1 k2 rot
+line m = S T rot width 3
+```
+
+Eine Var gilt ab ihrer Zeile (eine spätere `var` mit demselben Namen ersetzt sie für die folgenden Zeilen) und darf andere Vars enthalten. Optionen gelten der Reihe nach, die spätere gewinnt: `rot color blue` ist blau mit allem Übrigen aus `rot`. Was aus einer Var für ein Objekt nicht passt, wird übergangen (ein Punkt mit `hilfs` nimmt die Farbe, ignoriert `width`); direkt geschriebene Optionen, die nicht passen, bleiben ein Fehler. Vars und Objekte haben verschiedene Namen.
+
 **Farben:** `black`, `white`, `gray`, `lightgray`, `red`, `darkred`, `green`, `lightgreen`, `blue`, `lightblue`, `navy`, `orange`, `yellow`, `purple`, `violet`, `pink`, `brown`, `teal`, `cyan`, `magenta` oder `#rgb` / `#rrggbb`.
 
 **Standardwerte:** Punkte blau, Radius 5 pt, erscheinen in 400 ms; Linien schwarz, 2,5 pt, 800 ms; Kreise 1200 ms; Vielecke 600 ms; Texte 26 pt, 400 ms; `show`/`hide` 400 ms; `move` 1000 ms mit `ease`.
