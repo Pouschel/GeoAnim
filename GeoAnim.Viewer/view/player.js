@@ -155,19 +155,114 @@
       element.setAttribute('fill', v.fill)
       element.setAttribute('fill-opacity', v.fillOpacity)
     },
+    // a group with the pieces of the text side by side: text elements and formulas (nested svg elements)
     text (element, v) {
-      element.setAttribute('x', toX(v.x) + (v.dx || 0) * unit)
-      element.setAttribute('y', toY(v.y) - (v.dy || 0) * unit)
-      element.setAttribute('font-size', v.size * unit)
+      const size = v.size * unit
+      const key = v.text + '\n' + size
+      if (element.layoutKey !== key) {
+        element.layoutWidth = layoutText(element, v.text, size)
+        element.layoutKey = key
+      }
+      let x = toX(v.x) + (v.dx || 0) * unit
+      const y = toY(v.y) - (v.dy || 0) * unit
+      if (v.anchor === 'middle') {
+        x -= element.layoutWidth / 2
+      }
+      element.setAttribute('transform', `translate(${x} ${y})`)
       element.setAttribute('fill', v.color)
-      element.setAttribute('text-anchor', v.anchor || 'start')
-      if (element.textContent !== v.text) {
-        element.textContent = v.text
+      element.style.color = v.color
+    }
+  }
+
+  const TAGS = { dot: 'circle', line: 'line', arc: 'path', polygon: 'polygon', text: 'g' }
+
+  // ------------------------------------------------------------------ texts with formulas
+
+  // "Kreis um $A$" → [{ text: 'Kreis um ', math: false }, { text: 'A', math: true }]; "\$" is a dollar sign
+  function splitMath (text) {
+    const runs = []
+    let current = ''
+    let inFormula = false
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i]
+      if (c === '\\' && text[i + 1] === '$') {
+        current += '$'
+        i++
+      } else if (c === '$') {
+        if (current) {
+          runs.push({ text: inFormula ? current.trim() : current, math: inFormula })
+        }
+        current = ''
+        inFormula = !inFormula
+      } else {
+        current += c
+      }
+    }
+    if (current) {
+      runs.push({ text: current, math: inFormula })
+    }
+    return runs
+  }
+
+  const formulaOf = source => animation.math && animation.math[source]
+
+  // a formula as svg element; box: viewBox in thousandths of an em, baseline at y = 0
+  function formulaElement (formula) {
+    const element = document.createElementNS(SVG, 'svg')
+    element.setAttribute('viewBox', formula.box.join(' '))
+    element.setAttribute('overflow', 'visible')
+    element.innerHTML = formula.svg
+    return element
+  }
+
+  // lays out a text in the picture; returns its width in pixels
+  function layoutText (group, text, size) {
+    group.textContent = ''
+    let x = 0
+    for (const run of splitMath(text)) {
+      const formula = run.math ? formulaOf(run.text) : null
+      if (formula) {
+        const element = formulaElement(formula)
+        const [, top, width, height] = formula.box
+        element.setAttribute('x', x)
+        element.setAttribute('y', top / 1000 * size)
+        element.setAttribute('width', width / 1000 * size)
+        element.setAttribute('height', height / 1000 * size)
+        group.appendChild(element)
+        x += width / 1000 * size
+      } else {
+        const element = create('text', { x, y: 0, 'font-size': size, 'dominant-baseline': 'alphabetic' }, group)
+        element.style.whiteSpace = 'pre'
+        element.textContent = run.text
+        x += element.getComputedTextLength()
+      }
+    }
+    return x
+  }
+
+  // a text with formulas in an HTML element (title, step description)
+  function setRichText (element, text) {
+    if (element.richText === text) {
+      return
+    }
+    element.richText = text
+    element.textContent = ''
+    for (const run of splitMath(text)) {
+      const formula = run.math ? formulaOf(run.text) : null
+      if (formula) {
+        const [, top, width, height] = formula.box
+        const svg = formulaElement(formula)
+        svg.setAttribute('width', (width / 1000) + 'em')
+        svg.setAttribute('height', (height / 1000) + 'em')
+        svg.style.verticalAlign = (-(top + height) / 1000) + 'em'
+        element.appendChild(svg)
+      } else {
+        element.appendChild(document.createTextNode(run.text))
       }
     }
   }
 
-  const TAGS = { dot: 'circle', line: 'line', arc: 'path', polygon: 'polygon', text: 'text' }
+  const plainText = text => splitMath(text).map(run => run.text).join('')
 
   function buildScene () {
     scene.textContent = ''
@@ -182,9 +277,6 @@
       }
       if (primitive.type === 'polygon') {
         element.setAttribute('stroke-linejoin', 'round')
-      }
-      if (primitive.type === 'text') {
-        element.setAttribute('dominant-baseline', 'alphabetic')
       }
       return { primitive, element, shown: true }
     })
@@ -393,10 +485,7 @@
     }
     const list = steps()
     const index = currentStepIndex()
-    const caption = index >= 0 ? list[index].caption : ''
-    if ($('caption').textContent !== caption) {
-      $('caption').textContent = caption
-    }
+    setRichText($('caption'), index >= 0 ? list[index].caption : '')
     $('counter').textContent = (index + 1) + ' / ' + list.length
     const timeline = $('timeline')
     if (Number(timeline.value) !== Math.round(time)) {
@@ -429,8 +518,8 @@
       atStepEnd = stepIndex >= 0 && Math.abs(time - steps()[stepIndex].end) < EPSILON
     }
     animation = data
-    document.title = data.title || 'GeoAnim'
-    $('title').textContent = data.title || ''
+    document.title = data.title ? plainText(data.title) : 'GeoAnim'
+    setRichText($('title'), data.title || '')
     $('header').hidden = !data.title
     $('message').textContent = ''
     buildScene()

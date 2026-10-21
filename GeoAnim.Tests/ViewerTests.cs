@@ -11,7 +11,8 @@ public class ViewerTests
     public void PlayerFilesAreEmbedded()
     {
         Assert.Equal(
-            ["fonts/LICENSE-lato.txt", "fonts/fonts.css", "fonts/lato-latin-400-normal.woff2", "fonts/lato-latin-700-normal.woff2",
+            ["fonts/LICENSE-stix-two-text.txt", "fonts/fonts.css", "fonts/stix-two-text-latin-400-italic.woff2",
+             "fonts/stix-two-text-latin-400-normal.woff2", "fonts/stix-two-text-latin-700-normal.woff2",
              "player.css", "player.html", "player.js"],
             ViewerFiles.Paths);
         Assert.Null(ViewerFiles.Read("missing.js"));
@@ -31,7 +32,7 @@ public class ViewerTests
         {
             Assert.DoesNotMatch("""url\((?!data:)""", style.Groups[1].Value);
         }
-        Assert.Equal(2, Regex.Matches(html, "url\\(data:font/woff2;base64,").Count);
+        Assert.Equal(3, Regex.Matches(html, "url\\(data:font/woff2;base64,").Count);
         // the animation, readable again
         Match data = Regex.Match(html, "window.GEO_ANIMATION = (.*?);</script>", RegexOptions.Singleline);
         Assert.Equal(animation.ToJson(), data.Groups[1].Value);

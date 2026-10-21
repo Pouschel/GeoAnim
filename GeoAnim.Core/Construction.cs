@@ -1,3 +1,5 @@
+using GeoAnim.Formulas;
+
 namespace GeoAnim;
 
 /// <summary>
@@ -40,8 +42,14 @@ public sealed class Construction
     private AnimationStep? currentStep;
     private bool built;
     private double speed = 1;
+    private string? title;
 
-    public string? Title { get; set; }
+    /// <summary>The title; like all texts it may contain formulas in AsciiMath between $…$ ("\$" for a dollar sign).</summary>
+    public string? Title
+    {
+        get => title;
+        set => title = value == null ? null : CheckText(value);
+    }
 
     public Color Background { get; set; } = Color.Names["white"];
 
@@ -170,14 +178,32 @@ public sealed class Construction
         Define(new GeoPolygon(name, vertices, options ?? Options.None));
 
     public GeoText Text(string name, string content, double x, double y, Options? options = null) =>
-        Define(new GeoText(name, content, new Vec(x, y), options ?? Options.None));
+        Define(new GeoText(name, CheckText(content), new Vec(x, y), options ?? Options.None));
 
     /// <summary>A text next to a point; it moves with the point.</summary>
     public GeoText Text(string name, string content, GeoPoint anchor, Options? options = null) =>
-        Define(new GeoText(name, content, anchor, options ?? Options.None));
+        Define(new GeoText(name, CheckText(content), anchor, options ?? Options.None));
+
+    // the formulas of a text must be complete ($…$)
+    private static string CheckText(string text)
+    {
+        try
+        {
+            MathText.Split(text);
+            return text;
+        }
+        catch (FormatException e)
+        {
+            throw new GeoException(e.Message);
+        }
+    }
 
     private T Define<T>(T item) where T : GeoObject
     {
+        if (item.Options.Label != null)
+        {
+            CheckText(item.Options.Label);
+        }
         item.Compute();
         if (!item.IsDefined)
         {
@@ -319,7 +345,7 @@ public sealed class Construction
             throw new GeoException("A step cannot begin inside a \"together\" block.");
         }
         CloseStep();
-        currentStep = new AnimationStep(caption, time, time);
+        currentStep = new AnimationStep(CheckText(caption), time, time);
     }
 
     private void RequireStep(string what)
@@ -440,7 +466,33 @@ public sealed class Construction
         }
         double scale = 1 / speed;
         List<AnimationStep> scaledSteps = steps.Select(s => s with { Start = s.Start * scale, End = s.End * scale }).ToList();
-        return new AnimationData(Title, view, Background, GridStep, Axes, time * scale, scaledSteps, scene.Primitives, scale);
+        return new AnimationData(Title, view, Background, GridStep, Axes, time * scale, scaledSteps, scene.Primitives, scale, RenderFormulas(scaledSteps));
+    }
+
+    // all formulas of the title, the step descriptions and the texts in the picture, as SVG
+    private Dictionary<string, Formula> RenderFormulas(List<AnimationStep> stepList)
+    {
+        IEnumerable<string> texts = stepList.Select(s => s.Caption)
+            .Concat(scene.Primitives
+                .Where(p => p.Type == "text" && p.Tracks.ContainsKey("text"))
+                .SelectMany(p => p.Tracks["text"].Select(key => (string)key.Value)));
+        if (Title != null)
+        {
+            texts = texts.Prepend(Title);
+        }
+        var formulas = new Dictionary<string, Formula>(StringComparer.Ordinal);
+        foreach (string formula in texts.SelectMany(MathText.Formulas).Distinct(StringComparer.Ordinal))
+        {
+            try
+            {
+                formulas[formula] = MathRenderer.Render(formula);
+            }
+            catch (FormatException e)
+            {
+                throw new GeoException(e.Message);
+            }
+        }
+        return formulas;
     }
 }
 

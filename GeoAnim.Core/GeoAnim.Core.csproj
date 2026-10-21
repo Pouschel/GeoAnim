@@ -3,6 +3,10 @@
   <!-- Geometry objects, the timeline of an animation (steps and actions) and the animation data for the player. -->
 
   <ItemGroup>
+    <ProjectReference Include="..\GeoAnim.Formulas\GeoAnim.Formulas.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <InternalsVisibleTo Include="GeoAnim.Tests" />
   </ItemGroup>
 

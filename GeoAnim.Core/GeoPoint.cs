@@ -92,7 +92,8 @@ public sealed class GeoPoint : GeoObject
         }
     }
 
-    internal string? LabelText => Options.NoLabel ? null : Options.Label ?? Name;
+    // the name as a formula: italic, P_1 with subscript, A' with prime
+    internal string? LabelText => Options.NoLabel ? null : Options.Label ?? "$" + Name + "$";
 
     internal override void Render(RenderContext context, Span span)
     {

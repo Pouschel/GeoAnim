@@ -90,7 +90,7 @@ public sealed class CliTests : IDisposable
         Assert.Equal(1, state.GetProperty("version").GetInt32());
         Assert.Equal("served", state.GetProperty("animation").GetProperty("title").GetString());
 
-        HttpResponseMessage font = await client.GetAsync("/fonts/lato-latin-400-normal.woff2");
+        HttpResponseMessage font = await client.GetAsync("/fonts/stix-two-text-latin-400-normal.woff2");
         Assert.Equal("font/woff2", font.Content.Headers.ContentType!.MediaType);
         Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync("/missing.js")).StatusCode);
     }

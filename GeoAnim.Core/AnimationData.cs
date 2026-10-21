@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
+using GeoAnim.Formulas;
 
 namespace GeoAnim;
 
@@ -17,8 +18,10 @@ public sealed class AnimationData
 
     internal AnimationData(
         string? title, ViewWindow view, Color background, double? gridStep, bool axes, double duration,
-        IReadOnlyList<AnimationStep> steps, IReadOnlyList<Primitive> primitives, double timeScale = 1)
+        IReadOnlyList<AnimationStep> steps, IReadOnlyList<Primitive> primitives, double timeScale,
+        IReadOnlyDictionary<string, Formula> formulas)
     {
+        Formulas = formulas;
         this.timeScale = timeScale;
         Title = title;
         View = view;
@@ -44,6 +47,9 @@ public sealed class AnimationData
     public double Duration { get; }
 
     public IReadOnlyList<AnimationStep> Steps { get; }
+
+    /// <summary>The formulas of all texts (AsciiMath → SVG).</summary>
+    public IReadOnlyDictionary<string, Formula> Formulas { get; }
 
     internal IReadOnlyList<Primitive> Primitives => primitives;
 
@@ -83,6 +89,24 @@ public sealed class AnimationData
                 json.WriteEndObject();
             }
             json.WriteEndArray();
+            if (Formulas.Count > 0)
+            {
+                // "math": { "AsciiMath": { "box": [x, y, width, height], "svg": "…" } }, box in thousandths of an em
+                json.WriteStartObject("math");
+                foreach ((string source, Formula formula) in Formulas.OrderBy(f => f.Key, StringComparer.Ordinal))
+                {
+                    json.WriteStartObject(source);
+                    json.WriteStartArray("box");
+                    json.WriteNumberValue(formula.X);
+                    json.WriteNumberValue(formula.Y);
+                    json.WriteNumberValue(formula.Width);
+                    json.WriteNumberValue(formula.Height);
+                    json.WriteEndArray();
+                    json.WriteString("svg", formula.Svg);
+                    json.WriteEndObject();
+                }
+                json.WriteEndObject();
+            }
             json.WriteStartArray("primitives");
             foreach (Primitive primitive in primitives)
             {

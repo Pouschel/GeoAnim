@@ -1,15 +1,23 @@
-/* Lato from @fontsource 5.3.0, latin subset. SIL Open Font License 1.1, see LICENSE-lato.txt. */
+/* STIX Two Text from @fontsource 5.3.0, latin subset. SIL Open Font License 1.1, see LICENSE-stix-two-text.txt.
+   Formulas need no font: they are drawn as SVG paths (MathJax with the matching STIX Two glyphs). */
 @font-face {
-  font-family: 'Lato';
+  font-family: 'STIX Two Text';
   font-style: normal;
   font-weight: 400;
   font-display: block;
-  src: url(lato-latin-400-normal.woff2) format('woff2');
+  src: url(stix-two-text-latin-400-normal.woff2) format('woff2');
 }
 @font-face {
-  font-family: 'Lato';
+  font-family: 'STIX Two Text';
+  font-style: italic;
+  font-weight: 400;
+  font-display: block;
+  src: url(stix-two-text-latin-400-italic.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'STIX Two Text';
   font-style: normal;
   font-weight: 700;
   font-display: block;
-  src: url(lato-latin-700-normal.woff2) format('woff2');
+  src: url(stix-two-text-latin-700-normal.woff2) format('woff2');
 }

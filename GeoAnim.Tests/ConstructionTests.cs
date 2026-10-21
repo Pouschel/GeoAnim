@@ -24,7 +24,7 @@ public class ConstructionTests
         Assert.Equal(2, json.GetProperty("primitives").GetArrayLength());
         Assert.Equal("dot", json.GetProperty("primitives")[0].GetProperty("type").GetString());
         Assert.Equal("[[0,5,\"s\"]]", Keys(Track(json, 1, "r")));
-        Assert.Equal("[[0,\"A\",\"s\"]]", Keys(Track(json, 2, "text")));
+        Assert.Equal("[[0,\"$A$\",\"s\"]]", Keys(Track(json, 2, "text")));
     }
 
     [Fact]

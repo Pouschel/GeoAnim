@@ -10,7 +10,7 @@ body {
   flex-direction: column;
   background: #eceef2;
   color: #222;
-  font-family: Lato, 'Segoe UI', sans-serif;
+  font-family: 'STIX Two Text', 'Times New Roman', serif;
   overflow: hidden;
 }
 
@@ -41,7 +41,7 @@ h1 {
 }
 
 #scene text {
-  font-family: Lato, 'Segoe UI', sans-serif;
+  font-family: 'STIX Two Text', 'Times New Roman', serif;
 }
 
 #message {

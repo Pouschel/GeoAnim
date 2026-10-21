@@ -6,7 +6,7 @@ Animierte geometrische Konstruktionen aus einer kleinen Skriptsprache (oder aus 
 - **`geoanim export datei.geo`** schreibt **eine** HTML-Datei (rund 100 KB), die ohne Server läuft und weitergegeben werden kann.
 - **`geoanim exportdir ordner`** macht das für jede `.geo`-Datei im Ordner und allen Unterordnern (die HTML-Datei jeweils daneben); ein fehlerhaftes Skript wird gemeldet, die übrigen werden trotzdem exportiert.
                
-Gezeichnet wird mit SVG, also in jeder Größe scharf. Es gibt keine Abhängigkeiten außer der Schrift Lato (SIL Open Font License, `GeoAnim.Viewer/view/fonts/LICENSE-lato.txt`) und EmbedIO für den Webserver.
+Gezeichnet wird mit SVG, also in jeder Größe scharf. Formeln stehen in AsciiMath zwischen `$…$` und werden beim Übersetzen mit MathJax zu SVG-Pfaden; der Export enthält nur die Zeichen, die vorkommen. Die Schrift ist STIX Two (Text und Formeln aus einer Familie). Abhängigkeiten: siehe [Lizenz](#lizenz).
 
 ## Schnellstart
 
@@ -46,6 +46,8 @@ Weitere Beispiele in `Samples/`: Umkreis eines Dreiecks (mit bewegtem Eckpunkt) 
 ## Die Sprache
 
 Eine Anweisung pro Zeile; Einrückung ist egal. Alle Angaben werden nur durch Leerzeichen getrennt, ohne Kommas und Klammern (Koordinaten: `2 3`). `#` beginnt einen Kommentar (außer `#rgb` / `#rrggbb` als Farbe). Zahlen mit Punkt (`2.5`, `-0.5`). Hinter `title` und `step` ist der Rest der Zeile der Text, so wie er dasteht, ohne Anführungszeichen (auch `#` gehört dann dazu). Andere Texte (`text`, `label`) stehen in doppelten Anführungszeichen (`\"` für ein Anführungszeichen darin), weil danach noch Optionen folgen können. Namen bestehen aus Buchstaben, Ziffern und `_`, gefolgt von beliebig vielen `'` (`A'`, `P_1`); Groß-/Kleinschreibung zählt. Schlüsselwörter (`point`, `to`, `x`, …) sind als Namen nicht erlaubt.
+
+**Formeln:** In allen Texten (`title`, `step`, `text`, `label`) steht zwischen zwei `$` eine Formel in [AsciiMath](https://asciimath.org): `step Kreis um $A$ mit Radius $|AB|$`, `text t = "$alpha + beta = 180^@$" at 2 3`, `$bar(AB)$`, `$vec(BD)$`, `$NN sub RR$`. `\$` ist ein Dollarzeichen. Ein `$` ohne Gegenstück ist ein Fehler mit Zeile und Spalte. Punkte sind standardmäßig mit ihrem Namen als Formel beschriftet: kursiv, `P_1` mit tiefgestellter 1, `A'` mit Strich.
 
 Koordinaten sind mathematisch: die y-Achse zeigt nach oben. Der Maßstab ist in beiden Richtungen gleich; das Bild hat die Form des Bereichs aus `view`.
 
@@ -105,7 +107,7 @@ Hinter einer Anweisung, in beliebiger Reihenfolge:
 | `color red` / `color #1565c0` | alle Objekte | Farbe |
 | `width 3` | Strecke, Gerade, Strahl, Kreis, Vieleck | Linienbreite in Punkt |
 | `size 6` | Punkt (Radius), Text (Schriftgröße) | Größe in Punkt |
-| `label "A'"` / `nolabel` | Punkt | Beschriftung (Standard: der Name) bzw. keine |
+| `label "$A'$"` / `nolabel` | Punkt | Beschriftung (Standard: der Name als Formel) bzw. keine |
 | `offset 0.3 -0.5` | Punkt (Beschriftung), Text | Lage in Koordinateneinheiten relativ zum Punkt: dort beginnt die Grundlinie des Textes (bei Text an festen Koordinaten: seine Mitte); ohne `offset` steht die Beschriftung knapp rechts oberhalb |
 | `fill lightblue` | Vieleck | Füllfarbe (Standard: die Linienfarbe) |
 | `opacity 0.3` | Vieleck | Deckkraft der Füllung (Standard 0.2) |
@@ -155,20 +157,28 @@ File.WriteAllText("mittelsenkrechte.html", HtmlExporter.Export(c.Build()));
 | Projekt | Inhalt |
 |---|---|
 | `GeoAnim.Core` | Geometrie (Punkte, Strecken, Kreise, Schnittpunkte, Abhängigkeiten), Zeitleiste (`Construction`: Schritte und Aktionen), Animationsdaten (`AnimationData.ToJson`) |
+| `GeoAnim.Formulas` | Formeln: `MathText` zerlegt Texte in Text und `$…$`; `MathRenderer` lässt MathJax (AsciiMath → SVG, Schrift STIX2) in der JavaScript-Engine Jint laufen (Start unter einer Sekunde, dann wenige Millisekunden je Formel). MathJax und die Zeichendaten liegen in `mathjax/` und `mathjax-stix2-font/` als eingebettete Ressourcen |
 | `GeoAnim.Script` | Skriptsprache: Lexer, Parser, Übersetzung in eine `Construction`; Fehler als `ScriptError` mit Zeile/Spalte |
 | `GeoAnim.Viewer` | Player (`view/`: `player.html`, `player.js`, `player.css`, Schrift) als eingebettete Ressourcen; `HtmlExporter` für die eigenständige Datei |
 | `GeoAnim` | Kommandozeile `geoanim serve` (EmbedIO, Dateibeobachtung, `/animation.json`) und `geoanim export` |
-| `GeoAnim.Tests` | xUnit: Geometrie, Zeitleiste, Sprache, Export, Server |
+| `GeoAnim.Tests` | xUnit: Geometrie, Zeitleiste, Sprache, Formeln, Export, Server, alle Beispiele in `Samples` |
 
-**Animationsdaten:** Ein Objekt besteht aus Grundelementen (`dot`, `line`, `arc`, `polygon`, `text`) mit je einer Spur pro Eigenschaft: Schlüssel `[zeit, wert]` oder `[zeit, wert, verlauf]` (Zeit in ms; Verlauf `s` = Sprung, `i`/`o`/`io` = ease in/out/in-out, sonst linear). Zwischen zwei Schlüsseln interpoliert der Player mit dem Verlauf des späteren; vor dem ersten Schlüssel ist ein Element nicht da. Dazu kommen Titel, Bereich, Hintergrund, Gitter, Achsen, Gesamtdauer und die Schritte (`caption`, `start`, `end`).
+**Animationsdaten:** Ein Objekt besteht aus Grundelementen (`dot`, `line`, `arc`, `polygon`, `text`) mit je einer Spur pro Eigenschaft: Schlüssel `[zeit, wert]` oder `[zeit, wert, verlauf]` (Zeit in ms; Verlauf `s` = Sprung, `i`/`o`/`io` = ease in/out/in-out, sonst linear). Zwischen zwei Schlüsseln interpoliert der Player mit dem Verlauf des späteren; vor dem ersten Schlüssel ist ein Element nicht da. Dazu kommen Titel, Bereich, Hintergrund, Gitter, Achsen, Gesamtdauer, die Schritte (`caption`, `start`, `end`) und die Formeln aller Texte (`math`: AsciiMath → `box` = viewBox in Tausendstel em mit der Grundlinie bei y = 0, `svg` = Pfade in `currentColor`).
 
 ## Lizenz
 
-GeoAnim steht unter der MIT-Lizenz (`LICENSE`). Fremde Bestandteile: die Schrift Lato (SIL Open Font License 1.1, `GeoAnim.Viewer/view/fonts/LICENSE-lato.txt`), EmbedIO (MIT, als NuGet-Paket), für die Tests xUnit (Apache 2.0).
+GeoAnim steht unter der MIT-Lizenz (`LICENSE`). Fremde Bestandteile:
+
+| Bestandteil | Lizenz | wo |
+|---|---|---|
+| Schrift STIX Two Text (Fontsource, lateinische Zeichen) | SIL Open Font License 1.1 | `GeoAnim.Viewer/view/fonts/`, steckt in jedem Export |
+| MathJax 4 (Auszug) und die Zeichendaten von MathJax STIX2 (aus den STIX-Two-Schriften, OFL 1.1) | Apache 2.0 | `GeoAnim.Formulas/mathjax*/`; im Export stehen nur die erzeugten Pfade |
+| Jint | BSD 2-Clause | NuGet-Paket |
+| EmbedIO | MIT | NuGet-Paket |
+| xUnit (nur Tests) | Apache 2.0 | NuGet-Paket |
 
 ## Ideen für später
 
-- Formeln in Beschreibungen und im Bild mit MathJax (AsciiMath als Eingabe, SVG als Ausgabe)
 - Winkelmarkierungen, Kreisbögen als eigene Objekte, gestrichelte Linien, Pfeile
 - Farbe oder Breite eines Objekts in einem späteren Schritt ändern (`set k color red`)
 - Export als Video oder animiertes SVG
