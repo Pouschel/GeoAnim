@@ -9,6 +9,11 @@
       "commandName": "Project",
       "commandLineArgs": "export Samples/perpendicular-bisector.geo",
       "workingDirectory": "$(ProjectDir).."
+    },
+    "export dir": {
+      "commandName": "Project",
+      "commandLineArgs": "exportdir Samples",
+      "workingDirectory": "$(ProjectDir).."
     }
   }
 }

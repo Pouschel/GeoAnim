@@ -4,6 +4,21 @@ namespace GeoAnim.Tests;
 
 public class ConstructionTests
 {
+    [Fact]
+    public void KeysOnAStraightLineAreLeftOut()
+    {
+        static Primitive.Key K(double t, object v, Easing e = Easing.Linear) => new(t, v, e);
+        List<Primitive.Key> keys =
+        [
+            K(0, 0.0, Easing.Step), K(40, 1.0), K(80, 2.0), K(120, 3.0005), K(160, 4.0),
+            K(200, 6.0), K(240, 8.0), K(240, 0.0, Easing.Step), K(280, 0.5), K(320, 1.0, Easing.EaseInOut),
+        ];
+        // 40 → 120 lie on the line from 0 to 160; at 200 the slope changes; steps and eased keys stay
+        Assert.Equal([0.0, 160, 240, 240, 280, 320], AnimationData.Simplify(keys).Select(k => k.Time));
+        List<Primitive.Key> points = [K(0, new[] { 0.0, 0 }), K(40, new[] { 1.0, 2 }), K(80, new[] { 2.0, 4 }), K(120, new[] { 3.0, 7 })];
+        Assert.Equal([0.0, 80, 120], AnimationData.Simplify(points).Select(k => k.Time));
+    }
+
     private static JsonElement Json(Construction c) => JsonDocument.Parse(c.Build().ToJson()).RootElement;
 
     private static JsonElement Track(JsonElement json, int primitive, string property) =>
@@ -131,10 +146,22 @@ public class ConstructionTests
         JsonElement json = Json(c);
         JsonElement x = Track(json, 4, "x");
         JsonElement y = Track(json, 4, "y");
-        // halfway at 90°: (0, 2), not on the chord
-        Assert.Equal(200, x[5][0].GetDouble());
-        Assert.Equal(0, x[5][1].GetDouble(), 4);
-        Assert.Equal(2, y[5][1].GetDouble(), 4);
+        // halfway at 90°: (0, 2), not on the chord – as the player interpolates the keys (linearly between samples)
+        static double At(JsonElement track, double t)
+        {
+            JsonElement[] keys = track.EnumerateArray().ToArray();
+            int i = Array.FindLastIndex(keys, k => k[0].GetDouble() <= t);
+            if (i == keys.Length - 1)
+            {
+                return keys[i][1].GetDouble();
+            }
+            double t0 = keys[i][0].GetDouble(), t1 = keys[i + 1][0].GetDouble();
+            return keys[i][1].GetDouble() + (keys[i + 1][1].GetDouble() - keys[i][1].GetDouble()) * (t - t0) / (t1 - t0);
+        }
+        Assert.Equal(0, At(x, 200), 2);
+        Assert.Equal(2, At(y, 200), 2);
+        // fewer keys than samples: those on a straight line are left out
+        Assert.True(x.GetArrayLength() < 11, "keys " + x.GetArrayLength());
     }
 
     [Fact]

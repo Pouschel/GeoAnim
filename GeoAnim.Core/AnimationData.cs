@@ -118,7 +118,7 @@ public sealed class AnimationData
                 foreach (KeyValuePair<string, List<Primitive.Key>> track in primitive.Tracks)
                 {
                     json.WriteStartArray(track.Key);
-                    foreach (Primitive.Key key in track.Value)
+                    foreach (Primitive.Key key in Simplify(track.Value, ToleranceFor(primitive.Type, track.Key)))
                     {
                         // [time, value] or [time, value, easing]
                         json.WriteStartArray();
@@ -142,6 +142,77 @@ public sealed class AnimationData
     }
 
     private static double RoundTime(double time) => Math.Round(time, 1);
+
+    /// <summary>
+    /// How far a left-out key may be from the straight line between its neighbours: a quarter point for coordinates
+    /// (a point is 1/1280 of the picture's width), else a thousandth (points, degrees, opacity).
+    /// </summary>
+    private double ToleranceFor(string type, string property)
+    {
+        bool coordinate = property is "x" or "y" or "x1" or "y1" or "x2" or "y2" or "cx" or "cy" or "points"
+            || (type == "arc" && property == "r");
+        return coordinate ? 0.25 * (View.XMax - View.XMin) / 1280 : 1e-3;
+    }
+
+    /// <summary>
+    /// Leaves out the keys the player gets anyway: in a run of linear changes (moving points are computed every 40 ms),
+    /// a key that lies on the straight line between the keys kept around it, within <paramref name="tolerance"/>.
+    /// </summary>
+    internal static List<Primitive.Key> Simplify(List<Primitive.Key> keys, double tolerance = 1e-3)
+    {
+        if (keys.Count <= 2)
+        {
+            return keys;
+        }
+        var kept = new List<Primitive.Key> { keys[0] };
+        int from = 0;
+        for (int to = 2; to < keys.Count; to++)
+        {
+            if (!Bridges(keys, from, to, tolerance))
+            {
+                // the key before can't be left out: it starts the next run
+                kept.Add(keys[to - 1]);
+                from = to - 1;
+            }
+        }
+        kept.Add(keys[^1]);
+        return kept;
+    }
+
+    // whether the straight line from keys[from] to keys[to] passes all keys between them
+    private static bool Bridges(List<Primitive.Key> keys, int from, int to, double tolerance)
+    {
+        Primitive.Key a = keys[from];
+        Primitive.Key b = keys[to];
+        double span = b.Time - a.Time;
+        if (span <= 0)
+        {
+            return false;
+        }
+        for (int i = from + 1; i <= to; i++)
+        {
+            if (keys[i].Easing != Easing.Linear)
+            {
+                return false;
+            }
+        }
+        for (int i = from + 1; i < to; i++)
+        {
+            double u = (keys[i].Time - a.Time) / span;
+            bool close = (a.Value, b.Value, keys[i].Value) switch
+            {
+                (double x, double y, double v) => Math.Abs(x + (y - x) * u - v) <= tolerance,
+                (double[] x, double[] y, double[] v) when x.Length == y.Length && y.Length == v.Length =>
+                    Enumerable.Range(0, x.Length).All(k => Math.Abs(x[k] + (y[k] - x[k]) * u - v[k]) <= tolerance),
+                _ => false,
+            };
+            if (!close)
+            {
+                return false;
+            }
+        }
+        return true;
+    }
 
     private static double RoundValue(double value) => Math.Round(value, 4);
 
