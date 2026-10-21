@@ -114,6 +114,25 @@ public class ScriptTests
     }
 
     [Fact]
+    public void EmptyTogetherBlocksTakeNoTime()
+    {
+        AnimationData animation = ScriptCompiler.Compile("""
+            point A = 0 0
+            point B = 1 0
+            step leer
+              together
+              end
+            step nur versteckt
+              together
+                circle k = center A through B hidden
+              end
+              segment s = A B duration 800
+            """);
+        // the first step is empty (500 ms by default), the second takes as long as the segment
+        Assert.Equal([(0.0, 500.0), (500.0, 1300.0)], animation.Steps.Select(s => (s.Start, s.End)));
+    }
+
+    [Fact]
     public void OffsetIsInCoordinates()
     {
         JsonElement primitives = JsonDocument.Parse(ScriptCompiler.Compile("point A = 1 2 offset 0.5 -0.25\ntext t = \"x\" at A offset 1 1").ToJson())

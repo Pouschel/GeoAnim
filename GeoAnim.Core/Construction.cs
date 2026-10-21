@@ -358,6 +358,11 @@ public sealed class Construction
     /// <summary>Runs actions that start at the same time (one action, or a together block).</summary>
     private void Run(List<TimelineAction> actions)
     {
+        // an empty together block (or one with hidden definitions only) takes no time
+        if (actions.Count == 0)
+        {
+            return;
+        }
         RenderContext ctx = Context;
         if (currentStep == null)
         {

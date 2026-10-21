@@ -24,6 +24,17 @@ polygon ABD = A B D
 hide k1 k2
 
 step Erweitere $DA$ und $DB$ zu Strahlen
-#together
+together
+  ray dar = D A
+  ray dbr = D B
+end
 
-#end
+step Zeichne um $B$ einen Kreis mir dem Radius $BC$ ... 
+circle kb = center B through C
+
+step Sei nun $G$ der Schnittpunkt dieses Kreises mit dem Strahl $BD$
+point G = intersect dbr kb
+
+
+step ... und um $D$ einen Kreis mit dem Radius $DG$
+#circle kd = center D through G
