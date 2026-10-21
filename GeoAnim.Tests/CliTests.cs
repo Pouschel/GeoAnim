@@ -22,23 +22,23 @@ public sealed class CliTests : IDisposable
     [Fact]
     public void LiveScriptKeepsTheLastGoodAnimationAfterAMistake()
     {
-        string path = Write("a.geo", "title \"one\"\npoint A = (1, 1)");
+        string path = Write("a.geo", "title one\npoint A = 1 1");
         using var script = new LiveScript(path);
         Assert.Equal(1, script.Version);
         Assert.Equal("one", State(script).GetProperty("animation").GetProperty("title").GetString());
 
-        File.WriteAllText(path, "title \"one\"\npoint A = (1, 1) colour red");
+        File.WriteAllText(path, "title one\npoint A = 1 1 colour red");
         script.Compile();
         JsonElement state = State(script);
         Assert.Equal(2, script.Version);
-        Assert.Equal("Line 2, column 18: Unknown option \"colour\"", state.GetProperty("error").GetString()!.Split(" (")[0]);
+        Assert.Equal("Line 2, column 15: Unknown option \"colour\"", state.GetProperty("error").GetString()!.Split(" (")[0]);
         Assert.Equal("one", state.GetProperty("animation").GetProperty("title").GetString());
 
         // no change, no new version
         script.Compile();
         Assert.Equal(2, script.Version);
 
-        File.WriteAllText(path, "title \"two\"");
+        File.WriteAllText(path, "title two");
         script.Compile();
         Assert.Equal(JsonValueKind.Null, State(script).GetProperty("error").ValueKind);
         Assert.Equal("two", State(script).GetProperty("animation").GetProperty("title").GetString());
@@ -47,11 +47,11 @@ public sealed class CliTests : IDisposable
     [Fact]
     public async Task LiveScriptNoticesSavedFiles()
     {
-        string path = Write("b.geo", "title \"one\"");
+        string path = Write("b.geo", "title one");
         using var script = new LiveScript(path);
         var compiled = new TaskCompletionSource();
         script.Compiled += _ => compiled.TrySetResult();
-        await File.WriteAllTextAsync(path, "title \"two\"");
+        await File.WriteAllTextAsync(path, "title two");
         await compiled.Task.WaitAsync(TimeSpan.FromSeconds(10));
         Assert.Equal("two", State(script).GetProperty("animation").GetProperty("title").GetString());
     }
@@ -59,7 +59,7 @@ public sealed class CliTests : IDisposable
     [Fact]
     public async Task ServerDeliversPlayerAndAnimation()
     {
-        using var script = new LiveScript(Write("c.geo", "title \"served\"\npoint A = (1, 1)"));
+        using var script = new LiveScript(Write("c.geo", "title served\npoint A = 1 1"));
         using var server = new LiveServer(script, LiveServer.FindFreePort(18080));
         using var client = new HttpClient { BaseAddress = new Uri(server.Url) };
 

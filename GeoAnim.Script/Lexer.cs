@@ -31,8 +31,10 @@ internal readonly record struct Token(TokenKind Kind, string Text, int Line, int
 
 /// <summary>
 /// Splits a script into tokens: names (letters, digits, _ and trailing primes like A'), numbers (with a decimal point),
-/// strings in double quotes, colours (#rgb or #rrggbb), the symbols ( ) , = .. and line ends. A # that does not start a
-/// colour starts a comment until the end of the line.
+/// strings in double quotes, colours (#rgb or #rrggbb), the symbols = and .. and line ends. A # that does not start a
+/// colour starts a comment until the end of the line. After "title" or "step" at the start of a line, the rest of the
+/// line (trimmed, taken literally, # included) is one string. Values are separated by spaces only: commas and parentheses
+/// are errors with a hint.
 /// </summary>
 internal static class Lexer
 {
@@ -138,14 +140,28 @@ internal static class Lexer
                 {
                     i++;
                 }
-                tokens.Add(new Token(TokenKind.Name, source.Substring(start, i - start), line, column));
+                string word = source.Substring(start, i - start);
+                bool startsLine = tokens.Count == 0 || tokens[^1].Kind == TokenKind.NewLine;
+                tokens.Add(new Token(TokenKind.Name, word, line, column));
+                if (startsLine && word is "title" or "step")
+                {
+                    tokens.Add(RestOfLine(source, ref i, line, lineStart));
+                }
             }
             else if (c == '.' && i + 1 < source.Length && source[i + 1] == '.')
             {
                 tokens.Add(new Token(TokenKind.Symbol, "..", line, column));
                 i += 2;
             }
-            else if (c is '(' or ')' or ',' or '=')
+            else if (c == ',')
+            {
+                throw new ScriptError(line, column, "No commas: separate values with spaces, e.g. \"point S T = intersect k1 k2\".");
+            }
+            else if (c is '(' or ')')
+            {
+                throw new ScriptError(line, column, "Coordinates are written without parentheses and comma, e.g. \"point A = 2 3\".");
+            }
+            else if (c == '=')
             {
                 tokens.Add(new Token(TokenKind.Symbol, c.ToString(), line, column));
                 i++;
@@ -158,6 +174,21 @@ internal static class Lexer
         tokens.Add(new Token(TokenKind.NewLine, "\n", line, i - lineStart + 1));
         tokens.Add(new Token(TokenKind.End, string.Empty, line + 1, 1));
         return tokens;
+    }
+
+    // the text after "title" or "step": up to the end of the line, without the spaces around it
+    private static Token RestOfLine(string source, ref int i, int line, int lineStart)
+    {
+        while (i < source.Length && source[i] is ' ' or '\t')
+        {
+            i++;
+        }
+        int start = i;
+        while (i < source.Length && source[i] != '\n')
+        {
+            i++;
+        }
+        return new Token(TokenKind.String, source.Substring(start, i - start).TrimEnd(), line, start - lineStart + 1);
     }
 
     // "-2", "-.5" or ".5" (but not the second dot of "..")

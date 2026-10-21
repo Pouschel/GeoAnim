@@ -119,15 +119,17 @@ public sealed class GeoPoint : GeoObject
         dot.Animate("color", span, color.ToHex());
         if (label != null)
         {
-            Vec offset = Options.Offset ?? Defaults.LabelOffset;
+            // an offset is in coordinates; the default distance is in points
+            Vec offset = Options.Offset ?? new Vec(0, 0);
+            Vec distance = Options.Offset == null ? Defaults.LabelOffset : new Vec(0, 0);
             label.Animate("opacity", span, visibility * Reveal);
             if (IsDefined)
             {
-                label.Animate("x", span, position.X);
-                label.Animate("y", span, position.Y);
+                label.Animate("x", span, position.X + offset.X);
+                label.Animate("y", span, position.Y + offset.Y);
             }
-            label.Animate("dx", span, offset.X);
-            label.Animate("dy", span, offset.Y);
+            label.Animate("dx", span, distance.X);
+            label.Animate("dy", span, distance.Y);
             label.Animate("size", span, Defaults.LabelSize);
             label.Animate("color", span, color.ToHex());
         }

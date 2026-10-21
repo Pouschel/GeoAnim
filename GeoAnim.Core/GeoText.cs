@@ -42,15 +42,17 @@ public sealed class GeoText : GeoObject
             text.Animate("text", span, Content);
             text.Animate("anchor", span, anchor == null ? "middle" : "start");
         }
-        Vec offset = Options.Offset ?? (anchor == null ? new Vec(0, 0) : Defaults.LabelOffset);
+        // an offset is in coordinates; the default distance from a point is in points
+        Vec offset = Options.Offset ?? new Vec(0, 0);
+        Vec distance = Options.Offset == null && anchor != null ? Defaults.LabelOffset : new Vec(0, 0);
         text.Animate("opacity", span, Visibility * Reveal);
         if (IsDefined)
         {
-            text.Animate("x", span, Position.X);
-            text.Animate("y", span, Position.Y);
+            text.Animate("x", span, Position.X + offset.X);
+            text.Animate("y", span, Position.Y + offset.Y);
         }
-        text.Animate("dx", span, offset.X);
-        text.Animate("dy", span, offset.Y);
+        text.Animate("dx", span, distance.X);
+        text.Animate("dy", span, distance.Y);
         text.Animate("size", span, Options.Size ?? Defaults.TextSize);
         text.Animate("color", span, ColorOr(Defaults.LineColor).ToHex());
     }

@@ -26,7 +26,11 @@ public sealed record Options
     /// <summary>A point without label.</summary>
     public bool NoLabel { get; init; }
 
-    /// <summary>Offset of a text (or point label) in points, x to the right and y upwards.</summary>
+    /// <summary>
+    /// Offset of a text (or point label) in units of the coordinate system: the start of the text's baseline (its centre
+    /// for a text at fixed coordinates) lies at the position plus this offset. Without it, a label sits a little to the
+    /// upper right of its point.
+    /// </summary>
     public Vec? Offset { get; init; }
 
     /// <summary>Define the object without showing it (show it later with Show).</summary>

@@ -80,7 +80,7 @@ internal sealed class Parser
         switch (word.Text)
         {
             case "title":
-                statement = new TitleStatement(l, c, ExpectString("the title"));
+                statement = new TitleStatement(l, c, Next().Text);
                 break;
             case "view":
                 statement = ParseView(word);
@@ -99,7 +99,7 @@ internal sealed class Parser
                 {
                     throw Error(word, "A step cannot begin inside a \"together\" block.");
                 }
-                statement = new StepStatement(l, c, ExpectString("the description of the step"));
+                statement = new StepStatement(l, c, Next().Text);
                 break;
             case "point":
                 statement = ParsePoint(word);
@@ -147,10 +147,6 @@ internal sealed class Parser
     {
         ExpectWord("x");
         (double xMin, double xMax) = ParseRange();
-        if (Current.Is(","))
-        {
-            position++;
-        }
         ExpectWord("y");
         (double yMin, double yMax) = ParseRange();
         var view = new ViewWindow(xMin, xMax, yMin, yMax);
@@ -175,15 +171,15 @@ internal sealed class Parser
 
     private DefineStatement ParsePoint(Token word)
     {
+        // several names only for intersections: "point S T = intersect k1 k2"
         var names = new List<NameRef> { ExpectNewName() };
-        while (Current.Is(","))
+        while (Current.Kind == TokenKind.Name)
         {
-            position++;
             names.Add(ExpectNewName());
         }
         ExpectSymbol("=");
         Definition definition;
-        if (Current.Is("("))
+        if (Current.Kind == TokenKind.Number)
         {
             definition = new CoordinatesDefinition(ParseCoordinates());
         }
@@ -206,7 +202,7 @@ internal sealed class Parser
         }
         else
         {
-            throw Error(Current, $"Expected coordinates like (2, 3), \"midpoint A B\", \"intersect k1 k2\" or \"on k at 30\" after \"=\", not {Current.Describe()}.");
+            throw Error(Current, $"Expected coordinates like 2 3, \"midpoint A B\", \"intersect k1 k2\" or \"on k at 30\" after \"=\", not {Current.Describe()}.");
         }
         if (names.Count > 1 && definition is not IntersectDefinition)
         {
@@ -274,10 +270,6 @@ internal sealed class Parser
         while (Current.Kind == TokenKind.Name && !OptionNames.Contains(Current.Text))
         {
             vertices.Add(ExpectName());
-            if (Current.Is(","))
-            {
-                position++;
-            }
         }
         if (vertices.Count < 3)
         {
@@ -292,7 +284,7 @@ internal sealed class Parser
         ExpectSymbol("=");
         string content = ExpectString("the text");
         ExpectWord("at");
-        TextDefinition definition = Current.Is("(")
+        TextDefinition definition = Current.Kind == TokenKind.Number
             ? new TextDefinition(content, ParseCoordinates(), null)
             : new TextDefinition(content, null, ExpectName());
         return new DefineStatement(word.Line, word.Column, "text", [name], definition, ParseOptions());
@@ -304,10 +296,6 @@ internal sealed class Parser
         while (Current.Kind == TokenKind.Name && !OptionNames.Contains(Current.Text))
         {
             targets.Add(ExpectName());
-            if (Current.Is(","))
-            {
-                position++;
-            }
         }
         if (targets.Count == 0)
         {
@@ -320,7 +308,8 @@ internal sealed class Parser
     {
         NameRef point = ExpectName();
         ExpectWord("to");
-        if (Current.Kind == TokenKind.Number)
+        // one number: angle or position on the path; two numbers: coordinates
+        if (Current.Kind == TokenKind.Number && tokens[position + 1].Kind != TokenKind.Number)
         {
             return new MoveStatement(word.Line, word.Column, point, null, ExpectNumber("the target"), ParseOptions());
         }
@@ -330,11 +319,8 @@ internal sealed class Parser
 
     private Vec ParseCoordinates()
     {
-        ExpectSymbol("(");
         double x = ExpectNumber("the x coordinate");
-        ExpectSymbol(",");
         double y = ExpectNumber("the y coordinate");
-        ExpectSymbol(")");
         return new Vec(x, y);
     }
 
