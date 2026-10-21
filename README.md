@@ -1,5 +1,5 @@
 # GeoAnim
-
+          
 Animierte geometrische Konstruktionen aus einer kleinen Skriptsprache (oder aus C#). Eine Konstruktion besteht aus Schritten mit Beschreibung; Punkte erscheinen, Strecken wachsen, Kreise werden wie mit dem Zirkel gezogen, Punkte bewegen sich, und alles, was von ihnen abhängt, folgt exakt.
 
 - **`geoanim serve datei.geo`** zeigt die Animation im Browser und aktualisiert sie bei jedem Speichern der Datei. Der Player bleibt dabei am aktuellen Schritt; Fehler erscheinen mit Zeile und Spalte über dem Bild.
@@ -15,7 +15,7 @@ dotnet run --project GeoAnim -- serve Samples/perpendicular-bisector.geo
 dotnet run --project GeoAnim -- export Samples/circumcircle.geo
 ```
 
-In Visual Studio: Startprojekt `GeoAnim`; die Startprofile „serve sample“ und „export sample“ (`GeoAnim/Properties/launchSettings.json`) arbeiten im Repository-Ordner, dort lässt sich die Datei austauschen. Optionen: `serve … --port 8080 --no-browser`, `export … -o ziel.html`.
+In Visual Studio: Startprojekt `GeoAnim`; die Startprofile „serve sample“ und „export sample“ (`GeoAnim/Properties/launchSettings.json`) arbeiten im Repository-Ordner, dort lässt sich die Datei austauschen. Alle `.geo`-Dateien aus `Samples` samt Unterordnern erscheinen im Projekt `GeoAnim` unter „Samples“, neue Dateien von selbst. Optionen: `serve … --port 8080 --no-browser`, `export … -o ziel.html`.
 
 **Player:** Abspielen/Pause (großer runder Knopf, Leertaste, Klick ins Bild), vorheriger/nächster Schritt (← →), Anfang/Ende (Pos1/Ende), Schritt wiederholen (R), Schieberegler mit Marken an den Schrittenden. Die Animation beginnt angehalten beim Startbild und läuft beim Abspielen bis zum Ende durch; „nach jedem Schritt anhalten“ lässt sich zuschalten (S). Geschwindigkeit ¼× bis 4×: Klick auf die Anzeige öffnet die Auswahl, außerdem − / + oder das Mausrad über der Anzeige.
 
@@ -147,6 +147,10 @@ File.WriteAllText("mittelsenkrechte.html", HtmlExporter.Export(c.Build()));
 | `GeoAnim.Tests` | xUnit: Geometrie, Zeitleiste, Sprache, Export, Server |
 
 **Animationsdaten:** Ein Objekt besteht aus Grundelementen (`dot`, `line`, `arc`, `polygon`, `text`) mit je einer Spur pro Eigenschaft: Schlüssel `[zeit, wert]` oder `[zeit, wert, verlauf]` (Zeit in ms; Verlauf `s` = Sprung, `i`/`o`/`io` = ease in/out/in-out, sonst linear). Zwischen zwei Schlüsseln interpoliert der Player mit dem Verlauf des späteren; vor dem ersten Schlüssel ist ein Element nicht da. Dazu kommen Titel, Bereich, Hintergrund, Gitter, Achsen, Gesamtdauer und die Schritte (`caption`, `start`, `end`).
+
+## Lizenz
+
+GeoAnim steht unter der MIT-Lizenz (`LICENSE`). Fremde Bestandteile: die Schrift Lato (SIL Open Font License 1.1, `GeoAnim.Viewer/view/fonts/LICENSE-lato.txt`), EmbedIO (MIT, als NuGet-Paket), für die Tests xUnit (Apache 2.0).
 
 ## Ideen für später
 

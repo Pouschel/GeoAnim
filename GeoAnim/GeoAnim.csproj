@@ -22,4 +22,9 @@
     <InternalsVisibleTo Include="GeoAnim.Tests" />
   </ItemGroup>
 
+  <!-- All scripts in Samples (with subfolders) show in Visual Studio under this project; new files appear by themselves. -->
+  <ItemGroup>
+    <None Include="..\Samples\**\*.geo" LinkBase="Samples" />
+  </ItemGroup>
+
 </Project>
