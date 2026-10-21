@@ -4,7 +4,7 @@ Animierte geometrische Konstruktionen aus einer kleinen Skriptsprache (oder aus 
 
 - **`geoanim serve datei.geo`** zeigt die Animation im Browser und aktualisiert sie bei jedem Speichern der Datei. Der Player bleibt dabei am aktuellen Schritt; Fehler erscheinen mit Zeile und Spalte über dem Bild.
 - **`geoanim export datei.geo`** schreibt **eine** HTML-Datei (rund 100 KB), die ohne Server läuft und weitergegeben werden kann.
-
+               
 Gezeichnet wird mit SVG, also in jeder Größe scharf. Es gibt keine Abhängigkeiten außer der Schrift Lato (SIL Open Font License, `GeoAnim.Viewer/view/fonts/LICENSE-lato.txt`) und EmbedIO für den Webserver.
 
 ## Schnellstart

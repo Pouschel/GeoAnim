@@ -431,26 +431,26 @@ dotnet run --project GeoAnim -- export Samples/circumcircle.geo
 <p><strong>Player:</strong> Abspielen/Pause (großer runder Knopf, Leertaste, Klick ins Bild), vorheriger/nächster Schritt (← →), Anfang/Ende (Pos1/Ende), Schritt wiederholen (R), Schieberegler mit Marken an den Schrittenden. Die Animation beginnt angehalten beim Startbild und läuft beim Abspielen bis zum Ende durch; „nach jedem Schritt anhalten“ lässt sich zuschalten (S). Geschwindigkeit ¼× bis 4×: Klick auf die Anzeige öffnet die Auswahl, außerdem − / + oder das Mausrad über der Anzeige.</p>
 <h2 id="beispiel">Beispiel</h2>
 <pre>
-title "Mittelsenkrechte"
-view x -1 .. 11, y -1 .. 7
+title Mittelsenkrechte
+view x -1 .. 11 y -1 .. 7
 
-point A = (3, 3)
-point B = (7, 3)
+point A = 3 3
+point B = 7 3
 
-step "Wir zeichnen die Strecke AB."
+step Wir zeichnen die Strecke AB.
   segment AB = A B
 
-step "Kreise um A und B mit Radius AB."
+step Kreise um A und B mit Radius AB.
   circle k1 = center A through B color gray
   circle k2 = center B through A color gray
 
-step "Die Gerade durch die Schnittpunkte ist die Mittelsenkrechte."
-  point S, T = intersect k1 k2 color red
+step Die Gerade durch die Schnittpunkte ist die Mittelsenkrechte.
+  point S T = intersect k1 k2 color red
   line m = S T color red width 3
 </pre>
 <p>Weitere Beispiele in <code>Samples/</code>: Umkreis eines Dreiecks (mit bewegtem Eckpunkt) und Satz des Thales (Punkt läuft auf dem Kreis).</p>
 <h2 id="die-sprache">Die Sprache</h2>
-<p>Eine Anweisung pro Zeile; Einrückung ist egal. <code>#</code> beginnt einen Kommentar (außer <code>#rgb</code> / <code>#rrggbb</code> als Farbe). Zahlen mit Punkt (<code>2.5</code>, <code>-0.5</code>), Texte in doppelten Anführungszeichen (<code>\&quot;</code> für ein Anführungszeichen darin). Namen bestehen aus Buchstaben, Ziffern und <code>_</code>, gefolgt von beliebig vielen <code>'</code> (<code>A'</code>, <code>P_1</code>); Groß-/Kleinschreibung zählt. Schlüsselwörter (<code>point</code>, <code>to</code>, <code>x</code>, …) sind als Namen nicht erlaubt.</p>
+<p>Eine Anweisung pro Zeile; Einrückung ist egal. Alle Angaben werden nur durch Leerzeichen getrennt, ohne Kommas und Klammern (Koordinaten: <code>2 3</code>). <code>#</code> beginnt einen Kommentar (außer <code>#rgb</code> / <code>#rrggbb</code> als Farbe). Zahlen mit Punkt (<code>2.5</code>, <code>-0.5</code>). Hinter <code>title</code> und <code>step</code> ist der Rest der Zeile der Text, so wie er dasteht, ohne Anführungszeichen (auch <code>#</code> gehört dann dazu). Andere Texte (<code>text</code>, <code>label</code>) stehen in doppelten Anführungszeichen (<code>\&quot;</code> für ein Anführungszeichen darin), weil danach noch Optionen folgen können. Namen bestehen aus Buchstaben, Ziffern und <code>_</code>, gefolgt von beliebig vielen <code>'</code> (<code>A'</code>, <code>P_1</code>); Groß-/Kleinschreibung zählt. Schlüsselwörter (<code>point</code>, <code>to</code>, <code>x</code>, …) sind als Namen nicht erlaubt.</p>
 <p>Koordinaten sind mathematisch: die y-Achse zeigt nach oben. Der Maßstab ist in beiden Richtungen gleich; das Bild hat die Form des Bereichs aus <code>view</code>.</p>
 <h3 id="einstellungen-vor-dem-ersten-schritt">Einstellungen (vor dem ersten Schritt)</h3>
 <table>
@@ -462,11 +462,11 @@ step "Die Gerade durch die Schnittpunkte ist die Mittelsenkrechte."
 </thead>
 <tbody>
 <tr>
-<td><code>title &quot;…&quot;</code></td>
-<td>Überschrift über dem Bild</td>
+<td><code>title Mittelsenkrechte</code></td>
+<td>Überschrift über dem Bild (Rest der Zeile)</td>
 </tr>
 <tr>
-<td><code>view x -1 .. 11, y -1 .. 7</code></td>
+<td><code>view x -1 .. 11 y -1 .. 7</code></td>
 <td>sichtbarer Bereich (Standard wie hier); vor dem ersten Objekt</td>
 </tr>
 <tr>
@@ -493,7 +493,7 @@ step "Die Gerade durch die Schnittpunkte ist die Mittelsenkrechte."
 </thead>
 <tbody>
 <tr>
-<td><code>point A = (2, 3)</code></td>
+<td><code>point A = 2 3</code></td>
 <td>freier Punkt (kann sich bewegen)</td>
 </tr>
 <tr>
@@ -501,7 +501,7 @@ step "Die Gerade durch die Schnittpunkte ist die Mittelsenkrechte."
 <td>Mittelpunkt</td>
 </tr>
 <tr>
-<td><code>point S, T = intersect k1 k2</code></td>
+<td><code>point S T = intersect k1 k2</code></td>
 <td>Schnittpunkte (ein oder zwei Namen)</td>
 </tr>
 <tr>
@@ -537,7 +537,7 @@ step "Die Gerade durch die Schnittpunkte ist die Mittelsenkrechte."
 <td>gefülltes Vieleck (mindestens 3 Punkte)</td>
 </tr>
 <tr>
-<td><code>text t = &quot;Hallo&quot; at (5, 6)</code></td>
+<td><code>text t = &quot;Hallo&quot; at 5 6</code></td>
 <td>Text an festen Koordinaten (zentriert)</td>
 </tr>
 <tr>
@@ -558,7 +558,7 @@ step "Die Gerade durch die Schnittpunkte ist die Mittelsenkrechte."
 </thead>
 <tbody>
 <tr>
-<td><code>step &quot;Beschreibung&quot;</code></td>
+<td><code>step Beschreibung bis zum Zeilenende</code></td>
 <td>neuer Schritt; der Text erscheint unter dem Bild</td>
 </tr>
 <tr>
@@ -570,7 +570,7 @@ step "Die Gerade durch die Schnittpunkte ist die Mittelsenkrechte."
 <td>blendet Objekte aus</td>
 </tr>
 <tr>
-<td><code>move A to (4, 5)</code></td>
+<td><code>move A to 4 5</code></td>
 <td>bewegt einen freien Punkt</td>
 </tr>
 <tr>
@@ -620,9 +620,9 @@ step "Die Gerade durch die Schnittpunkte ist die Mittelsenkrechte."
 <td>Beschriftung (Standard: der Name) bzw. keine</td>
 </tr>
 <tr>
-<td><code>offset (8, -20)</code></td>
+<td><code>offset 0.3 -0.5</code></td>
 <td>Punkt (Beschriftung), Text</td>
-<td>Verschiebung in Punkt, x nach rechts, y nach oben</td>
+<td>Lage in Koordinateneinheiten relativ zum Punkt: dort beginnt die Grundlinie des Textes (bei Text an festen Koordinaten: seine Mitte); ohne <code>offset</code> steht die Beschriftung knapp rechts oberhalb</td>
 </tr>
 <tr>
 <td><code>fill lightblue</code></td>

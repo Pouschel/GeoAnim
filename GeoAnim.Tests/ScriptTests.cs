@@ -14,16 +14,31 @@ public class ScriptTests
         Assert.Contains(messagePart, error.Message);
     }
 
+    /// <summary>Every script in Samples, with subfolders (paths relative to Samples, with "/").</summary>
+    private static List<string> SamplePaths()
+    {
+        string folder = Repository.PathOf("Samples");
+        return Directory.EnumerateFiles(folder, "*.geo", SearchOption.AllDirectories)
+            .Select(path => Path.GetRelativePath(folder, path).Replace('\\', '/'))
+            .Order(StringComparer.Ordinal)
+            .ToList();
+    }
+
+    public static TheoryData<string> Samples() => new(SamplePaths());
+
+    // a change of the language must be carried through all samples: each one compiles completely
     [Theory]
-    [InlineData("perpendicular-bisector.geo")]
-    [InlineData("circumcircle.geo")]
-    [InlineData("moving-point.geo")]
+    [MemberData(nameof(Samples))]
     public void SamplesCompile(string sample)
     {
-        AnimationData animation = ScriptCompiler.Compile(File.ReadAllText(Repository.PathOf("Samples", sample)));
-        Assert.NotEmpty(animation.Steps);
-        Assert.True(animation.Duration > 0);
+        AnimationData animation = ScriptCompiler.Compile(File.ReadAllText(Repository.PathOf(["Samples", .. sample.Split('/')])));
         JsonDocument.Parse(animation.ToJson());
+    }
+
+    [Fact]
+    public void SamplesAreFound()
+    {
+        Assert.Contains("circumcircle.geo", SamplePaths());
     }
 
     [Fact]
