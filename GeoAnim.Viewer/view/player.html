@@ -20,21 +20,22 @@
     </main>
     <div id="caption" aria-live="polite"></div>
     <nav id="controls" aria-label="Animation controls">
+      <!-- start/end: double arrow with bar; step back/forward: single arrow with bar; play: the large round button -->
       <button id="first" type="button" title="Start (Home)" disabled>
-        <svg viewBox="0 0 24 24"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg>
+        <svg viewBox="0 0 24 24"><path d="M4 5h2v14H4zM6.5 12L13 5v14zM13 12l7-7v14z"/></svg>
       </button>
       <button id="previous" type="button" title="Previous step (←)" disabled>
-        <svg viewBox="0 0 24 24"><path d="M17 5v14L6 12z"/></svg>
+        <svg viewBox="0 0 24 24"><path d="M6 5h2v14H6zM8.5 12L18 5v14z"/></svg>
       </button>
       <button id="play" type="button" title="Play / pause (Space)" disabled>
-        <svg class="play" viewBox="0 0 24 24"><path d="M7 4v16l13-8z"/></svg>
-        <svg class="pause" viewBox="0 0 24 24"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>
+        <svg class="play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+        <svg class="pause" viewBox="0 0 24 24"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg>
       </button>
       <button id="next" type="button" title="Next step (→)" disabled>
-        <svg viewBox="0 0 24 24"><path d="M7 5v14l11-7z"/></svg>
+        <svg viewBox="0 0 24 24"><path d="M16 5h2v14h-2zM15.5 12L6 5v14z"/></svg>
       </button>
       <button id="last" type="button" title="End (End)" disabled>
-        <svg viewBox="0 0 24 24"><path d="M16 5h2v14h-2zM4 5v14l11-7z"/></svg>
+        <svg viewBox="0 0 24 24"><path d="M18 5h2v14h-2zM17.5 12L11 5v14zM11 12L4 5v14z"/></svg>
       </button>
       <button id="replay" type="button" title="Replay this step (R)" disabled>
         <svg viewBox="0 0 24 24"><path d="M12 5V2L7 6l5 4V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/></svg>
@@ -44,10 +45,13 @@
         <div id="marks"></div>
       </div>
       <span id="counter" title="Step">0 / 0</span>
-      <button id="stops" type="button" title="Stop after each step (S)" aria-pressed="true" disabled>
+      <button id="stops" type="button" title="Stop after each step (S)" aria-pressed="false" disabled>
         <svg viewBox="0 0 24 24"><path d="M4 11h9v2H4zM15 5h2v14h-2zM19 5h2v14h-2z"/></svg>
       </button>
-      <button id="speed" type="button" title="Speed" disabled>1×</button>
+      <div id="speed-box">
+        <button id="speed" type="button" title="Speed (− / +, mouse wheel)" aria-haspopup="true" aria-expanded="false" disabled>1×</button>
+        <div id="speed-menu" role="menu" hidden></div>
+      </div>
     </nav>
     <script src="player.js"></script>
   </body>

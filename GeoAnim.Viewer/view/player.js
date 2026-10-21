@@ -7,7 +7,7 @@
   const SVG = 'http://www.w3.org/2000/svg'
   // sizes in the animation (line widths, font sizes) are points: pixels of a player 1280 pixels wide
   const REFERENCE_WIDTH = 1280
-  const SPEEDS = [0.25, 0.5, 1, 2, 4]
+  const SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2, 3, 4]
   const POLL_INTERVAL = 400
 
   const $ = id => document.getElementById(id)
@@ -21,7 +21,8 @@
   let playing = false
   let stopTime = null
   let speed = 1
-  let stopAtSteps = true
+  // off: the animation runs through; on (S): it stops at the end of every step
+  let stopAtSteps = false
   let previousTimestamp = null
   // the mapping from mathematical coordinates to the pixels of the picture
   let scale = 1
@@ -498,11 +499,52 @@
     setTime(position)
   })
   $('stops').addEventListener('click', toggleStops)
-  $('speed').addEventListener('click', () => {
-    speed = SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length]
-    $('speed').textContent = speed + '×'
-  })
   scene.addEventListener('click', () => { if (animation) togglePlay() })
+
+  // ------------------------------------------------------------------ speed
+
+  const formatSpeed = s => ({ 0.25: '¼', 0.5: '½', 0.75: '¾', 1.25: '1¼', 1.5: '1½' }[s] || String(s)) + '×'
+
+  function setSpeed (s) {
+    speed = s
+    $('speed').textContent = formatSpeed(s)
+    $('speed-menu').querySelectorAll('button').forEach(item => {
+      item.setAttribute('aria-checked', String(Number(item.dataset.speed) === s))
+    })
+  }
+
+  // one step slower (-1) or faster (+1)
+  function changeSpeed (direction) {
+    const index = SPEEDS.indexOf(speed) + direction
+    setSpeed(SPEEDS[Math.max(0, Math.min(SPEEDS.length - 1, index))])
+  }
+
+  function openSpeedMenu (open) {
+    $('speed-menu').hidden = !open
+    $('speed').setAttribute('aria-expanded', String(open))
+  }
+
+  for (const s of SPEEDS.slice().reverse()) {
+    const item = document.createElement('button')
+    item.type = 'button'
+    item.setAttribute('role', 'menuitemradio')
+    item.dataset.speed = String(s)
+    item.textContent = formatSpeed(s)
+    item.addEventListener('mousedown', event => event.preventDefault())
+    item.addEventListener('click', () => { setSpeed(s); openSpeedMenu(false) })
+    $('speed-menu').appendChild(item)
+  }
+  setSpeed(1)
+  $('speed').addEventListener('click', () => openSpeedMenu($('speed-menu').hidden))
+  $('speed').addEventListener('wheel', event => {
+    event.preventDefault()
+    changeSpeed(event.deltaY < 0 ? 1 : -1)
+  }, { passive: false })
+  document.addEventListener('mousedown', event => {
+    if (!$('speed-box').contains(event.target)) {
+      openSpeedMenu(false)
+    }
+  })
 
   function toggleStops () {
     stopAtSteps = !stopAtSteps
@@ -525,7 +567,10 @@
       r: replayStep,
       R: replayStep,
       s: toggleStops,
-      S: toggleStops
+      S: toggleStops,
+      '-': () => changeSpeed(-1),
+      '+': () => changeSpeed(1),
+      Escape: () => openSpeedMenu(false)
     }
     if (actions[event.key]) {
       event.preventDefault()

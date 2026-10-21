@@ -17,7 +17,7 @@ dotnet run --project GeoAnim -- export Samples/circumcircle.geo
 
 In Visual Studio: Startprojekt `GeoAnim`; die Startprofile „serve sample“ und „export sample“ (`GeoAnim/Properties/launchSettings.json`) arbeiten im Repository-Ordner, dort lässt sich die Datei austauschen. Optionen: `serve … --port 8080 --no-browser`, `export … -o ziel.html`.
 
-**Player:** Abspielen/Pause (Leertaste, Klick ins Bild), vorheriger/nächster Schritt (← →), Anfang/Ende (Pos1/Ende), Schritt wiederholen (R), „nach jedem Schritt anhalten“ an/aus (S), Geschwindigkeit ¼× bis 4×, Schieberegler mit Marken an den Schrittenden. Die Animation beginnt angehalten beim Startbild.
+**Player:** Abspielen/Pause (großer runder Knopf, Leertaste, Klick ins Bild), vorheriger/nächster Schritt (← →), Anfang/Ende (Pos1/Ende), Schritt wiederholen (R), Schieberegler mit Marken an den Schrittenden. Die Animation beginnt angehalten beim Startbild und läuft beim Abspielen bis zum Ende durch; „nach jedem Schritt anhalten“ lässt sich zuschalten (S). Geschwindigkeit ¼× bis 4×: Klick auf die Anzeige öffnet die Auswahl, außerdem − / + oder das Mausrad über der Anzeige.
 
 ## Beispiel
 
