@@ -1,6 +1,7 @@
 // The GeoAnim player: draws an animation (the JSON of GeoAnim.Core's AnimationData) with SVG and plays it.
-// The animation comes from window.GEO_ANIMATION (an exported file) or, in "geoanim serve", from animation.json, which
-// is fetched again and again so that a changed script shows at once.
+// The animation comes from window.GEO_ANIMATION (an exported file), in "geoanim serve" from animation.json, which is
+// fetched again and again so that a changed script shows at once, or, in an editor's preview (window.GEO_EMBEDDED), as
+// messages: { type: 'animation', animation, keepPosition, step }, { type: 'error', error }, { type: 'step', index }.
 (function () {
   'use strict'
 
@@ -747,6 +748,37 @@
     layout()
   })
 
+  // ------------------------------------------------------------------ in an editor's preview
+
+  function receive (message) {
+    if (!message || typeof message.type !== 'string') {
+      return
+    }
+    if (message.type === 'animation' && message.animation) {
+      setAnimation(message.animation, animation !== null && message.keepPosition !== false)
+      showError(null)
+      // while writing: the end of the step the cursor is in, wherever it is now
+      if (typeof message.step === 'number') {
+        showStepEnd(message.step)
+      }
+    } else if (message.type === 'error') {
+      showError(message.error || null)
+      if (!animation) {
+        $('message').textContent = ''
+      }
+    } else if (message.type === 'step' && animation) {
+      showStepEnd(message.index)
+    }
+  }
+
+  // the step the cursor is in: shown at its end (before the first step: the starting picture)
+  function showStepEnd (index) {
+    pause()
+    const list = steps()
+    const i = Math.min(index, list.length - 1)
+    setTime(i >= 0 ? list[i].end : 0)
+  }
+
   async function start () {
     // the fonts first: the labels are measured with them
     try {
@@ -755,6 +787,12 @@
     }
     if (window.GEO_ANIMATION) {
       setAnimation(window.GEO_ANIMATION, false)
+    } else if (window.GEO_EMBEDDED) {
+      window.addEventListener('message', event => receive(event.data))
+      // VS Code: tell the extension that messages can come now
+      if (typeof acquireVsCodeApi === 'function') {
+        acquireVsCodeApi().postMessage({ type: 'ready' })
+      }
     } else {
       poll()
     }

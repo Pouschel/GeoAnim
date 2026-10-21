@@ -33,14 +33,23 @@ public sealed partial class ScriptSource
     public IReadOnlyList<string> Files => files;
 
     /// <summary>Reads a script file and the files it includes; throws <see cref="ScriptError"/> for a missing or circular include.</summary>
-    public static ScriptSource FromFile(string path)
+    public static ScriptSource FromFile(string path) => FromFile(path, File.ReadAllText(Path.GetFullPath(path)));
+
+    /// <summary>
+    /// A script with the text given here (e.g. unsaved in an editor) as if it were the file <paramref name="path"/>:
+    /// includes and uses are relative to its folder.
+    /// </summary>
+    public static ScriptSource FromFile(string path, string text)
     {
         string fullPath = Path.GetFullPath(path);
         var source = new ScriptSource(fullPath, Path.GetDirectoryName(fullPath)!);
         source.files.Add(fullPath);
-        source.Add(File.ReadAllText(fullPath), null, Path.GetDirectoryName(fullPath)!, [fullPath]);
+        source.Add(text, null, Path.GetDirectoryName(fullPath)!, [fullPath]);
         return source;
     }
+
+    /// <summary>The full path of a file named in an error (<see cref="ScriptError.File"/>), or null for the script itself.</summary>
+    public string? FullPathOf(ScriptError error) => error.File == null ? MainFile : Path.GetFullPath(Path.Combine(baseDirectory, error.File));
 
     /// <summary>A script given as text; includes are relative to <paramref name="baseDirectory"/> (default: the current directory).</summary>
     public static ScriptSource FromText(string script, string? baseDirectory = null)

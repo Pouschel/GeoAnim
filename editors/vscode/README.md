@@ -1,12 +1,12 @@
-# GeoAnim für VS Code und Visual Studio
+# GeoAnim für VS Code
 
-Syntaxhervorhebung für GeoAnim-Skripte (`.geo`). Die Grammatik `syntaxes/geo.tmLanguage.json` dient beiden Editoren.
+Syntaxhervorhebung, Live-Vorschau und Fehlermeldungen für GeoAnim-Skripte (`.geo`). Die Grammatik steht in `syntaxes/geo.tmLanguage.json`.
 
 **Kategorien:** Befehle am Zeilenanfang, Hilfswörter (`midpoint`, `center`, `to`, `use` …), Optionen, Zahlen, Farben, neue
 Objektnamen (links vom `=`), Vars (bei `var` und dort, wo Optionen stehen), Texte, Formeln `$…$`, Dateipfade (`include`,
 `use`), Kommentare. Die Farben kommen aus dem Farbschema des Editors.
 
-## VS Code
+## Einrichten
 
 Den Ordner `editors/vscode` als Erweiterung einbinden, ohne Marketplace – in einer Eingabeaufforderung im Repository:
 
@@ -14,20 +14,25 @@ Den Ordner `editors/vscode` als Erweiterung einbinden, ohne Marketplace – in e
 mklink /J "%USERPROFILE%\.vscode\extensions\geoanim-geo" "%CD%\editors\vscode"
 ```
 
-(Eine Verknüpfung, damit Änderungen an der Grammatik ohne Kopieren wirken; alternativ den Ordner dorthin kopieren.)
-Danach VS Code neu starten. Strg+# schaltet Kommentare um; `"` und `$` werden automatisch geschlossen.
+(Eine Verknüpfung, damit Änderungen an der Erweiterung ohne Kopieren wirken.) Danach VS Code neu starten – nach einer
+Änderung an der Erweiterung ebenso (oder „Developer: Reload Window“).
 
-## Visual Studio
+## Vorschau und Fehler
 
-Visual Studio liest TextMate-Grammatiken aus `%USERPROFILE%\.vs\Extensions\<Sprache>\Syntaxes\`:
+- **Vorschau:** Symbol oben rechts im Editor, Strg+K V oder „GeoAnim: Vorschau öffnen“. Sie zeigt die Animation neben
+  dem Editor, aktualisiert sich schon beim Tippen (nicht erst beim Speichern) und bleibt dabei am aktuellen Schritt. Sie
+  folgt der jeweils aktiven `.geo`-Datei.
+- **Schritt folgt Cursor:** Steht der Cursor in einem Schritt, zeigt die Vorschau dessen Ende (vor dem ersten `step`:
+  das Startbild). Gezählt werden die `step`-Zeilen der Datei selbst.
+- **Fehler** werden rot unterstrichen und stehen unter „Probleme“, Fehler in eingebundenen Dateien dort. In der
+  Vorschau erscheint der Fehler über der letzten guten Animation.
+- Koordinaten unter der Maus und Umschalt+Klick zum Kopieren gibt es wie bei `geoanim serve`.
 
-```
-mkdir "%USERPROFILE%\.vs\Extensions\GeoAnim\Syntaxes"
-copy editors\vscode\syntaxes\geo.tmLanguage.json "%USERPROFILE%\.vs\Extensions\GeoAnim\Syntaxes\"
-```
-
-Danach offene `.geo`-Dateien schließen und neu öffnen. Visual Studio übernimmt nur die Farben (keine
-Kommentar-Tastenkürzel). Nach einer Änderung der Grammatik die Datei erneut kopieren.
+Die Arbeit macht `geoanim daemon`, einmal im Hintergrund gestartet (MathJax startet daher nur einmal). Gefunden wird
+`geoanim` so: die Einstellung `geoanim.path`, sonst der neuere der Builds `GeoAnim\bin\Debug\net10.0\geoanim.exe` und
+`…\Release\…` im Arbeitsbereich oder in einem Ordner über der geöffneten Datei, sonst `geoanim` aus dem Suchpfad. Ein Build
+läuft als Kopie aus dem Temp-Ordner, damit Visual Studio weiter bauen kann; nach einem neuen Build (Debug oder Release)
+startet die Erweiterung den neuesten von selbst, und die Vorschau lädt nach. „GeoAnim: Neu starten“ startet `geoanim` von Hand neu; Meldungen stehen im Ausgabefenster „GeoAnim“.
 
 ## Grenzen
 

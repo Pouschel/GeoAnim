@@ -1,8 +1,8 @@
 {
   "name": "geoanim-geo",
   "displayName": "GeoAnim (.geo)",
-  "description": "Syntax highlighting for GeoAnim scripts (.geo)",
-  "version": "0.1.0",
+  "description": "GeoAnim scripts (.geo): syntax highlighting, live preview, errors in the editor",
+  "version": "0.2.0",
   "publisher": "mathepedia",
   "license": "MIT",
   "engines": {
@@ -31,6 +31,55 @@
         "scopeName": "source.geo",
         "path": "./syntaxes/geo.tmLanguage.json"
       }
-    ]
-  }
+    ],
+    "commands": [
+      {
+        "command": "geoanim.preview",
+        "title": "Vorschau öffnen",
+        "category": "GeoAnim",
+        "icon": "$(open-preview)"
+      },
+      {
+        "command": "geoanim.restart",
+        "title": "Neu starten",
+        "category": "GeoAnim"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "geoanim.preview",
+          "when": "resourceLangId == geo",
+          "group": "navigation"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "geoanim.preview",
+          "when": "editorLangId == geo"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "geoanim.preview",
+        "key": "ctrl+k v",
+        "when": "editorLangId == geo"
+      }
+    ],
+    "configuration": {
+      "title": "GeoAnim",
+      "properties": {
+        "geoanim.path": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Pfad zu `geoanim.exe` (oder `geoanim.dll`). Leer: ein Build `GeoAnim/bin/Debug/net10.0` im Arbeitsbereich oder über der geöffneten Datei, sonst `geoanim` aus dem Suchpfad. `${workspaceFolder}` ist erlaubt."
+        }
+      }
+    }
+  },
+  "main": "./extension.js",
+  "activationEvents": [
+    "onLanguage:geo"
+  ]
 }

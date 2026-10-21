@@ -34,6 +34,20 @@ public static partial class HtmlExporter
         return html;
     }
 
+    /// <summary>
+    /// The player page without an animation, for an editor's preview: it gets its animations as messages
+    /// ({ type: "animation" | "error" | "step", … }, see player.js) instead of fetching them from "geoanim serve".
+    /// </summary>
+    public static string ExportPlayer()
+    {
+        string html = ViewerFiles.ReadText("player.html");
+        html = StylesheetPattern().Replace(html, m => "<style>\n" + InlineCss(m.Groups[1].Value) + "</style>");
+        html = ScriptPattern().Replace(html, m =>
+            "<script>window.GEO_EMBEDDED = true;</script>\n"
+            + "    <script>\n" + EscapeScript(ViewerFiles.ReadText(m.Groups[1].Value)) + "</script>");
+        return html;
+    }
+
     private static string InlineCss(string path)
     {
         string folder = path.Contains('/') ? path.Substring(0, path.LastIndexOf('/') + 1) : string.Empty;

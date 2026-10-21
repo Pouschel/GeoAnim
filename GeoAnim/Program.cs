@@ -8,7 +8,8 @@ namespace GeoAnim.Cli;
 /// <summary>
 /// geoanim serve &lt;file.geo&gt; [--port N] [--no-browser]: live preview in the browser, updated on every save.<br/>
 /// geoanim export &lt;file.geo&gt; [-o file.html]: one self-contained HTML file.<br/>
-/// geoanim exportdir &lt;dir&gt;: an HTML file next to every .geo file in the folder and its subfolders.
+/// geoanim exportdir &lt;dir&gt;: an HTML file next to every .geo file in the folder and its subfolders.<br/>
+/// geoanim daemon: compiles for an editor over standard input and output (see <see cref="Daemon"/>).
 /// </summary>
 internal static class Program
 {
@@ -20,11 +21,18 @@ internal static class Program
               Writes the animation as one HTML file that plays without a server (default: next to the script).
           geoanim exportdir <dir>
               Writes the animation HTML next to every .geo file in directory dir and all subdirectories.
+          geoanim daemon
+              Compiles for an editor (the VS Code extension): JSON requests on standard input, answers on standard output.
         """;
 
     private static int Main(string[] args)
     {
         Console.OutputEncoding = Encoding.UTF8;
+        if (args.Length == 1 && args[0] == "daemon")
+        {
+            Console.InputEncoding = Encoding.UTF8;
+            return Daemon.Run(Console.In, Console.Out);
+        }
         if (args.Length < 2 || args[0] is not ("serve" or "export" or "exportdir"))
         {
             Console.WriteLine(Usage);

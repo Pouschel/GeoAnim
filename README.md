@@ -210,11 +210,12 @@ c.Line("m", s, t, new Options { Color = Color.Parse("red") });
 File.WriteAllText("mittelsenkrechte.html", HtmlExporter.Export(c.Build()));
 ```
 
-## Syntaxhervorhebung
+## VS Code
 
-`editors/vscode` enthält eine Grammatik für `.geo`-Dateien, die VS Code und Visual Studio verstehen: Befehle,
-Hilfswörter, Optionen, Zahlen, Farben, neue Objektnamen, Vars, Texte, Formeln, Dateipfade und Kommentare bekommen eigene
-Farben. Einrichten: siehe `editors/vscode/README.md`.
+`editors/vscode` ist eine Erweiterung für VS Code: Syntaxhervorhebung (Befehle, Hilfswörter, Optionen, Zahlen, Farben,
+neue Objektnamen, Vars, Texte, Formeln, Dateipfade, Kommentare), eine Live-Vorschau neben dem Editor, die schon beim
+Tippen aktualisiert und dem Schritt unter dem Cursor folgt, und Fehler als rote Unterstreichung. Dahinter steht
+`geoanim daemon` (JSON-Zeilen über Standardein- und -ausgabe). Einrichten: siehe `editors/vscode/README.md`.
 
 ## Aufbau
 

@@ -77,6 +77,41 @@ public sealed class CliTests : IDisposable
     }
 
     [Fact]
+    public void DaemonCompilesUnsavedTextAsIfItWereTheFile()
+    {
+        string styles = Write("styles.geo", "default point size 6");
+        string main = Path.Combine(folder, "main.geo");
+        JsonElement Ask(object request) => JsonDocument.Parse(Daemon.Handle(JsonSerializer.Serialize(request))).RootElement;
+
+        // the text need not be saved: main.geo does not even exist; its include is found next to it
+        JsonElement answer = Ask(new { id = 7, type = "compile", file = main, text = "include styles.geo\ntitle eins\npoint A = 1 1" });
+        Assert.Equal(7, answer.GetProperty("id").GetInt32());
+        Assert.Equal("eins", answer.GetProperty("animation").GetProperty("title").GetString());
+        Assert.Equal(0, answer.GetProperty("errors").GetArrayLength());
+        Assert.Equal([main, styles], answer.GetProperty("files").EnumerateArray().Select(f => f.GetString()));
+
+        // errors with the full path: of the script itself and of an included file
+        JsonElement error = Ask(new { id = 8, type = "compile", file = main, text = "point A = 1 1\nsegment s = A C" }).GetProperty("errors")[0];
+        Assert.Equal((main, 2, 15), (error.GetProperty("file").GetString(), error.GetProperty("line").GetInt32(), error.GetProperty("column").GetInt32()));
+        File.WriteAllText(styles, "default point size 6\npont X = 1 1");
+        answer = Ask(new { id = 9, type = "compile", file = main, text = "include styles.geo" });
+        Assert.Equal(JsonValueKind.Null, answer.GetProperty("animation").ValueKind);
+        Assert.Equal((styles, 2), (answer.GetProperty("errors")[0].GetProperty("file").GetString(), answer.GetProperty("errors")[0].GetProperty("line").GetInt32()));
+
+        // the player page for the preview: everything inside, no animation, waiting for messages
+        string html = Ask(new { id = 10, type = "player" }).GetProperty("html").GetString()!;
+        Assert.Contains("window.GEO_EMBEDDED = true;", html);
+        Assert.DoesNotContain("GEO_ANIMATION =", html);
+        Assert.Contains("fatal", Daemon.Handle("{\"id\": 11, \"type\": \"dance\"}"));
+        Assert.Contains("fatal", Daemon.Handle("not json"));
+
+        // over standard input and output, one line each
+        var output = new StringWriter();
+        Daemon.Run(new StringReader("{\"id\":1,\"type\":\"compile\",\"file\":\"x.geo\",\"text\":\"title a\"}\n\n{\"id\":2,\"type\":\"player\"}\n"), output);
+        Assert.Equal(2, output.ToString().Split('\n', StringSplitOptions.RemoveEmptyEntries).Length);
+    }
+
+    [Fact]
     public async Task LiveScriptNoticesSavedFiles()
     {
         string path = Write("b.geo", "title one");
