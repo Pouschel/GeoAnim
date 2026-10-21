@@ -1,4 +1,6 @@
 
+include ../def.geo
+
 title Auf einer gegebenen Strecke ein gleichseitiges Dreieck errichten.
 
 view x -10 .. 10 y -7 .. 7
@@ -6,8 +8,9 @@ grid 0.5
 speed 0.7
 
 step Gegeben ist die Verbindungsstrecke $s$ durch die Punkte $A$ und $B$
-point A = -3 0 offset -0.4 0
-point B = 3 0
+input point A = -3 0 offset -0.4 0
+input point B = 3 0
+output C
 segment s = A B color blue
 
 step Wir zeichnen um $A$ einen Kreis mit dem Radius $|AB|$

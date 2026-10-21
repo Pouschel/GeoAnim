@@ -147,6 +147,23 @@ internal static class Lexer
                 {
                     tokens.Add(RestOfLine(source, ref i, line, lineStart));
                 }
+                else if (word == "use")
+                {
+                    // the file: everything up to the next space ("../Book1/Prop1.geo")
+                    while (i < source.Length && source[i] is ' ' or '\t')
+                    {
+                        i++;
+                    }
+                    int pathStart = i;
+                    while (i < source.Length && !char.IsWhiteSpace(source[i]))
+                    {
+                        i++;
+                    }
+                    if (i > pathStart)
+                    {
+                        tokens.Add(new Token(TokenKind.String, source.Substring(pathStart, i - pathStart), line, pathStart - lineStart + 1));
+                    }
+                }
             }
             else if (c == '.' && i + 1 < source.Length && source[i + 1] == '.')
             {

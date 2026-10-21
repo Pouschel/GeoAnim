@@ -24,6 +24,12 @@ internal sealed record StepStatement(int Line, int Column, string Caption) : Sta
 internal sealed record DefineStatement(int Line, int Column, string Kind, IReadOnlyList<NameRef> Names, Definition Definition, OptionList Options)
     : Statement(Line, Column);
 
+/// <summary>"input point A = -3 0": an input of the file when it is used; when it runs alone, an ordinary definition.</summary>
+internal sealed record InputStatement(int Line, int Column, DefineStatement Define) : Statement(Line, Column);
+
+/// <summary>"output C": the results of the file when it is used.</summary>
+internal sealed record OutputStatement(int Line, int Column, IReadOnlyList<NameRef> Names) : Statement(Line, Column);
+
 internal sealed record ShowStatement(int Line, int Column, bool Show, IReadOnlyList<NameRef> Targets, OptionList Options) : Statement(Line, Column);
 
 /// <summary>"move P to (x, y)" (Target) or "move P to 90" (Parameter: angle or position on a path).</summary>
@@ -54,6 +60,17 @@ internal sealed record CircleThroughDefinition(NameRef Center, NameRef Through) 
 internal sealed record CircleRadiusDefinition(NameRef Center, double Radius) : Definition;
 
 internal sealed record PolygonDefinition(IReadOnlyList<NameRef> Vertices) : Definition;
+
+/// <summary>How a used file appears: only its results, its construction drawn in the current step, or its own steps.</summary>
+internal enum UseMode
+{
+    Result,
+    Draw,
+    Steps,
+}
+
+/// <summary>"use Prop1.geo A B": the outputs of another file, constructed from these inputs.</summary>
+internal sealed record UseDefinition(string Path, int PathLine, int PathColumn, IReadOnlyList<NameRef> Arguments, UseMode Mode) : Definition;
 
 internal sealed record TextDefinition(string Content, Vec? Position, NameRef? Anchor) : Definition;
 

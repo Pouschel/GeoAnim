@@ -6,7 +6,7 @@ public static class ScriptCompiler
     /// <summary>Compiles the script; throws <see cref="ScriptError"/> with line and column for any mistake.</summary>
     public static AnimationData Compile(string source) => Compile(ScriptSource.FromText(source));
 
-    /// <summary>Compiles a script file (with the files it includes).</summary>
+    /// <summary>Compiles a script file (with the files it includes and uses).</summary>
     public static AnimationData CompileFile(string path) => Compile(ScriptSource.FromFile(path));
 
     public static AnimationData Compile(ScriptSource source)
@@ -32,7 +32,7 @@ public static class ScriptCompiler
         {
             List<Statement> statements = Parser.Parse(source.Text);
             var construction = new Construction();
-            var executor = new Executor(construction);
+            var executor = new Executor(construction, source, source.MainFile == null ? [] : [source.MainFile], new UseCounter(), null);
             foreach (Statement statement in statements)
             {
                 executor.Execute(statement);
@@ -45,12 +45,37 @@ public static class ScriptCompiler
         }
     }
 
-    private sealed class Executor(Construction c)
+    private sealed class UseCounter
+    {
+        public int Next;
+    }
+
+    /// <summary>
+    /// A used file while it runs: its inputs (bound to the caller's objects), its outputs (with the caller's names and
+    /// options) and how it appears. Its other objects get names of their own ("Prop1#1.k1") that the caller cannot see.
+    /// </summary>
+    private sealed class Module(string prefix, UseMode mode, Dictionary<string, GeoObject> inputs, Dictionary<string, (string Name, Options Options)> outputs)
+    {
+        public string Prefix { get; } = prefix;
+
+        public UseMode Mode { get; } = mode;
+
+        public Dictionary<string, GeoObject> Inputs { get; } = inputs;
+
+        public Dictionary<string, (string Name, Options Options)> Outputs { get; } = outputs;
+
+        /// <summary>Objects of the file that are not results (faded out at the end with draw and steps).</summary>
+        public List<GeoObject> Internals { get; } = new();
+    }
+
+    private sealed class Executor(Construction c, ScriptSource source, List<string> files, UseCounter counter, Module? module)
     {
         private bool hadObject;
 
         // "default kind… options": options that come first for every object of the kind ("" for all kinds)
         private readonly Dictionary<string, List<OptionValue>> defaults = new(StringComparer.Ordinal);
+
+        private bool OnlyResult => module?.Mode == UseMode.Result;
 
         public void Execute(Statement statement)
         {
@@ -66,6 +91,11 @@ public static class ScriptCompiler
 
         private void Run(Statement statement)
         {
+            // a used file: its settings and steps belong to it running alone
+            if (module != null && statement is TitleStatement or ViewStatement or BackgroundStatement or GridStatement or AxesStatement or SpeedStatement)
+            {
+                return;
+            }
             switch (statement)
             {
                 case TitleStatement s:
@@ -107,14 +137,30 @@ public static class ScriptCompiler
                     c.Speed = s.Speed;
                     break;
                 case StepStatement s:
-                    c.Step(s.Caption);
+                    if (module == null || module.Mode == UseMode.Steps)
+                    {
+                        c.Step(s.Caption);
+                    }
+                    break;
+                case InputStatement s:
+                    // when the file runs alone, an input is an ordinary object; when it is used, it is bound already
+                    if (module == null)
+                    {
+                        Define(s.Define);
+                    }
+                    break;
+                case OutputStatement:
                     break;
                 case DefineStatement s:
                     Define(s);
                     break;
                 case ShowStatement s:
                     {
-                        List<GeoObject> targets = s.Targets.Select(Resolve).ToList();
+                        if (OnlyResult)
+                        {
+                            break;
+                        }
+                        List<GeoObject> targets = s.Targets.Select(t => NotInput(t, s.Show ? "show" : "hide")).ToList();
                         Options options = ToOptions(s.Options, s.Show ? "show" : "hide", ["duration", "easing"]);
                         if (s.Show)
                         {
@@ -128,7 +174,12 @@ public static class ScriptCompiler
                     }
                 case MoveStatement s:
                     {
-                        GeoPoint point = ResolvePoint(s.Point);
+                        if (OnlyResult)
+                        {
+                            break;
+                        }
+                        GeoPoint point = NotInput(s.Point, "move") as GeoPoint
+                            ?? throw new ScriptError(s.Point.Line, s.Point.Column, $"{s.Point.Name} is a {Resolve(s.Point).Kind}, not a point.");
                         Options options = ToOptions(s.Options, "move", ["duration", "easing"]);
                         if (s.Target != null)
                         {
@@ -141,9 +192,22 @@ public static class ScriptCompiler
                         break;
                     }
                 case PauseStatement s:
-                    c.Pause(s.Duration);
+                    // a used file drawn in one step goes without its pauses
+                    if (module == null || module.Mode == UseMode.Steps)
+                    {
+                        c.Pause(s.Duration);
+                    }
                     break;
                 case TogetherStatement s:
+                    if (OnlyResult)
+                    {
+                        // nothing is animated: just the definitions
+                        foreach (Statement inner in s.Body)
+                        {
+                            Execute(inner);
+                        }
+                        break;
+                    }
                     c.Together(() =>
                     {
                         foreach (Statement inner in s.Body)
@@ -165,93 +229,280 @@ public static class ScriptCompiler
             }
         }
 
+        // ------------------------------------------------------------------ names
+
+        /// <summary>The name in the construction: the caller's name for an output, a name of its own for the rest of a used file.</summary>
+        private string Global(string name) =>
+            module == null ? name : module.Outputs.TryGetValue(name, out var output) ? output.Name : module.Prefix + "." + name;
+
+        private GeoObject Resolve(NameRef name)
+        {
+            if (module != null && module.Inputs.TryGetValue(name.Name, out GeoObject? input))
+            {
+                return input;
+            }
+            return c.Objects.TryGetValue(Global(name.Name), out GeoObject? item)
+                ? item
+                : throw new ScriptError(name.Line, name.Column, $"Unknown object \"{name.Name}\".");
+        }
+
+        private GeoPoint ResolvePoint(NameRef name) =>
+            Resolve(name) as GeoPoint
+                ?? throw new ScriptError(name.Line, name.Column, $"{name.Name} is a {Resolve(name).Kind}, not a point.");
+
+        // a used file must leave the caller's objects alone
+        private GeoObject NotInput(NameRef name, string what) =>
+            module != null && module.Inputs.ContainsKey(name.Name)
+                ? throw new ScriptError(name.Line, name.Column, $"A used file cannot {what} its input {name.Name}.")
+                : Resolve(name);
+
+        // ------------------------------------------------------------------ definitions
+
+        private static string[] AllowedOptions(string kind) => kind switch
+        {
+            "point" => ["color", "size", "labelsize", "label", "offset", "draw"],
+            "polygon" => ["color", "width", "fill", "opacity", "draw"],
+            "text" => ["color", "size", "offset", "draw"],
+            _ => ["color", "width", "draw"],
+        };
+
+        /// <summary>The options of an object of this file: an output gets the caller's options on top; with "use … " (only the result) the rest is hidden.</summary>
+        private Options FinalOptions(string name, Options own)
+        {
+            if (module == null)
+            {
+                return own;
+            }
+            if (module.Outputs.TryGetValue(name, out var output))
+            {
+                Options caller = output.Options;
+                return new Options
+                {
+                    Color = caller.Color ?? own.Color,
+                    Width = caller.Width ?? own.Width,
+                    Fill = caller.Fill ?? own.Fill,
+                    FillOpacity = caller.FillOpacity ?? own.FillOpacity,
+                    Size = caller.Size ?? own.Size,
+                    LabelSize = caller.LabelSize ?? own.LabelSize,
+                    // the label follows the caller's name
+                    Label = caller.Label,
+                    NoLabel = caller.NoLabel || (own.NoLabel && caller.Label == null),
+                    Offset = caller.Offset ?? own.Offset,
+                    Hidden = caller.Hidden || (own.Hidden && module.Mode != UseMode.Result),
+                    Duration = caller.Duration ?? own.Duration,
+                    Easing = caller.Easing ?? own.Easing,
+                };
+            }
+            // the label shows the name in the file, not the name of its own ("Prop1#1.C")
+            own = own with { Label = own.Label ?? "$" + name + "$" };
+            return module.Mode == UseMode.Result ? own with { Hidden = true } : own;
+        }
+
         private void Define(DefineStatement s)
         {
             foreach (NameRef name in s.Names)
             {
-                if (c.Objects.ContainsKey(name.Name))
+                if (c.Objects.ContainsKey(Global(name.Name)) || (module != null && module.Inputs.ContainsKey(name.Name)))
                 {
                     throw new ScriptError(name.Line, name.Column, $"The name {name.Name} is already used.");
                 }
             }
-            string name0 = s.Names[0].Name;
             hadObject = true;
+            if (s.Definition is UseDefinition use)
+            {
+                Use(s, use);
+                return;
+            }
+            string local0 = s.Names[0].Name;
+            string name0 = Global(local0);
+            Options options = FinalOptions(local0, ToOptions(s.Options, s.Kind, AllowedOptions(s.Kind)));
+            GeoObject created;
             switch (s.Definition)
             {
                 case CoordinatesDefinition d:
-                    c.Point(name0, d.Position.X, d.Position.Y, PointOptions(s));
+                    created = c.Point(name0, d.Position.X, d.Position.Y, options);
                     break;
                 case OnDefinition d:
                     {
                         GeoObject path = Resolve(d.Path);
-                        if (path is GeoCircle circle)
+                        created = path switch
                         {
-                            c.PointOn(name0, circle, d.Parameter, PointOptions(s));
-                        }
-                        else if (path is GeoStraight straight)
-                        {
-                            c.PointOn(name0, straight, d.Parameter, PointOptions(s));
-                        }
-                        else
-                        {
-                            throw new ScriptError(d.Path.Line, d.Path.Column, $"A point can lie on a circle, segment, line or ray, not on the {path.Kind} {path.Name}.");
-                        }
+                            GeoCircle circle => c.PointOn(name0, circle, d.Parameter, options),
+                            GeoStraight straight => c.PointOn(name0, straight, d.Parameter, options),
+                            _ => throw new ScriptError(d.Path.Line, d.Path.Column, $"A point can lie on a circle, segment, line or ray, not on the {path.Kind} {path.Name}."),
+                        };
                         break;
                     }
                 case MidpointDefinition d:
-                    c.Midpoint(name0, ResolvePoint(d.A), ResolvePoint(d.B), PointOptions(s));
+                    created = c.Midpoint(name0, ResolvePoint(d.A), ResolvePoint(d.B), options);
                     break;
                 case IntersectDefinition d:
-                    c.Intersect(s.Names.Select(n => n.Name).ToList(), Resolve(d.A), Resolve(d.B), PointOptions(s));
-                    break;
+                    {
+                        // each point with its own options (one may be a result, the other a hidden helper)
+                        Options own = ToOptions(s.Options, "point", AllowedOptions("point"));
+                        IReadOnlyList<GeoPoint> points = c.Intersect(
+                            s.Names.Select(n => Global(n.Name)).ToList(), Resolve(d.A), Resolve(d.B),
+                            s.Names.Select(n => FinalOptions(n.Name, own)).ToList());
+                        foreach ((NameRef name, GeoPoint point) in s.Names.Zip(points))
+                        {
+                            Remember(name.Name, point);
+                        }
+                        return;
+                    }
                 case TwoPointsDefinition d:
                     {
                         GeoPoint a = ResolvePoint(d.A);
                         GeoPoint b = ResolvePoint(d.B);
-                        Options options = ToOptions(s.Options, s.Kind, ["color", "width", "draw"]);
-                        if (s.Kind == "segment")
+                        created = s.Kind switch
                         {
-                            c.Segment(name0, a, b, options);
-                        }
-                        else if (s.Kind == "ray")
-                        {
-                            c.Ray(name0, a, b, options);
-                        }
-                        else
-                        {
-                            c.Line(name0, a, b, options);
-                        }
+                            "segment" => c.Segment(name0, a, b, options),
+                            "ray" => c.Ray(name0, a, b, options),
+                            _ => c.Line(name0, a, b, options),
+                        };
                         break;
                     }
                 case CircleThroughDefinition d:
-                    c.Circle(name0, ResolvePoint(d.Center), ResolvePoint(d.Through), ToOptions(s.Options, "circle", ["color", "width", "draw"]));
+                    created = c.Circle(name0, ResolvePoint(d.Center), ResolvePoint(d.Through), options);
                     break;
                 case CircleRadiusDefinition d:
-                    c.Circle(name0, ResolvePoint(d.Center), d.Radius, ToOptions(s.Options, "circle", ["color", "width", "draw"]));
+                    created = c.Circle(name0, ResolvePoint(d.Center), d.Radius, options);
                     break;
                 case PolygonDefinition d:
-                    c.Polygon(name0, d.Vertices.Select(ResolvePoint).ToList(),
-                        ToOptions(s.Options, "polygon", ["color", "width", "fill", "opacity", "draw"]));
+                    created = c.Polygon(name0, d.Vertices.Select(ResolvePoint).ToList(), options);
                     break;
                 case TextDefinition d:
-                    {
-                        Options options = ToOptions(s.Options, "text", ["color", "size", "offset", "draw"]);
-                        if (d.Anchor != null)
-                        {
-                            c.Text(name0, d.Content, ResolvePoint(d.Anchor), options);
-                        }
-                        else
-                        {
-                            c.Text(name0, d.Content, d.Position!.Value.X, d.Position.Value.Y, options);
-                        }
-                        break;
-                    }
+                    created = d.Anchor != null
+                        ? c.Text(name0, d.Content, ResolvePoint(d.Anchor), options)
+                        : c.Text(name0, d.Content, d.Position!.Value.X, d.Position.Value.Y, options);
+                    break;
                 default:
                     throw new InvalidOperationException("Unknown definition");
             }
+            Remember(local0, created);
         }
 
-        private Options PointOptions(DefineStatement s) => ToOptions(s.Options, "point", ["color", "size", "labelsize", "label", "offset", "draw"]);
+        private void Remember(string local, GeoObject item)
+        {
+            if (module != null && !module.Outputs.ContainsKey(local))
+            {
+                module.Internals.Add(item);
+            }
+        }
+
+        // ------------------------------------------------------------------ use
+
+        /// <summary>"point D = use Prop1.geo A B": runs the file with A and B as its inputs; its output becomes D.</summary>
+        private void Use(DefineStatement s, UseDefinition d)
+        {
+            string path = Path.GetFullPath(Path.Combine(source.DirectoryOf(s.Line), d.Path));
+            ScriptError AtPath(string message) => new(d.PathLine, d.PathColumn, message);
+            if (!File.Exists(path))
+            {
+                throw AtPath($"File not found: {d.Path} ({path}).");
+            }
+            if (files.Contains(path, StringComparer.OrdinalIgnoreCase))
+            {
+                throw AtPath($"{d.Path} is already being used (circle: {string.Join(" → ", files.Append(path).Select(Path.GetFileName))}).");
+            }
+            ScriptSource moduleSource;
+            List<Statement> statements;
+            try
+            {
+                moduleSource = ScriptSource.FromFile(path);
+                statements = Parser.Parse(moduleSource.Text);
+            }
+            catch (ScriptError e)
+            {
+                throw InModule(d, null, e);
+            }
+
+            List<DefineStatement> inputs = statements.OfType<InputStatement>().Select(i => i.Define).ToList();
+            List<NameRef> outputs = statements.OfType<OutputStatement>().SelectMany(o => o.Names).ToList();
+            if (outputs.Count == 0)
+            {
+                throw AtPath($"{d.Path} has no \"output\" line, so it gives no results.");
+            }
+            if (s.Names.Count != outputs.Count)
+            {
+                throw new ScriptError(s.Names[0].Line, s.Names[0].Column,
+                    $"{d.Path} gives {Count(outputs.Count, "result")} ({string.Join(" ", outputs.Select(o => o.Name))}); give as many names.");
+            }
+            if (d.Arguments.Count != inputs.Count)
+            {
+                throw AtPath($"{d.Path} needs {Count(inputs.Count, "input")} ({string.Join(" ", inputs.Select(i => i.Kind + " " + i.Names[0].Name))}), not {d.Arguments.Count}.");
+            }
+
+            // inputs: the caller's objects, of the right kind
+            var bound = new Dictionary<string, GeoObject>(StringComparer.Ordinal);
+            for (int i = 0; i < inputs.Count; i++)
+            {
+                GeoObject argument = Resolve(d.Arguments[i]);
+                if (argument.Kind != inputs[i].Kind)
+                {
+                    throw new ScriptError(d.Arguments[i].Line, d.Arguments[i].Column,
+                        $"The input {inputs[i].Names[0].Name} of {d.Path} is a {inputs[i].Kind}; {argument.Name} is a {argument.Kind}.");
+                }
+                bound[inputs[i].Names[0].Name] = argument;
+            }
+
+            // outputs: the caller's names and options (inside a used file, as that file's names and options)
+            Options callerOptions = ToOptions(s.Options, s.Kind, AllowedOptions(s.Kind));
+            var results = new Dictionary<string, (string Name, Options Options)>(StringComparer.Ordinal);
+            for (int i = 0; i < outputs.Count; i++)
+            {
+                results[outputs[i].Name] = (Global(s.Names[i].Name), FinalOptions(s.Names[i].Name, callerOptions));
+            }
+
+            // within "use … " (only the result) everything used inside shows only its result, too
+            UseMode mode = OnlyResult ? UseMode.Result : d.Mode;
+            var inner = new Module($"{Path.GetFileNameWithoutExtension(path)}#{++counter.Next}", mode, bound, results);
+            var executor = new Executor(c, moduleSource, [.. files, path], counter, inner);
+            foreach (Statement statement in statements)
+            {
+                try
+                {
+                    executor.Execute(statement);
+                }
+                catch (ScriptError e)
+                {
+                    throw InModule(d, moduleSource, e, inner.Prefix);
+                }
+            }
+
+            for (int i = 0; i < outputs.Count; i++)
+            {
+                if (!c.Objects.TryGetValue(results[outputs[i].Name].Name, out GeoObject? result))
+                {
+                    throw AtPath($"{d.Path} does not define its output {outputs[i].Name}.");
+                }
+                string expected = s.Kind;
+                if (result.Kind != expected)
+                {
+                    throw new ScriptError(s.Names[i].Line, s.Names[i].Column,
+                        $"The output {outputs[i].Name} of {d.Path} is a {result.Kind}, not a {expected}.");
+                }
+                Remember(s.Names[i].Name, result);
+            }
+            if (mode != UseMode.Result)
+            {
+                // the helpers of the construction go, the results stay
+                c.HideVisible(inner.Internals);
+            }
+            // a later "hide" of an internal object of the used file is not possible: its names are its own
+        }
+
+        // an error inside a used file, reported at the "use" with the file and line where it happened
+        private static ScriptError InModule(UseDefinition d, ScriptSource? moduleSource, ScriptError e, string? prefix = null)
+        {
+            ScriptError located = moduleSource?.Locate(e) ?? e;
+            string where = located.File == null ? d.Path : $"{d.Path} ({located.File})";
+            string message = prefix == null ? located.Message : located.Message.Replace(prefix + ".", string.Empty);
+            return new ScriptError(d.PathLine, d.PathColumn, $"In {where}, line {located.Line}, column {located.Column}: {message}");
+        }
+
+        private static string Count(int n, string what) => n + " " + what + (n == 1 ? "" : "s");
+
+        // ------------------------------------------------------------------ options
 
         /// <summary>
         /// The options of a statement after the defaults for all kinds and for <paramref name="what"/>;
@@ -303,14 +554,5 @@ public static class ScriptCompiler
             }
             return options;
         }
-
-        private GeoObject Resolve(NameRef name) =>
-            c.Objects.TryGetValue(name.Name, out GeoObject? item)
-                ? item
-                : throw new ScriptError(name.Line, name.Column, $"Unknown object \"{name.Name}\".");
-
-        private GeoPoint ResolvePoint(NameRef name) =>
-            Resolve(name) as GeoPoint
-                ?? throw new ScriptError(name.Line, name.Column, $"{name.Name} is a {Resolve(name).Kind}, not a point.");
     }
 }

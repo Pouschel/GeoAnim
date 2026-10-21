@@ -62,6 +62,7 @@ Koordinaten sind mathematisch: die y-Achse zeigt nach oben. Der Maßstab ist in 
 | `axes` | Koordinatenachsen mit Zahlen |
 | `default point size 4 labelsize 20` | Voreinstellung: Optionen, die für alle folgenden Objekte der genannten Arten zuerst gelten (siehe unten) |
 | `include styles.geo` | bindet eine andere Datei an dieser Stelle ein (siehe unten) |
+| `input point A = -3 0` / `output C` | Eingaben und Ergebnisse, wenn die Datei mit `use` benutzt wird (siehe unten) |
 | `speed 0.5` | Tempo der ganzen Animation: 1 wie angegeben, 0.5 halb so schnell (alles dauert doppelt so lange), 2 doppelt so schnell |
 
 ### Objekte
@@ -145,6 +146,31 @@ default color navy
 Es gilt der Reihe nach: Voreinstellungen ohne Art, dann die für die Art, dann die Optionen des Objekts selbst – die spätere gewinnt. Eine weitere `default`-Zeile ergänzt die bisherigen für die folgenden Objekte. Wie bei einer Var wird übergangen, was nicht passt (`default width 2` betrifft keine Punkte). Vorsicht bei `size` ohne Art: das ist bei Punkten der Radius, bei Texten die Schriftgröße. Vars sind auch hier möglich: `default circle hilfs`.
 
 **Dateien einbinden:** `include pfad` (Rest der Zeile, relativ zur einbindenden Datei) setzt den Inhalt einer anderen Datei an dieser Stelle ein, als stünde er dort – typisch für gemeinsame Voreinstellungen und Vars (`include ../styles.geo`). Eingebundene Dateien dürfen selbst einbinden, aber nicht im Kreis. Fehler darin werden mit Datei und Zeile gemeldet (`styles.geo, line 3, column 1: …`), und `geoanim serve` übersetzt auch neu, wenn eine eingebundene Datei gespeichert wird. Hinweis: Tests und `exportdir` behandeln jede `.geo`-Datei als eigenes Skript; eine Datei nur mit Voreinstellungen und Vars ist das auch (mit leerer Animation).
+
+**Konstruktionen wiederverwenden (`use`):** Eine Datei kann eine andere wie eine Funktion benutzen. Die benutzte Datei nennt ihre Eingaben und Ergebnisse:
+
+```
+# Book1/Prop1.geo – gleichseitiges Dreieck über AB
+input point A = -3 0      # der Wert gilt nur, wenn die Datei allein läuft
+input point B = 3 0
+output C
+…die Konstruktion wie gewohnt, mit Schritten…
+```
+
+```
+# Book1/Prop2.geo
+point D = use Prop1.geo A B draw offset 0 0.2
+```
+
+- Läuft die Datei allein, ist `input` eine gewöhnliche Definition und `output` wird übergangen – sie animiert sich wie immer.
+- Beim `use` stehen die Objekte des Aufrufers (in der Reihenfolge der `input`-Zeilen, von passender Art) für die Eingaben; die Ergebnisse bekommen die Namen links vom `=` (`point S T = use …` für zwei Ergebnisse; auch `segment`, `line`, `ray`, `circle`, `polygon`). Optionen beim `use` gelten für die Ergebnisse, zusätzlich zu den Voreinstellungen des Aufrufers.
+- Alle anderen Objekte der Datei bleiben in ihr: Sie bekommen intern eigene Namen und sind für den Aufrufer unsichtbar, Namen können also nicht kollidieren. Die Abhängigkeiten sind echt: Bewegt sich später eine Eingabe, folgen die Ergebnisse.
+- Titel, `view`, `grid`, `axes`, `background` und `speed` der Datei gelten nur, wenn sie allein läuft. Ihre Voreinstellungen, Vars und `include`s gelten für sie selbst.
+- Was man sieht:
+  - `use datei …` (Standard): nur die Ergebnisse, gezeichnet wie gewöhnliche Objekte; die Hilfskonstruktion bleibt unsichtbar.
+  - `use datei … draw`: die Konstruktion der Datei wird im aktuellen Schritt gezeichnet (ohne ihre Schrittbeschreibungen und Pausen); am Ende blenden die Hilfsobjekte aus, die Ergebnisse bleiben.
+  - `use datei … steps`: wie `draw`, aber die Schritte der Datei werden mit ihren Beschreibungen zu eigenen Schritten.
+- Eine benutzte Datei darf ihre Eingaben nicht bewegen, ein- oder ausblenden. Sie darf selbst andere Dateien benutzen (nicht im Kreis); innerhalb eines `use` ohne `draw`/`steps` zeigen auch diese nur ihr Ergebnis. Fehler in der benutzten Datei werden am `use` gemeldet, mit Datei und Zeile: `Line 12, column 15: In Prop1.geo, line 22, column 1: …`.
 
 **Farben:** `black`, `white`, `gray`, `lightgray`, `red`, `darkred`, `green`, `lightgreen`, `blue`, `lightblue`, `navy`, `orange`, `yellow`, `purple`, `violet`, `pink`, `brown`, `teal`, `cyan`, `magenta` oder `#rgb` / `#rrggbb`.
 

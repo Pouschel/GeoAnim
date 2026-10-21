@@ -6,7 +6,8 @@ internal sealed class Parser
     /// <summary>Words that cannot be names of objects.</summary>
     internal static readonly HashSet<string> Keywords = new(StringComparer.Ordinal)
     {
-        "title", "view", "background", "grid", "axes", "speed", "var", "default", "include", "step", "point", "segment", "line", "ray", "circle", "polygon",
+        "title", "view", "background", "grid", "axes", "speed", "var", "default", "include", "input", "output", "use",
+        "draw", "steps", "step", "point", "segment", "line", "ray", "circle", "polygon",
         "text", "show", "hide", "move", "pause", "together", "end", "midpoint", "intersect", "center", "through",
         "radius", "at", "to", "on", "x", "y",
         "duration", "color", "width", "fill", "opacity", "size", "labelsize", "label", "nolabel", "hidden", "offset",
@@ -121,6 +122,23 @@ internal sealed class Parser
             case "default":
                 statement = ParseDefault(word);
                 break;
+            case "input":
+                statement = ParseInput(word);
+                break;
+            case "output":
+                {
+                    var names = new List<NameRef>();
+                    while (Current.Kind == TokenKind.Name)
+                    {
+                        names.Add(ExpectName());
+                    }
+                    if (names.Count == 0)
+                    {
+                        throw Error(Current, "\"output\" needs the names of the results, like \"output C\".");
+                    }
+                    statement = new OutputStatement(l, c, names);
+                    break;
+                }
             case "step":
                 if (inTogether)
                 {
@@ -168,6 +186,50 @@ internal sealed class Parser
         }
         ExpectLineEnd();
         return statement;
+    }
+
+    private InputStatement ParseInput(Token word)
+    {
+        Token kind = Next();
+        DefineStatement define = kind.Kind == TokenKind.Name ? kind.Text switch
+        {
+            "point" => ParsePoint(kind),
+            "segment" or "line" or "ray" => ParseStraight(kind),
+            "circle" => ParseCircle(kind),
+            _ => throw Error(kind, $"An input is a point, segment, line, ray or circle, not \"{kind.Text}\"."),
+        } : throw Error(kind, $"Expected the kind of the input (like \"input point A = 0 0\"), not {kind.Describe()}.");
+        if (define.Names.Count > 1 || define.Definition is UseDefinition)
+        {
+            throw Error(kind, "An input is one object with a value for running the file alone, like \"input point A = 0 0\".");
+        }
+        return new InputStatement(word.Line, word.Column, define);
+    }
+
+    // after "=": "use file A B [draw|steps]"
+    private UseDefinition? TryParseUse()
+    {
+        if (!(Current.Is("use") && Current.Kind == TokenKind.Name))
+        {
+            return null;
+        }
+        Token use = Next();
+        Token path = Current;
+        if (path.Kind != TokenKind.String)
+        {
+            throw Error(use, "\"use\" needs a file, like \"point C = use Prop1.geo A B\".");
+        }
+        position++;
+        var arguments = new List<NameRef>();
+        while (Current.Kind == TokenKind.Name && !IsOption(Current.Text) && Current.Text is not ("draw" or "steps"))
+        {
+            arguments.Add(ExpectName());
+        }
+        UseMode mode = UseMode.Result;
+        if (Current.Is("draw") || Current.Is("steps"))
+        {
+            mode = Next().Text == "draw" ? UseMode.Draw : UseMode.Steps;
+        }
+        return new UseDefinition(path.Text, path.Line, path.Column, arguments, mode);
     }
 
     private DefaultStatement ParseDefault(Token word)
@@ -245,7 +307,11 @@ internal sealed class Parser
         }
         ExpectSymbol("=");
         Definition definition;
-        if (Current.Kind == TokenKind.Number)
+        if (TryParseUse() is { } use)
+        {
+            definition = use;
+        }
+        else if (Current.Kind == TokenKind.Number)
         {
             definition = new CoordinatesDefinition(ParseCoordinates());
         }
@@ -270,11 +336,11 @@ internal sealed class Parser
         {
             throw Error(Current, $"Expected coordinates like 2 3, \"midpoint A B\", \"intersect k1 k2\" or \"on k at 30\" after \"=\", not {Current.Describe()}.");
         }
-        if (names.Count > 1 && definition is not IntersectDefinition)
+        if (names.Count > 1 && definition is not (IntersectDefinition or UseDefinition))
         {
-            throw Error(names[1], "Several names are only possible for intersections.");
+            throw Error(names[1], "Several names are only possible for intersections and \"use\".");
         }
-        if (names.Count > 2)
+        if (names.Count > 2 && definition is IntersectDefinition)
         {
             throw Error(names[2], "Two objects have at most 2 intersections.");
         }
@@ -291,6 +357,10 @@ internal sealed class Parser
         {
             position++;
             name = first;
+            if (TryParseUse() is { } use)
+            {
+                return new DefineStatement(word.Line, word.Column, word.Text, [name], use, ParseOptions());
+            }
             a = ExpectName();
             b = ExpectName();
         }
@@ -309,6 +379,10 @@ internal sealed class Parser
     {
         NameRef name = ExpectNewName();
         ExpectSymbol("=");
+        if (TryParseUse() is { } use)
+        {
+            return new DefineStatement(word.Line, word.Column, "circle", [name], use, ParseOptions());
+        }
         ExpectWord("center");
         NameRef center = ExpectName();
         Definition definition;
@@ -333,6 +407,10 @@ internal sealed class Parser
     {
         NameRef name = ExpectNewName();
         ExpectSymbol("=");
+        if (TryParseUse() is { } use)
+        {
+            return new DefineStatement(word.Line, word.Column, "polygon", [name], use, ParseOptions());
+        }
         var vertices = new List<NameRef>();
         while (Current.Kind == TokenKind.Name && !IsOption(Current.Text))
         {

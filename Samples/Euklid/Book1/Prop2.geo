@@ -1,12 +1,13 @@
+include ../def.geo
+
 title An einem Punkt eine Strecke vorgegebener Länge konstruieren
+
 
 view x -10 .. 10 y -7 .. 7
 grid 0.5
 speed 0.6
 
-var opt_gg color blue  # gegebene Objekte
-var opt_gg2 color green 
-var opt_h1 color grey
+
 
 step Gegeben ist der Punkt $A$
 point A = -2 2 opt_gg2
@@ -17,16 +18,11 @@ point C = 3 0 opt_gg
 segment s = B C opt_gg
 
 step Zeichne die Strecke $AB$
-segment AB = A B color grey
+segment AB = A B opt_h1
 
 step Zeichne auf $AB$ ein gleichseitiges Dreieck $ABD$ (Prop1.html)
-together
-  circle k1 = center A through B
-  circle k2 = center B through A
-end
-point D = intersect k1 k2 offset 0 0.2
+point D = use Prop1.geo A B draw offset 0 0.2
 polygon ABD = A B D
-hide k1 k2
 
 step Erweitere $DA$ und $DB$ zu Strahlen
 together

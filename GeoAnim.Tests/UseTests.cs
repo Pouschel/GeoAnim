@@ -1,0 +1,146 @@
+using System.Text.Json;
+using GeoAnim.Script;
+
+namespace GeoAnim.Tests;
+
+public sealed class UseTests : IDisposable
+{
+    private readonly string folder = Directory.CreateTempSubdirectory("geoanim-use").FullName;
+
+    // an equilateral triangle on AB: the third point C (to the left of A → B)
+    private const string Equilateral = """
+        title Gleichseitiges Dreieck
+        input point A = -3 0
+        input point B = 3 0
+        output C
+        step Kreise um $A$ und $B$
+          circle k1 = center A through B color gray
+          circle k2 = center B through A color gray
+        step Der Schnittpunkt $C$
+          point C T = intersect k1 k2 color red
+          pause 700
+          segment AC = A C
+        """;
+
+    public UseTests() => File.WriteAllText(Path.Combine(folder, "equilateral.geo"), Equilateral);
+
+    public void Dispose() => Directory.Delete(folder, recursive: true);
+
+    private Construction Compile(string script)
+    {
+        string path = Path.Combine(folder, "main.geo");
+        File.WriteAllText(path, script);
+        return ScriptCompiler.CompileConstruction(ScriptSource.FromFile(path));
+    }
+
+    private ScriptError Error(string script) => Assert.Throws<ScriptError>(() => Compile(script));
+
+    [Fact]
+    public void TheFileRunsAloneWithTheValuesOfItsInputs()
+    {
+        var c = ScriptCompiler.CompileConstruction(ScriptSource.FromFile(Path.Combine(folder, "equilateral.geo")));
+        Assert.Equal(0, ((GeoPoint)c.Objects["C"]).Position.X, 9);
+        Assert.Equal(Math.Sqrt(27), ((GeoPoint)c.Objects["C"]).Position.Y, 9);
+        Assert.Equal("Gleichseitiges Dreieck", c.Title);
+    }
+
+    [Fact]
+    public void UseGivesTheOutputUnderTheCallersName()
+    {
+        var c = Compile("""
+            point P = 0 0
+            point Q = 2 0
+            step Ein Dreieck
+              point R = use equilateral.geo P Q color blue
+              move Q to 4 0
+            """);
+        var r = (GeoPoint)c.Objects["R"];
+        // the result depends on the inputs: it followed Q
+        Assert.Equal(2, r.Position.X, 9);
+        Assert.Equal(Math.Sqrt(12), r.Position.Y, 9);
+        Assert.Equal(Color.Parse("blue"), r.Options.Color);
+        Assert.Null(r.Options.Label);
+        // the helpers have names of their own and stay hidden; the file's title and steps do not count
+        Assert.DoesNotContain("k1", c.Objects.Keys);
+        Assert.Contains(c.Objects.Keys, name => name.EndsWith(".k1", StringComparison.Ordinal));
+        Assert.All(c.Objects.Values.Where(o => o.Name.Contains('#')), o => Assert.True(o.Options.Hidden));
+        Assert.Null(c.Title);
+        AnimationData animation = c.Build();
+        Assert.Single(animation.Steps);
+        // drawn like an ordinary point (400 ms), then the move (1000 ms)
+        Assert.Equal(1400, animation.Duration);
+    }
+
+    [Fact]
+    public void DrawShowsTheConstructionInTheCurrentStepAndHidesTheHelpers()
+    {
+        var c = Compile("""
+            point P = 0 0
+            point Q = 2 0
+            step Ein Dreieck
+              point R = use equilateral.geo P Q draw
+            """);
+        AnimationData animation = c.Build();
+        Assert.Single(animation.Steps);
+        // circles (1200 ms each, one after the other), the points (400), the segment (800), no pause, then fading out (400)
+        Assert.Equal(1200 + 1200 + 400 + 800 + 400, animation.Duration);
+        Assert.False(c.Objects["R"].Options.Hidden);
+        JsonElement texts = JsonDocument.Parse(animation.ToJson()).RootElement.GetProperty("primitives");
+        // the helper point is labelled with its name in the file
+        Assert.Contains(texts.EnumerateArray(), p => p.GetProperty("type").GetString() == "text"
+            && p.GetProperty("tracks").GetProperty("text")[0][1].GetString() == "$T$");
+    }
+
+    [Fact]
+    public void StepsTakesTheStepsOfTheFile()
+    {
+        AnimationData animation = Compile("""
+            point P = 0 0
+            point Q = 2 0
+            step Wir konstruieren
+              point R = use equilateral.geo P Q steps
+            """).Build();
+        Assert.Equal(["Wir konstruieren", "Kreise um $A$ und $B$", "Der Schnittpunkt $C$"], animation.Steps.Select(s => s.Caption));
+    }
+
+    [Fact]
+    public void UsedFilesCanUseOthers()
+    {
+        File.WriteAllText(Path.Combine(folder, "lib.geo"), """
+            input point U = 0 0
+            input point V = 1 0
+            output W
+            point M = midpoint U V
+            point W = use equilateral.geo M V draw
+            """);
+        var c = Compile("point P = 0 0\npoint Q = 4 0\nstep s\n  point X = use lib.geo P Q draw");
+        Assert.Equal(3, ((GeoPoint)c.Objects["X"]).Position.X, 9);
+        // within the result-only use, the inner one shows only its result, too
+        var hidden = Compile("point P = 0 0\npoint Q = 4 0\npoint X = use lib.geo P Q");
+        Assert.All(hidden.Objects.Values.Where(o => o.Name.Contains('#')), o => Assert.True(o.Options.Hidden));
+    }
+
+    [Fact]
+    public void MistakesAreReportedAtTheUse()
+    {
+        Assert.Equal("Line 3, column 15: equilateral.geo needs 2 inputs (point A point B), not 1.",
+            Error("point P = 0 0\npoint Q = 2 0\npoint R = use equilateral.geo P").ToString());
+        Assert.Equal("Line 3, column 31: The input A of equilateral.geo is a point; k is a circle.",
+            Error("point P = 0 0\ncircle k = center P radius 1\npoint R = use equilateral.geo k P").ToString());
+        Assert.Contains("gives 1 result (C); give as many names",
+            Error("point P = 0 0\npoint Q = 2 0\npoint R S = use equilateral.geo P Q").Message);
+        Assert.Contains("The output C of equilateral.geo is a point, not a circle",
+            Error("point P = 0 0\npoint Q = 2 0\ncircle k = use equilateral.geo P Q").Message);
+        Assert.StartsWith("Line 1, column 15: File not found: missing.geo", Error("point R = use missing.geo").ToString());
+        // an error inside the file: with its line, without the internal names
+        Assert.StartsWith("Line 3, column 15: In equilateral.geo, line 6, column 3: circle k1 ",
+            Error("point P = 0 0\npoint Q = 0 0\npoint R = use equilateral.geo P Q").ToString());
+        File.WriteAllText(Path.Combine(folder, "self.geo"), "input point A = 0 0\noutput B\npoint B = use self.geo A");
+        Assert.Contains("self.geo is already being used (circle: main.geo → self.geo → self.geo)",
+            Error("point P = 0 0\npoint R = use self.geo P").Message);
+        File.WriteAllText(Path.Combine(folder, "mover.geo"), "input point A = 0 0\noutput B\npoint B = 1 1\nstep s\n  move A to 2 2");
+        Assert.Contains("A used file cannot move its input A", Error("point P = 0 0\nstep s\n  point R = use mover.geo P draw").Message);
+        File.WriteAllText(Path.Combine(folder, "none.geo"), "point A = 0 0");
+        Assert.Contains("has no \"output\" line", Error("point R = use none.geo").Message);
+    }
+}

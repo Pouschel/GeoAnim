@@ -101,6 +101,10 @@ public sealed partial class ScriptSource
     private ScriptError Error(string? file, int line, int column, string message) =>
         new(line, column, message, file == null ? null : Display(file));
 
+    /// <summary>The folder of the file a line of <see cref="Text"/> comes from (for paths in it).</summary>
+    internal string DirectoryOf(int line) =>
+        line >= 1 && line <= origins.Count && origins[line - 1].File is { } file ? Path.GetDirectoryName(file)! : baseDirectory;
+
     /// <summary>An error with a line of <see cref="Text"/>, moved to the file and line it comes from.</summary>
     internal ScriptError Locate(ScriptError error)
     {

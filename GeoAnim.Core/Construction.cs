@@ -112,8 +112,16 @@ public sealed class Construction
         Define(GeoPoint.Midpoint(name, a, b, options ?? Options.None));
 
     /// <summary>The intersections of two objects (segments, lines, rays, circles), one name per intersection wanted.</summary>
-    public IReadOnlyList<GeoPoint> Intersect(IReadOnlyList<string> names, GeoObject a, GeoObject b, Options? options = null)
+    public IReadOnlyList<GeoPoint> Intersect(IReadOnlyList<string> names, GeoObject a, GeoObject b, Options? options = null) =>
+        Intersect(names, a, b, names.Select(_ => options ?? Options.None).ToList());
+
+    /// <summary>The intersections of two objects with options for each point.</summary>
+    public IReadOnlyList<GeoPoint> Intersect(IReadOnlyList<string> names, GeoObject a, GeoObject b, IReadOnlyList<Options> options)
     {
+        if (options.Count != names.Count)
+        {
+            throw new ArgumentException("One set of options per name.", nameof(options));
+        }
         int max = Intersections.MaxCount(a, b);
         if (max == 0)
         {
@@ -138,7 +146,7 @@ public sealed class Construction
         var points = new List<GeoPoint>();
         for (int i = 0; i < names.Count; i++)
         {
-            GeoPoint point = GeoPoint.Intersection(names[i], a, b, indices[i], options ?? Options.None);
+            GeoPoint point = GeoPoint.Intersection(names[i], a, b, indices[i], options[i]);
             point.Compute();
             points.Add(point);
         }
@@ -147,7 +155,7 @@ public sealed class Construction
         {
             Register(point);
         }
-        RunOrQueue(points.Where(p => !(options?.Hidden ?? false)).Select(p => (TimelineAction)DrawActionFor(p, options)).ToList());
+        RunOrQueue(points.Where(p => !p.Options.Hidden).Select(p => (TimelineAction)DrawActionFor(p, p.Options)).ToList());
         return points;
     }
 
@@ -267,6 +275,16 @@ public sealed class Construction
             actions.Add(new FadeAction(item, 0, duration ?? 400, easing ?? Easing.EaseOut));
         }
         RunOrQueue(actions);
+    }
+
+    /// <summary>Fades out those of the objects that are visible or about to be drawn; the others are left alone.</summary>
+    public void HideVisible(IEnumerable<GeoObject> items, double? duration = null, Easing? easing = null)
+    {
+        List<GeoObject> visible = items.Where(item => (item.IsDrawn || IsQueued(item)) && item.Opacity > 0).ToList();
+        if (visible.Count > 0)
+        {
+            Hide(visible, duration, easing);
+        }
     }
 
     /// <summary>Moves a free point to <paramref name="target"/>; dependent objects follow.</summary>
