@@ -1,0 +1,508 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "GeoAnim",
+  "scopeName": "source.geo",
+  "fileTypes": [
+    "geo"
+  ],
+  "uuid": "5f0b6a2e-8c1d-4e7a-9b3f-2d6c1a9e4b70",
+  "patterns": [
+    {
+      "include": "#comment"
+    },
+    {
+      "match": "^\\s*(title|step)\\b(.*)$",
+      "captures": {
+        "1": {
+          "name": "keyword.control.geo"
+        },
+        "2": {
+          "name": "string.unquoted.caption.geo",
+          "patterns": [
+            {
+              "include": "#math"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "match": "^\\s*(include)\\b\\s*(.*?)\\s*$",
+      "captures": {
+        "1": {
+          "name": "keyword.control.geo"
+        },
+        "2": {
+          "name": "string.other.link.path.geo"
+        }
+      }
+    },
+    {
+      "begin": "^\\s*(var)\\s+([A-Za-z_][A-Za-z0-9_]*'*)",
+      "beginCaptures": {
+        "1": {
+          "name": "keyword.control.geo"
+        },
+        "2": {
+          "name": "entity.name.function.var.geo"
+        }
+      },
+      "end": "$",
+      "patterns": [
+        {
+          "include": "#tail"
+        }
+      ]
+    },
+    {
+      "begin": "^\\s*(default)\\b((?:\\s+(?:point|segment|line|ray|circle|polygon|text|show|hide|move)\\b)*)",
+      "beginCaptures": {
+        "1": {
+          "name": "keyword.control.geo"
+        },
+        "2": {
+          "name": "keyword.other.geo"
+        }
+      },
+      "end": "$",
+      "patterns": [
+        {
+          "include": "#tail"
+        }
+      ]
+    },
+    {
+      "match": "^\\s*(output)\\b(.*?)(?=\\s*(?:#|$))",
+      "captures": {
+        "1": {
+          "name": "keyword.control.geo"
+        }
+      }
+    },
+    {
+      "begin": "^\\s*(view)\\b",
+      "beginCaptures": {
+        "1": {
+          "name": "keyword.control.geo"
+        }
+      },
+      "end": "$",
+      "patterns": [
+        {
+          "include": "#comment"
+        },
+        {
+          "match": "\\b(x|y)\\b",
+          "name": "keyword.other.geo"
+        },
+        {
+          "match": "\\.\\.",
+          "name": "keyword.operator.geo"
+        },
+        {
+          "include": "#number"
+        }
+      ]
+    },
+    {
+      "begin": "^\\s*(?:(input)\\s+)?(?:(point|segment|line|ray|circle|polygon|text)\\s+)?((?:[A-Za-z_][A-Za-z0-9_]*'*\\s+)*[A-Za-z_][A-Za-z0-9_]*'*)\\s*(=)(?=\\s*use\\b)",
+      "beginCaptures": {
+        "1": {
+          "name": "keyword.control.geo"
+        },
+        "2": {
+          "name": "keyword.control.geo"
+        },
+        "3": {
+          "name": "meta.names.geo",
+          "patterns": [
+            {
+              "match": "[A-Za-z_][A-Za-z0-9_]*'*",
+              "name": "entity.name.type.object.geo"
+            }
+          ]
+        },
+        "4": {
+          "name": "keyword.operator.geo"
+        }
+      },
+      "end": "$",
+      "patterns": [
+        {
+          "match": "\\G\\s*(use)\\s+(\\S+)",
+          "captures": {
+            "1": {
+              "name": "keyword.other.geo"
+            },
+            "2": {
+              "name": "string.other.link.path.geo"
+            }
+          }
+        },
+        {
+          "include": "#comment"
+        },
+        {
+          "begin": "(?=\\b(?:duration|color|width|fill|opacity|size|labelsize|labelpos|label|nolabel|hidden|offset|linear|ease|easein|easeout|easeinout|draw|steps)\\b)",
+          "end": "(?=$)",
+          "patterns": [
+            {
+              "match": "\\b(draw|steps)\\b",
+              "name": "keyword.other.geo"
+            },
+            {
+              "include": "#tail"
+            }
+          ]
+        },
+        {
+          "include": "#number"
+        }
+      ]
+    },
+    {
+      "begin": "^\\s*(?:(input)\\s+)?(point)\\s+((?:[A-Za-z_][A-Za-z0-9_]*'*\\s+)*[A-Za-z_][A-Za-z0-9_]*'*)\\s*(=)",
+      "beginCaptures": {
+        "1": {
+          "name": "keyword.control.geo"
+        },
+        "2": {
+          "name": "keyword.control.geo"
+        },
+        "3": {
+          "name": "meta.names.geo",
+          "patterns": [
+            {
+              "match": "[A-Za-z_][A-Za-z0-9_]*'*",
+              "name": "entity.name.type.object.geo"
+            }
+          ]
+        },
+        "4": {
+          "name": "keyword.operator.geo"
+        }
+      },
+      "end": "$",
+      "patterns": [
+        {
+          "match": "\\G\\s*(?:(-?(?:\\d+(?:\\.\\d+)?|\\.\\d+))\\s+(-?(?:\\d+(?:\\.\\d+)?|\\.\\d+))|(midpoint|intersect)\\s+([A-Za-z_][A-Za-z0-9_]*'*)\\s+([A-Za-z_][A-Za-z0-9_]*'*)|(on)\\s+([A-Za-z_][A-Za-z0-9_]*'*)\\s+(at)\\s+(-?(?:\\d+(?:\\.\\d+)?|\\.\\d+))|(copy)\\s+([A-Za-z_][A-Za-z0-9_]*'*))",
+          "captures": {
+            "1": {
+              "name": "constant.numeric.geo"
+            },
+            "2": {
+              "name": "constant.numeric.geo"
+            },
+            "3": {
+              "name": "keyword.other.geo"
+            },
+            "6": {
+              "name": "keyword.other.geo"
+            },
+            "8": {
+              "name": "keyword.other.geo"
+            },
+            "9": {
+              "name": "constant.numeric.geo"
+            },
+            "10": {
+              "name": "keyword.other.geo"
+            }
+          }
+        },
+        {
+          "include": "#tail"
+        }
+      ]
+    },
+    {
+      "begin": "^\\s*(?:(input)\\s+)?(segment|line|ray)\\s+([A-Za-z_][A-Za-z0-9_]*'*)\\s*(=)\\s*([A-Za-z_][A-Za-z0-9_]*'*)\\s+([A-Za-z_][A-Za-z0-9_]*'*)",
+      "beginCaptures": {
+        "1": {
+          "name": "keyword.control.geo"
+        },
+        "2": {
+          "name": "keyword.control.geo"
+        },
+        "3": {
+          "name": "entity.name.type.object.geo"
+        },
+        "4": {
+          "name": "keyword.operator.geo"
+        }
+      },
+      "end": "$",
+      "patterns": [
+        {
+          "include": "#tail"
+        }
+      ]
+    },
+    {
+      "begin": "^\\s*(segment|line|ray)\\s+([A-Za-z_][A-Za-z0-9_]*'*)\\s+([A-Za-z_][A-Za-z0-9_]*'*)(?!\\s*=)",
+      "beginCaptures": {
+        "1": {
+          "name": "keyword.control.geo"
+        }
+      },
+      "end": "$",
+      "patterns": [
+        {
+          "include": "#tail"
+        }
+      ]
+    },
+    {
+      "begin": "^\\s*(?:(input)\\s+)?(circle)\\s+([A-Za-z_][A-Za-z0-9_]*'*)\\s*(=)\\s*(center)\\s+([A-Za-z_][A-Za-z0-9_]*'*)\\s+(?:(through)\\s+([A-Za-z_][A-Za-z0-9_]*'*)|(radius)\\s+(-?(?:\\d+(?:\\.\\d+)?|\\.\\d+)))",
+      "beginCaptures": {
+        "1": {
+          "name": "keyword.control.geo"
+        },
+        "2": {
+          "name": "keyword.control.geo"
+        },
+        "3": {
+          "name": "entity.name.type.object.geo"
+        },
+        "4": {
+          "name": "keyword.operator.geo"
+        },
+        "5": {
+          "name": "keyword.other.geo"
+        },
+        "7": {
+          "name": "keyword.other.geo"
+        },
+        "9": {
+          "name": "keyword.other.geo"
+        },
+        "10": {
+          "name": "constant.numeric.geo"
+        }
+      },
+      "end": "$",
+      "patterns": [
+        {
+          "include": "#tail"
+        }
+      ]
+    },
+    {
+      "begin": "^\\s*(polygon)\\s+([A-Za-z_][A-Za-z0-9_]*'*)\\s*(=)",
+      "beginCaptures": {
+        "1": {
+          "name": "keyword.control.geo"
+        },
+        "2": {
+          "name": "entity.name.type.object.geo"
+        },
+        "3": {
+          "name": "keyword.operator.geo"
+        }
+      },
+      "end": "$",
+      "patterns": [
+        {
+          "include": "#comment"
+        },
+        {
+          "begin": "(?=\\b(?:duration|color|width|fill|opacity|size|labelsize|labelpos|label|nolabel|hidden|offset|linear|ease|easein|easeout|easeinout|draw|steps)\\b)",
+          "end": "(?=$)",
+          "patterns": [
+            {
+              "match": "\\b(draw|steps)\\b",
+              "name": "keyword.other.geo"
+            },
+            {
+              "include": "#tail"
+            }
+          ]
+        },
+        {
+          "include": "#number"
+        }
+      ]
+    },
+    {
+      "begin": "^\\s*(text)\\s+([A-Za-z_][A-Za-z0-9_]*'*)\\s*(=)",
+      "beginCaptures": {
+        "1": {
+          "name": "keyword.control.geo"
+        },
+        "2": {
+          "name": "entity.name.type.object.geo"
+        },
+        "3": {
+          "name": "keyword.operator.geo"
+        }
+      },
+      "end": "$",
+      "patterns": [
+        {
+          "include": "#string"
+        },
+        {
+          "match": "\\b(at)\\s+(?:(-?(?:\\d+(?:\\.\\d+)?|\\.\\d+))\\s+(-?(?:\\d+(?:\\.\\d+)?|\\.\\d+))|([A-Za-z_][A-Za-z0-9_]*'*))",
+          "captures": {
+            "1": {
+              "name": "keyword.other.geo"
+            },
+            "2": {
+              "name": "constant.numeric.geo"
+            },
+            "3": {
+              "name": "constant.numeric.geo"
+            }
+          }
+        },
+        {
+          "include": "#tail"
+        }
+      ]
+    },
+    {
+      "begin": "^\\s*(move)\\s+([A-Za-z_][A-Za-z0-9_]*'*)\\s+(to)\\s+(?:(-?(?:\\d+(?:\\.\\d+)?|\\.\\d+))\\s+(-?(?:\\d+(?:\\.\\d+)?|\\.\\d+))|(-?(?:\\d+(?:\\.\\d+)?|\\.\\d+))|([A-Za-z_][A-Za-z0-9_]*'*))",
+      "beginCaptures": {
+        "1": {
+          "name": "keyword.control.geo"
+        },
+        "3": {
+          "name": "keyword.other.geo"
+        },
+        "4": {
+          "name": "constant.numeric.geo"
+        },
+        "5": {
+          "name": "constant.numeric.geo"
+        },
+        "6": {
+          "name": "constant.numeric.geo"
+        }
+      },
+      "end": "$",
+      "patterns": [
+        {
+          "include": "#tail"
+        }
+      ]
+    },
+    {
+      "begin": "^\\s*(show|hide)\\b",
+      "beginCaptures": {
+        "1": {
+          "name": "keyword.control.geo"
+        }
+      },
+      "end": "$",
+      "patterns": [
+        {
+          "include": "#comment"
+        },
+        {
+          "begin": "(?=\\b(?:duration|color|width|fill|opacity|size|labelsize|labelpos|label|nolabel|hidden|offset|linear|ease|easein|easeout|easeinout|draw|steps)\\b)",
+          "end": "(?=$)",
+          "patterns": [
+            {
+              "match": "\\b(draw|steps)\\b",
+              "name": "keyword.other.geo"
+            },
+            {
+              "include": "#tail"
+            }
+          ]
+        },
+        {
+          "include": "#number"
+        }
+      ]
+    },
+    {
+      "begin": "^\\s*(background|grid|axes|speed|pause|together|end|point|segment|line|ray|circle|polygon|text|move|input)\\b",
+      "beginCaptures": {
+        "1": {
+          "name": "keyword.control.geo"
+        }
+      },
+      "end": "$",
+      "patterns": [
+        {
+          "include": "#tail"
+        }
+      ]
+    },
+    {
+      "include": "#tail"
+    }
+  ],
+  "repository": {
+    "comment": {
+      "match": "(?<![\\w\\\"])#(?![0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?\\b).*$",
+      "name": "comment.line.number-sign.geo"
+    },
+    "color-hex": {
+      "match": "#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{3})\\b",
+      "name": "variable.other.constant.color.geo"
+    },
+    "number": {
+      "match": "(?<![\\w.])-?(?:\\d+(?:\\.\\d+)?|\\.\\d+)\\b",
+      "name": "constant.numeric.geo"
+    },
+    "math": {
+      "match": "(?<!\\\\)\\$[^$]*\\$",
+      "name": "constant.character.math.geo"
+    },
+    "string": {
+      "begin": "\"",
+      "end": "\"|$",
+      "name": "string.quoted.double.geo",
+      "patterns": [
+        {
+          "match": "\\\\.",
+          "name": "constant.character.escape.geo"
+        },
+        {
+          "include": "#math"
+        }
+      ]
+    },
+    "tail": {
+      "patterns": [
+        {
+          "include": "#comment"
+        },
+        {
+          "include": "#string"
+        },
+        {
+          "include": "#color-hex"
+        },
+        {
+          "match": "\\b(color|fill)\\s+(black|white|gray|grey|lightgray|lightgrey|red|darkred|green|lightgreen|blue|lightblue|navy|orange|yellow|purple|violet|pink|brown|teal|cyan|magenta)\\b",
+          "captures": {
+            "1": {
+              "name": "entity.other.attribute-name.option.geo"
+            },
+            "2": {
+              "name": "variable.other.constant.color.geo"
+            }
+          }
+        },
+        {
+          "match": "\\b(duration|color|width|fill|opacity|size|labelsize|labelpos|label|nolabel|hidden|offset|linear|ease|easein|easeout|easeinout)\\b",
+          "name": "entity.other.attribute-name.option.geo"
+        },
+        {
+          "include": "#number"
+        },
+        {
+          "match": "\\b(midpoint|intersect|on|at|center|through|radius|to|copy|use|draw|steps)\\b",
+          "name": "keyword.other.geo"
+        },
+        {
+          "match": "(?<![\\w'])[A-Za-z_][A-Za-z0-9_]*'*",
+          "name": "entity.name.function.var.geo"
+        }
+      ]
+    }
+  }
+}

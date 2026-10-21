@@ -210,6 +210,12 @@ c.Line("m", s, t, new Options { Color = Color.Parse("red") });
 File.WriteAllText("mittelsenkrechte.html", HtmlExporter.Export(c.Build()));
 ```
 
+## Syntaxhervorhebung
+
+`editors/vscode` enthält eine Grammatik für `.geo`-Dateien, die VS Code und Visual Studio verstehen: Befehle,
+Hilfswörter, Optionen, Zahlen, Farben, neue Objektnamen, Vars, Texte, Formeln, Dateipfade und Kommentare bekommen eigene
+Farben. Einrichten: siehe `editors/vscode/README.md`.
+
 ## Aufbau
 
 | Projekt | Inhalt |

@@ -1,0 +1,36 @@
+{
+  "name": "geoanim-geo",
+  "displayName": "GeoAnim (.geo)",
+  "description": "Syntax highlighting for GeoAnim scripts (.geo)",
+  "version": "0.1.0",
+  "publisher": "mathepedia",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "geo",
+        "aliases": [
+          "GeoAnim",
+          "geo"
+        ],
+        "extensions": [
+          ".geo"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "geo",
+        "scopeName": "source.geo",
+        "path": "./syntaxes/geo.tmLanguage.json"
+      }
+    ]
+  }
+}
