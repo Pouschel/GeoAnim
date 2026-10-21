@@ -1,0 +1,16 @@
+# Formatting of this repository, independent of the personal Visual Studio settings.
+root = true
+
+[*.{cs,csproj,slnx,props,targets}]
+indent_style = space
+indent_size = 4
+insert_final_newline = true
+
+[*.{js,css,html}]
+indent_style = space
+indent_size = 2
+insert_final_newline = true
+
+[*.{json,yaml,yml,md,geo}]
+indent_style = space
+indent_size = 2

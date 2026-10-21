@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Geometry objects, the timeline of an animation (steps and actions) and the animation data for the player. -->
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="GeoAnim.Tests" />
+  </ItemGroup>
+
+</Project>

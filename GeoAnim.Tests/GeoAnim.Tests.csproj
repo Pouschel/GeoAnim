@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GeoAnim\GeoAnim.csproj" />
+    <ProjectReference Include="..\GeoAnim.Core\GeoAnim.Core.csproj" />
+    <ProjectReference Include="..\GeoAnim.Script\GeoAnim.Script.csproj" />
+    <ProjectReference Include="..\GeoAnim.Viewer\GeoAnim.Viewer.csproj" />
+  </ItemGroup>
+
+</Project>

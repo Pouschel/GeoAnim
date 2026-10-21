@@ -1,0 +1,14 @@
+{
+  "profiles": {
+    "serve sample": {
+      "commandName": "Project",
+      "commandLineArgs": "serve Samples/perpendicular-bisector.geo",
+      "workingDirectory": "$(ProjectDir).."
+    },
+    "export sample": {
+      "commandName": "Project",
+      "commandLineArgs": "export Samples/perpendicular-bisector.geo",
+      "workingDirectory": "$(ProjectDir).."
+    }
+  }
+}

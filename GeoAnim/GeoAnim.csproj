@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The command line program: "geoanim serve file.geo" (live preview) and "geoanim export file.geo". -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>geoanim</AssemblyName>
+    <RootNamespace>GeoAnim.Cli</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="EmbedIO" Version="3.5.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GeoAnim.Core\GeoAnim.Core.csproj" />
+    <ProjectReference Include="..\GeoAnim.Script\GeoAnim.Script.csproj" />
+    <ProjectReference Include="..\GeoAnim.Viewer\GeoAnim.Viewer.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="GeoAnim.Tests" />
+  </ItemGroup>
+
+</Project>

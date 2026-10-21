@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The player in the browser (view/: HTML, JavaScript, CSS, fonts) as embedded resources, and the export of an
+    animation as one self-contained HTML file.
+  -->
+
+  <ItemGroup>
+    <EmbeddedResource Include="view\**\*" LogicalName="view/%(RecursiveDir)%(Filename)%(Extension)" WithCulture="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GeoAnim.Core\GeoAnim.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="GeoAnim.Tests" />
+  </ItemGroup>
+
+</Project>

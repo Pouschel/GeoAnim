@@ -1,0 +1,183 @@
+/* The GeoAnim player: title, picture (as large as the window allows, in the shape of the view), step description,
+   control bar. */
+html, body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  background: #eceef2;
+  color: #222;
+  font-family: Lato, 'Segoe UI', sans-serif;
+  overflow: hidden;
+}
+
+header {
+  padding: 10px 16px 0;
+  text-align: center;
+}
+
+h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+#stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  margin: 10px 16px 0;
+}
+
+#scene {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+  user-select: none;
+}
+
+#scene text {
+  font-family: Lato, 'Segoe UI', sans-serif;
+}
+
+#message {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  pointer-events: none;
+}
+
+#message:empty {
+  display: none;
+}
+
+#error {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 32px);
+  padding: 8px 14px;
+  border-radius: 6px;
+  background: #b71c1c;
+  color: #fff;
+  font-family: Consolas, 'Cascadia Mono', monospace;
+  font-size: 14px;
+  white-space: pre-wrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+#error[hidden] {
+  display: none;
+}
+
+#caption {
+  min-height: 1.4em;
+  padding: 10px 16px 6px;
+  font-size: 20px;
+  line-height: 1.4;
+  text-align: center;
+}
+
+#controls {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 46px;
+  padding: 0 12px;
+  background: #fff;
+  border-top: 1px solid #d5d8de;
+  user-select: none;
+}
+
+#controls button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  height: 34px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: #4a5160;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+#controls button:hover:not(:disabled) {
+  background: #eceef2;
+  color: #000;
+}
+
+#controls button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+#controls svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+}
+
+#play .pause,
+#play.playing .play {
+  display: none;
+}
+
+#play.playing .pause {
+  display: block;
+}
+
+#stops[aria-pressed="true"] {
+  color: #1565c0;
+}
+
+#timeline-box {
+  position: relative;
+  flex: 1;
+  min-width: 60px;
+  margin: 0 10px;
+}
+
+#timeline {
+  width: 100%;
+  margin: 0;
+  accent-color: #1565c0;
+}
+
+/* the ends of the steps on the timeline */
+#marks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+#marks span {
+  position: absolute;
+  top: 50%;
+  width: 2px;
+  height: 12px;
+  margin: -6px 0 0 -1px;
+  background: #9aa1ad;
+}
+
+#counter {
+  min-width: 56px;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+#speed {
+  min-width: 44px !important;
+}

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The GeoAnim player. "geoanim serve" shows it with live updates; "geoanim export" turns it into one
+         self-contained file by inlining the stylesheets and the script and adding the animation (window.GEO_ANIMATION). -->
+    <title>GeoAnim</title>
+    <link rel="stylesheet" href="fonts/fonts.css">
+    <link rel="stylesheet" href="player.css">
+  </head>
+  <body>
+    <header id="header" hidden>
+      <h1 id="title"></h1>
+    </header>
+    <main id="stage">
+      <svg id="scene" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title caption"></svg>
+      <div id="message">Loading…</div>
+      <div id="error" hidden></div>
+    </main>
+    <div id="caption" aria-live="polite"></div>
+    <nav id="controls" aria-label="Animation controls">
+      <button id="first" type="button" title="Start (Home)" disabled>
+        <svg viewBox="0 0 24 24"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg>
+      </button>
+      <button id="previous" type="button" title="Previous step (←)" disabled>
+        <svg viewBox="0 0 24 24"><path d="M17 5v14L6 12z"/></svg>
+      </button>
+      <button id="play" type="button" title="Play / pause (Space)" disabled>
+        <svg class="play" viewBox="0 0 24 24"><path d="M7 4v16l13-8z"/></svg>
+        <svg class="pause" viewBox="0 0 24 24"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>
+      </button>
+      <button id="next" type="button" title="Next step (→)" disabled>
+        <svg viewBox="0 0 24 24"><path d="M7 5v14l11-7z"/></svg>
+      </button>
+      <button id="last" type="button" title="End (End)" disabled>
+        <svg viewBox="0 0 24 24"><path d="M16 5h2v14h-2zM4 5v14l11-7z"/></svg>
+      </button>
+      <button id="replay" type="button" title="Replay this step (R)" disabled>
+        <svg viewBox="0 0 24 24"><path d="M12 5V2L7 6l5 4V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/></svg>
+      </button>
+      <div id="timeline-box">
+        <input id="timeline" type="range" min="0" max="1" step="1" value="0" aria-label="Position" disabled>
+        <div id="marks"></div>
+      </div>
+      <span id="counter" title="Step">0 / 0</span>
+      <button id="stops" type="button" title="Stop after each step (S)" aria-pressed="true" disabled>
+        <svg viewBox="0 0 24 24"><path d="M4 11h9v2H4zM15 5h2v14h-2zM19 5h2v14h-2z"/></svg>
+      </button>
+      <button id="speed" type="button" title="Speed" disabled>1×</button>
+    </nav>
+    <script src="player.js"></script>
+  </body>
+</html>

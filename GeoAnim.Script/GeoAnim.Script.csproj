@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The script language (.geo files): parser and compiler into a GeoAnim.Core construction. -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\GeoAnim.Core\GeoAnim.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="GeoAnim.Tests" />
+  </ItemGroup>
+
+</Project>

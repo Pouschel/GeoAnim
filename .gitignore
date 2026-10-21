@@ -1,0 +1,7 @@
+bin/
+obj/
+.vs/
+*.user
+TestResults/
+# animations exported from the samples
+Samples/*.html

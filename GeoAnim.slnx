@@ -1,0 +1,12 @@
+<Solution>
+  <Project Path="GeoAnim.Core/GeoAnim.Core.csproj" />
+  <Project Path="GeoAnim.Script/GeoAnim.Script.csproj" />
+  <Project Path="GeoAnim.Viewer/GeoAnim.Viewer.csproj" />
+  <Project Path="GeoAnim/GeoAnim.csproj" />
+  <Project Path="GeoAnim.Tests/GeoAnim.Tests.csproj" />
+  <Folder Name="/Samples/">
+    <File Path="Samples/perpendicular-bisector.geo" />
+    <File Path="Samples/circumcircle.geo" />
+    <File Path="Samples/moving-point.geo" />
+  </Folder>
+</Solution>
