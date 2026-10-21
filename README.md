@@ -98,6 +98,7 @@ Koordinaten sind mathematisch: die y-Achse zeigt nach oben. Der Maßstab ist in 
 | `move P to 150` | bewegt einen Punkt auf seinem Kreis (Winkel) bzw. seiner Strecke (Position) |
 | `pause 300` | wartet (Standard 500 ms) |
 | `together` … `end` | alles dazwischen beginnt gleichzeitig; der Block dauert so lange wie die längste Aktion |
+| `together duration 2500` … `end` | ebenso, aber der Block dauert genau 2,5 s: alle Aktionen darin werden im selben Verhältnis gestreckt oder gestaucht |
 
 Aktionen laufen nacheinander. Ein Schritt ohne Aktion dauert 500 ms. Bewegungen werden in Abständen von 40 ms exakt vorausberechnet, damit Kreise durch bewegte Punkte, Schnittpunkte usw. auch zwischendurch stimmen.
 

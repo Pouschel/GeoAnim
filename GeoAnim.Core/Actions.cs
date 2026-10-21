@@ -7,7 +7,8 @@ namespace GeoAnim;
 /// </summary>
 internal abstract class TimelineAction(double duration, Easing easing)
 {
-    public double Duration { get; } = duration;
+    /// <summary>How long it takes in milliseconds (a "together" block with a duration of its own scales it).</summary>
+    public double Duration { get; set; } = duration;
 
     public Easing Easing { get; } = easing;
 

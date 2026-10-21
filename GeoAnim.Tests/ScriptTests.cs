@@ -133,6 +133,33 @@ public class ScriptTests
     }
 
     [Fact]
+    public void TogetherWithDurationScalesItsActions()
+    {
+        AnimationData animation = ScriptCompiler.Compile("""
+            point A = 0 0
+            point C = 4 0
+            step zusammen
+              together duration 2500
+                move A to -2 1
+                move C to 4 2 duration 500
+              end
+            step warten
+              together duration 300
+              end
+            """);
+        // the longest move (1000 ms) becomes 2500 ms, the shorter one keeps its share (1250 ms)
+        Assert.Equal([(0.0, 2500.0), (2500.0, 2800.0)], animation.Steps.Select(s => (s.Start, s.End)));
+        JsonElement primitives = JsonDocument.Parse(animation.ToJson()).RootElement.GetProperty("primitives");
+        double LastKey(JsonElement track) => track.EnumerateArray().Last()[0].GetDouble();
+        // the dots of A and C: their x/y keys end when their moves end
+        JsonElement[] dots = primitives.EnumerateArray().Where(p => p.GetProperty("type").GetString() == "dot").ToArray();
+        Assert.Equal(2500, LastKey(dots[0].GetProperty("tracks").GetProperty("x")), 0);
+        // (moves are computed every 40 ms: the last key is at the next step after 1250 ms)
+        Assert.InRange(LastKey(dots[1].GetProperty("tracks").GetProperty("y")), 1250, 1291);
+        ErrorAt("point A = 0 0\nstep s\ntogether color red\nend", 3, 10, "\"color\" is not possible for together");
+    }
+
+    [Fact]
     public void EmptyTogetherBlocksTakeNoTime()
     {
         AnimationData animation = ScriptCompiler.Compile("""

@@ -335,18 +335,41 @@ public sealed class Construction
         RunOrQueue([new PauseAction(duration)]);
     }
 
-    /// <summary>Starts everything done in <paramref name="body"/> at the same time.</summary>
-    public void Together(Action body)
+    /// <summary>
+    /// Starts everything done in <paramref name="body"/> at the same time. With <paramref name="duration"/> the block takes
+    /// exactly that long: all its actions are stretched or compressed by the same factor.
+    /// </summary>
+    public void Together(Action body, double? duration = null)
     {
         if (together != null)
         {
             throw new GeoException("\"together\" blocks cannot be nested.");
+        }
+        if (duration < 0)
+        {
+            throw new GeoException("The duration cannot be negative.");
         }
         RequireStep("together");
         together = new List<TimelineAction>();
         try
         {
             body();
+            if (duration != null)
+            {
+                double length = together.Count == 0 ? 0 : together.Max(a => a.Duration);
+                if (length > 0)
+                {
+                    foreach (TimelineAction action in together)
+                    {
+                        action.Duration *= duration.Value / length;
+                    }
+                }
+                else
+                {
+                    // nothing that takes time: the block waits
+                    together.Add(new PauseAction(duration.Value));
+                }
+            }
             Run(together);
         }
         finally

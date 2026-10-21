@@ -17,9 +17,11 @@ pause 200
 step ...und eine Strecke $c$
 point C1 = -6 2 hidden
 point C2 = -2 2 hidden
-segment c = C1 C2 opt_gg2 
+segment c = C1 C2 opt_gg2  label "$c$"
 
-move A to -3 -3
+step Wir tragen an $A$ eine Strecke der Länge $c$ an (Prop2.html)
+#point D = use Prop2.geo C1 C2  
+
 
 
 

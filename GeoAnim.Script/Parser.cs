@@ -178,9 +178,10 @@ internal sealed class Parser
                 {
                     throw Error(word, "\"together\" blocks cannot be nested.");
                 }
+                OptionList togetherOptions = ParseOptions();
                 ExpectLineEnd();
                 List<Statement> body = ParseBlock(word, out _);
-                return new TogetherStatement(l, c, body);
+                return new TogetherStatement(l, c, body, togetherOptions);
             default:
                 throw Error(word, $"Unknown command \"{word.Text}\".");
         }

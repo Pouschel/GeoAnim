@@ -37,7 +37,7 @@ internal sealed record MoveStatement(int Line, int Column, NameRef Point, Vec? T
 
 internal sealed record PauseStatement(int Line, int Column, double Duration) : Statement(Line, Column);
 
-internal sealed record TogetherStatement(int Line, int Column, IReadOnlyList<Statement> Body) : Statement(Line, Column);
+internal sealed record TogetherStatement(int Line, int Column, IReadOnlyList<Statement> Body, OptionList Options) : Statement(Line, Column);
 
 /// <summary>A name in the script with its position (for messages about it).</summary>
 internal sealed record NameRef(string Name, int Line, int Column);

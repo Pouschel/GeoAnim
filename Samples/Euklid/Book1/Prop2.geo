@@ -19,7 +19,7 @@ segment s = B C opt_gg
 step Zeichne die Strecke $AB$
 segment AB = A B opt_h1
 
-step Zeichne auf $AB$ ein gleichseitiges Dreieck $ABD$ (Prop1.html)
+step Zeichne auf $AB$ ein gleichseitiges Dreieck $ABD$ (<Prop1.html>)
 point D = use Prop1.geo A B offset 0.1 0
 polygon ABD = A B D
 
@@ -47,7 +47,7 @@ step Die Strecke $bar(AL)$ ist genauso lang wie die Strecke $bar(BC)$
 segment res = A L opt_r1
 
 step Animation der Konstruktion
-together  # duration 1000 not yet supported
+together  duration 1500 
   move A to -2 1
   move C to 4 0
 end

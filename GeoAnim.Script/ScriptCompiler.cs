@@ -208,13 +208,15 @@ public static class ScriptCompiler
                         }
                         break;
                     }
-                    c.Together(() =>
-                    {
-                        foreach (Statement inner in s.Body)
+                    c.Together(
+                        () =>
                         {
-                            Execute(inner);
-                        }
-                    });
+                            foreach (Statement inner in s.Body)
+                            {
+                                Execute(inner);
+                            }
+                        },
+                        ToOptions(s.Options, "together", ["duration"]).Duration);
                     break;
                 default:
                     throw new InvalidOperationException("Unknown statement " + statement.GetType().Name);
