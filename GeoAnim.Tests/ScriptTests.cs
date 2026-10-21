@@ -65,6 +65,23 @@ public class ScriptTests
     }
 
     [Fact]
+    public void SpeedScalesAllTimes()
+    {
+        const string script = "point A = 0 0\npoint B = 1 0\nstep s\n  segment AB = A B duration 800\n  move B to 2 0";
+        AnimationData normal = ScriptCompiler.Compile(script);
+        AnimationData slow = ScriptCompiler.Compile("speed 0.5\n" + script);
+        Assert.Equal(1800, normal.Duration);
+        Assert.Equal(3600, slow.Duration);
+        Assert.Equal((0.0, 3600.0), (slow.Steps[0].Start, slow.Steps[0].End));
+        double LastKey(AnimationData a) => JsonDocument.Parse(a.ToJson()).RootElement.GetProperty("primitives").EnumerateArray()
+            .SelectMany(p => p.GetProperty("tracks").EnumerateObject()).SelectMany(t => t.Value.EnumerateArray()).Max(k => k[0].GetDouble());
+        Assert.Equal(2 * LastKey(normal), LastKey(slow));
+        Assert.Equal(900, ScriptCompiler.Compile("speed 2\n" + script).Duration);
+        ErrorAt("speed 0", 1, 7, "greater than 0");
+        ErrorAt("step s\nspeed 2", 2, 1, "before the first step");
+    }
+
+    [Fact]
     public void OffsetIsInCoordinates()
     {
         JsonElement primitives = JsonDocument.Parse(ScriptCompiler.Compile("point A = 1 2 offset 0.5 -0.25\ntext t = \"x\" at A offset 1 1").ToJson())

@@ -62,6 +62,10 @@ public static class ScriptCompiler
                     RequireSetup(s, "axes");
                     c.Axes = true;
                     break;
+                case SpeedStatement s:
+                    RequireSetup(s, "speed");
+                    c.Speed = s.Speed;
+                    break;
                 case StepStatement s:
                     c.Step(s.Caption);
                     break;

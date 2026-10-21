@@ -4,4 +4,4 @@ obj/
 *.user
 TestResults/
 # animations exported from the samples
-Samples/*.html
+Samples/**/*.html

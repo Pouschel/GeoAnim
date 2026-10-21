@@ -4,6 +4,7 @@ Animierte geometrische Konstruktionen aus einer kleinen Skriptsprache (oder aus 
 
 - **`geoanim serve datei.geo`** zeigt die Animation im Browser und aktualisiert sie bei jedem Speichern der Datei. Der Player bleibt dabei am aktuellen Schritt; Fehler erscheinen mit Zeile und Spalte über dem Bild.
 - **`geoanim export datei.geo`** schreibt **eine** HTML-Datei (rund 100 KB), die ohne Server läuft und weitergegeben werden kann.
+- **`geoanim exportdir ordner`** macht das für jede `.geo`-Datei im Ordner und allen Unterordnern (die HTML-Datei jeweils daneben); ein fehlerhaftes Skript wird gemeldet, die übrigen werden trotzdem exportiert.
                
 Gezeichnet wird mit SVG, also in jeder Größe scharf. Es gibt keine Abhängigkeiten außer der Schrift Lato (SIL Open Font License, `GeoAnim.Viewer/view/fonts/LICENSE-lato.txt`) und EmbedIO für den Webserver.
 
@@ -57,6 +58,7 @@ Koordinaten sind mathematisch: die y-Achse zeigt nach oben. Der Maßstab ist in 
 | `background white` | Hintergrundfarbe |
 | `grid` / `grid 0.5` | Gitter mit Abstand 1 bzw. 0.5 |
 | `axes` | Koordinatenachsen mit Zahlen |
+| `speed 0.5` | Tempo der ganzen Animation: 1 wie angegeben, 0.5 halb so schnell (alles dauert doppelt so lange), 2 doppelt so schnell |
 
 ### Objekte
 

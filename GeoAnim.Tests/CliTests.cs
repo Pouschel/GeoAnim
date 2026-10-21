@@ -45,6 +45,24 @@ public sealed class CliTests : IDisposable
     }
 
     [Fact]
+    public void ExportDirectoryWritesAllScriptsAndReportsFaultyOnes()
+    {
+        Directory.CreateDirectory(Path.Combine(folder, "sub", "deeper"));
+        Write("one.geo", "title one\npoint A = 1 1");
+        Write(Path.Combine("sub", "deeper", "two.geo"), "title two");
+        Assert.Equal(0, Program.ExportDirectory(folder));
+        Assert.True(File.Exists(Path.Combine(folder, "one.html")));
+        Assert.Contains("window.GEO_ANIMATION", File.ReadAllText(Path.Combine(folder, "sub", "deeper", "two.html")));
+
+        Write(Path.Combine("sub", "bad.geo"), "pont A = 1 1");
+        Write("three.geo", "title three");
+        Assert.Equal(1, Program.ExportDirectory(folder));
+        Assert.True(File.Exists(Path.Combine(folder, "three.html")));
+        Assert.False(File.Exists(Path.Combine(folder, "sub", "bad.html")));
+        Assert.Equal(1, Program.ExportDirectory(Path.Combine(folder, "missing")));
+    }
+
+    [Fact]
     public async Task LiveScriptNoticesSavedFiles()
     {
         string path = Write("b.geo", "title one");

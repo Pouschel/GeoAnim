@@ -39,6 +39,7 @@ public sealed class Construction
     private double time;
     private AnimationStep? currentStep;
     private bool built;
+    private double speed = 1;
 
     public string? Title { get; set; }
 
@@ -49,6 +50,16 @@ public sealed class Construction
 
     /// <summary>Whether the coordinate axes are drawn.</summary>
     public bool Axes { get; set; }
+
+    /// <summary>
+    /// Speed of the whole animation: 1 as given by the durations, 0.5 half as fast (everything takes twice as long),
+    /// 2 twice as fast. Applied when the animation is built; <see cref="Time"/> stays unscaled.
+    /// </summary>
+    public double Speed
+    {
+        get => speed;
+        set => speed = value > 0 && double.IsFinite(value) ? value : throw new GeoException("The speed must be greater than 0.");
+    }
 
     /// <summary>The visible window. Only before the first object, since lines are cut at its edges.</summary>
     public ViewWindow View
@@ -416,7 +427,9 @@ public sealed class Construction
             currentStep = null;
             built = true;
         }
-        return new AnimationData(Title, view, Background, GridStep, Axes, time, steps, scene.Primitives);
+        double scale = 1 / speed;
+        List<AnimationStep> scaledSteps = steps.Select(s => s with { Start = s.Start * scale, End = s.End * scale }).ToList();
+        return new AnimationData(Title, view, Background, GridStep, Axes, time * scale, scaledSteps, scene.Primitives, scale);
     }
 }
 

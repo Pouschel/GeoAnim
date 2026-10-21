@@ -12,10 +12,14 @@ public sealed class AnimationData
 {
     private readonly IReadOnlyList<Primitive> primitives;
 
+    // factor for the times of the primitives' keys (1 / speed); duration and steps are already scaled
+    private readonly double timeScale;
+
     internal AnimationData(
         string? title, ViewWindow view, Color background, double? gridStep, bool axes, double duration,
-        IReadOnlyList<AnimationStep> steps, IReadOnlyList<Primitive> primitives)
+        IReadOnlyList<AnimationStep> steps, IReadOnlyList<Primitive> primitives, double timeScale = 1)
     {
+        this.timeScale = timeScale;
         Title = title;
         View = view;
         Background = background;
@@ -94,7 +98,7 @@ public sealed class AnimationData
                     {
                         // [time, value] or [time, value, easing]
                         json.WriteStartArray();
-                        json.WriteNumberValue(RoundTime(key.Time));
+                        json.WriteNumberValue(RoundTime(key.Time * timeScale));
                         WriteValue(json, key.Value);
                         if (key.Easing != Easing.Linear)
                         {
