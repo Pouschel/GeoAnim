@@ -114,6 +114,25 @@ public class ScriptTests
     }
 
     [Fact]
+    public void OneNameTakesTheIntersectionThatLiesOnTheRay()
+    {
+        // the ray from D through B leaves the circle around B once only, behind B
+        var c = ScriptCompiler.CompileConstruction("""
+            point D = 0 2
+            point B = 0 0
+            point C = 3 0
+            ray r = D B
+            circle k = center B through C
+            point G = intersect r k
+            """);
+        Assert.Equal(new Vec(0, -3), ((GeoPoint)c.Objects["G"]).Position);
+        Assert.Equal("Line 6, column 1: r and k have only one intersection; give one name.",
+            Error("point D = 0 2\npoint B = 0 0\npoint C = 3 0\nray r = D B\ncircle k = center B through C\npoint G G' = intersect r k").ToString());
+        // a segment inside the circle
+        ErrorAt("point D = 0 5\npoint B = 0 4\ncircle k = center B radius 2\nsegment s = D B\npoint H = intersect s k", 5, 1, "do not intersect");
+    }
+
+    [Fact]
     public void EmptyTogetherBlocksTakeNoTime()
     {
         AnimationData animation = ScriptCompiler.Compile("""

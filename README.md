@@ -80,7 +80,7 @@ Koordinaten sind mathematisch: die y-Achse zeigt nach oben. Der Maßstab ist in 
 
 **Startbild und Schritte:** Objekte vor dem ersten `step` gehören zum Startbild und sind sofort da. In einem Schritt definierte Objekte werden dort nacheinander gezeichnet: Punkte erscheinen, Strecken wachsen von A nach B, Geraden von der Mitte nach außen, Kreise werden ab dem Punkt `through` (sonst ab 0°) gezogen, Vielecke und Texte blenden ein. Mit der Option `hidden` wird ein Objekt nur definiert (z. B. Hilfskreise) und erst mit `show` gezeigt – oder nie.
 
-**Reihenfolge der Schnittpunkte:** bei Gerade/Strecke/Strahl und Kreis in Richtung A → B; bei zwei Kreisen zuerst der Punkt links von der Richtung vom ersten zum zweiten Mittelpunkt. Die Reihenfolge bleibt erhalten, wenn sich Punkte bewegen. Ein Schnittpunkt, der beim Bewegen verschwindet (Kreise trennen sich), wird ausgeblendet, samt allem, was von ihm abhängt.
+**Reihenfolge der Schnittpunkte:** bei Gerade/Strecke/Strahl und Kreis in Richtung A → B; bei zwei Kreisen zuerst der Punkt links von der Richtung vom ersten zum zweiten Mittelpunkt. Bei nur einem Namen gilt der erste Schnittpunkt, den es gibt (bei Strecke oder Strahl kann der andere außerhalb liegen). Die Reihenfolge bleibt erhalten, wenn sich Punkte bewegen. Ein Schnittpunkt, der beim Bewegen verschwindet (Kreise trennen sich), wird ausgeblendet, samt allem, was von ihm abhängt.
 
 ### Schritte und Aktionen
 

@@ -115,17 +115,23 @@ public sealed class Construction
         {
             throw new GeoException($"{a} and {b} have at most {max} intersection{(max == 1 ? "" : "s")}; give 1{(max == 2 ? " or 2" : "")} names.");
         }
+        // which of the (up to 2) intersections exist now; on a segment or ray one of them may lie outside
+        List<int> existing = Enumerable.Range(0, max).Where(i => Intersections.Find(a, b, i) != null).ToList();
+        if (existing.Count == 0)
+        {
+            throw new GeoException($"{a.Name} and {b.Name} do not intersect.");
+        }
+        if (names.Count > existing.Count)
+        {
+            throw new GeoException($"{a.Name} and {b.Name} have only one intersection; give one name.");
+        }
+        // one name: the first intersection that exists (it keeps its number while points move)
+        List<int> indices = names.Count == max ? Enumerable.Range(0, max).ToList() : existing.Take(names.Count).ToList();
         var points = new List<GeoPoint>();
         for (int i = 0; i < names.Count; i++)
         {
-            GeoPoint point = GeoPoint.Intersection(names[i], a, b, i, options ?? Options.None);
+            GeoPoint point = GeoPoint.Intersection(names[i], a, b, indices[i], options ?? Options.None);
             point.Compute();
-            if (!point.IsDefined)
-            {
-                throw new GeoException(names.Count == 1 || i == 0
-                    ? $"{a.Name} and {b.Name} do not intersect."
-                    : $"{a.Name} and {b.Name} have only one intersection.");
-            }
             points.Add(point);
         }
         // define all first, then draw them together

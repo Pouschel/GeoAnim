@@ -29,12 +29,12 @@ together
   ray dbr = D B
 end
 
-step Zeichne um $B$ einen Kreis mir dem Radius $BC$ ... 
+step Zeichne um $B$ einen Kreis mir dem Radius $bar(BC)$ ... 
 circle kb = center B through C
 
-step Sei nun $G$ der Schnittpunkt dieses Kreises mit dem Strahl $BD$
+step Sei nun $G$ der Schnittpunkt dieses Kreises mit dem Strahl $vec(BD)$
 point G = intersect dbr kb
 
 
-step ... und um $D$ einen Kreis mit dem Radius $DG$
+step ... und um $D$ einen Kreis mit dem Radius $bar(DG)$
 #circle kd = center D through G
