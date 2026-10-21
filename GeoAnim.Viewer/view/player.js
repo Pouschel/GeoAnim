@@ -616,7 +616,54 @@
     setTime(position)
   })
   $('stops').addEventListener('click', toggleStops)
-  scene.addEventListener('click', () => { if (animation) togglePlay() })
+  scene.addEventListener('click', event => {
+    if (!animation) {
+      return
+    }
+    if (event.shiftKey && live) {
+      copyCoordinates(event)
+      return
+    }
+    togglePlay()
+  })
+
+  // ------------------------------------------------------------------ coordinates ("geoanim serve" only)
+
+  // live: the player shows a script being written (not an exported file)
+  const live = !window.GEO_ANIMATION
+
+  // the mathematical coordinates of a mouse position, rounded to hundredths
+  function coordinatesAt (event) {
+    const box = scene.getBoundingClientRect()
+    const round = v => Math.round(v * 100) / 100
+    return [round(animation.view.xmin + (event.clientX - box.left) / scale), round(animation.view.ymax - (event.clientY - box.top) / scale)]
+  }
+
+  const formatCoordinate = v => v.toFixed(2).replace('-', '−')
+
+  function copyCoordinates (event) {
+    const [x, y] = coordinatesAt(event)
+    // the format of the script: "2.35 -1.2"
+    const text = String(x) + ' ' + String(y)
+    const done = () => { $('coords').textContent = 'kopiert: ' + text }
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(done, () => { $('coords').textContent = text })
+    } else {
+      $('coords').textContent = text
+    }
+  }
+
+  if (live) {
+    document.body.classList.add('live')
+    $('coords').hidden = false
+    scene.addEventListener('mousemove', event => {
+      if (animation) {
+        const [x, y] = coordinatesAt(event)
+        $('coords').textContent = `x = ${formatCoordinate(x)}   y = ${formatCoordinate(y)}`
+      }
+    })
+    scene.addEventListener('mouseleave', () => { $('coords').textContent = '' })
+  }
 
   // ------------------------------------------------------------------ speed
 

@@ -1,4 +1,5 @@
 
+grid 0.5
 
 default point size 4 labelsize 30
 default segment line ray circle polygon width 2 

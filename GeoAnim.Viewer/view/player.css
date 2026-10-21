@@ -198,6 +198,24 @@ h1 {
   background: #9aa1ad;
 }
 
+/* "geoanim serve": the coordinates under the mouse */
+#coords {
+  min-width: 150px;
+  margin-right: 12px;
+  color: #4a5160;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  white-space: pre;
+}
+
+#coords[hidden] {
+  display: none;
+}
+
+body.live #scene {
+  cursor: crosshair;
+}
+
 #counter {
   min-width: 56px;
   font-size: 14px;

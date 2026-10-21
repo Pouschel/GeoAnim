@@ -2,7 +2,7 @@
           
 Animierte geometrische Konstruktionen aus einer kleinen Skriptsprache (oder aus C#). Eine Konstruktion besteht aus Schritten mit Beschreibung; Punkte erscheinen, Strecken wachsen, Kreise werden wie mit dem Zirkel gezogen, Punkte bewegen sich, und alles, was von ihnen abhängt, folgt exakt.
 
-- **`geoanim serve datei.geo`** zeigt die Animation im Browser und aktualisiert sie bei jedem Speichern der Datei. Der Player bleibt dabei am aktuellen Schritt; Fehler erscheinen mit Zeile und Spalte über dem Bild.
+- **`geoanim serve datei.geo`** zeigt die Animation im Browser und aktualisiert sie bei jedem Speichern der Datei. Der Player bleibt dabei am aktuellen Schritt; Fehler erscheinen mit Zeile und Spalte über dem Bild. Über dem Bild laufen unten in der Steuerleiste die Koordinaten unter der Maus mit; Umschalt+Klick kopiert sie im Skriptformat (`2.35 -1.2`) in die Zwischenablage. (Exportierte Dateien zeigen das nicht.)
 - **`geoanim export datei.geo`** schreibt **eine** HTML-Datei (rund 100 KB), die ohne Server läuft und weitergegeben werden kann.
 - **`geoanim exportdir ordner`** macht das für jede `.geo`-Datei im Ordner und allen Unterordnern (die HTML-Datei jeweils daneben); ein fehlerhaftes Skript wird gemeldet, die übrigen werden trotzdem exportiert.
                
