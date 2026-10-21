@@ -7,7 +7,7 @@ internal sealed class Parser
     internal static readonly HashSet<string> Keywords = new(StringComparer.Ordinal)
     {
         "title", "view", "background", "grid", "axes", "speed", "var", "default", "include", "input", "output", "use",
-        "draw", "steps", "step", "point", "segment", "line", "ray", "circle", "polygon",
+        "draw", "steps", "copy", "step", "point", "segment", "line", "ray", "circle", "polygon",
         "text", "show", "hide", "move", "pause", "together", "end", "midpoint", "intersect", "center", "through",
         "radius", "at", "to", "on", "x", "y",
         "duration", "color", "width", "fill", "opacity", "size", "labelsize", "labelpos", "label", "nolabel", "hidden", "offset",
@@ -349,6 +349,11 @@ internal sealed class Parser
         {
             definition = new CoordinatesDefinition(ParseCoordinates());
         }
+        else if (Current.Is("copy"))
+        {
+            position++;
+            definition = new CopyDefinition(ExpectName());
+        }
         else if (Current.Is("midpoint"))
         {
             position++;
@@ -368,7 +373,7 @@ internal sealed class Parser
         }
         else
         {
-            throw Error(Current, $"Expected coordinates like 2 3, \"midpoint A B\", \"intersect k1 k2\" or \"on k at 30\" after \"=\", not {Current.Describe()}.");
+            throw Error(Current, $"Expected coordinates like 2 3, \"midpoint A B\", \"intersect k1 k2\", \"on k at 30\", \"copy P\" or \"use file …\" after \"=\", not {Current.Describe()}.");
         }
         if (names.Count > 1 && definition is not (IntersectDefinition or UseDefinition))
         {

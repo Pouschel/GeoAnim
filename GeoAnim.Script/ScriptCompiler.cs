@@ -344,6 +344,17 @@ public static class ScriptCompiler
                         };
                         break;
                     }
+                case CopyDefinition d:
+                    {
+                        GeoPoint original = ResolvePoint(d.Source);
+                        if (!original.IsDefined)
+                        {
+                            throw new ScriptError(d.Source.Line, d.Source.Column, $"{d.Source.Name} does not exist for the current positions.");
+                        }
+                        // a free point: it can move without changing the construction
+                        created = c.Point(name0, original.Position.X, original.Position.Y, options);
+                        break;
+                    }
                 case MidpointDefinition d:
                     created = c.Midpoint(name0, ResolvePoint(d.A), ResolvePoint(d.B), options);
                     break;

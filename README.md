@@ -71,6 +71,7 @@ Koordinaten sind mathematisch: die y-Achse zeigt nach oben. Der Maßstab ist in 
 |---|---|
 | `point A = 2 3` | freier Punkt (kann sich bewegen) |
 | `point M = midpoint A B` | Mittelpunkt |
+| `point X = copy P` | freier Punkt an der Stelle, an der P gerade ist (z. B. um eine Kopie zu bewegen, ohne die Konstruktion zu ändern) |
 | `point S T = intersect k1 k2` | Schnittpunkte (ein oder zwei Namen) |
 | `point P = on k at 60` | Punkt auf einem Kreis, Winkel in Grad (gegen den Uhrzeigersinn ab der x-Richtung) |
 | `point Q = on AB at 0.25` | Punkt auf Strecke/Gerade/Strahl: A + 0.25·(B − A) |

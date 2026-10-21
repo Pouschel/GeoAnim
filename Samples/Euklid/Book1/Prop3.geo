@@ -27,19 +27,24 @@ step Zeiche um $A$ einen Kreis durch $D$
 circle kf = center A through D opt_h2
 
 step Dieser Kreis schneide die Strecke $bar(AB)$ im Punkt $P$
-point P = intersect kf AB  opt_r1
+point P = intersect kf AB  opt_r1 duration 400
 
 step Die Strecke $bar(AP)$ ist genauso lang wie $c$
 segment r1 = A P opt_r1 width 4
 
 step Animation
-point C1x = -4 5 hidden
-point C2x = -1 5 hidden
-segment cx = C1x C2x opt_ani1 width 5  duration 100
-together duration 1500
+point C1x = copy A hidden
+point C2x = copy P hidden
+segment cx = C1x C2x opt_r1 width 5 duration 100
+together duration 1300
+  move C1x to C1
+  move C2x to C2
+end
+together duration 1300
   move C1x to A
   move C2x to P
 end
+hide cx
 
 
 

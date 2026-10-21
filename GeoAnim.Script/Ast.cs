@@ -53,6 +53,9 @@ internal sealed record CoordinatesDefinition(Vec Position) : Definition;
 
 internal sealed record MidpointDefinition(NameRef A, NameRef B) : Definition;
 
+/// <summary>"copy P": a free point where P is at that moment.</summary>
+internal sealed record CopyDefinition(NameRef Source) : Definition;
+
 internal sealed record OnDefinition(NameRef Path, double Parameter) : Definition;
 
 internal sealed record IntersectDefinition(NameRef A, NameRef B) : Definition;

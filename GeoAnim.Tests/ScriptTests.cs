@@ -187,6 +187,29 @@ public class ScriptTests
     }
 
     [Fact]
+    public void CopiesAreFreePointsWhereTheOriginalIs()
+    {
+        var c = ScriptCompiler.CompileConstruction("""
+            point A = 0 0
+            point B = 4 0
+            point M = midpoint A B
+            point C = 0 5
+            step zurück
+              point Mx = copy M hidden
+              point Bx = copy B hidden
+              segment sx = Mx Bx
+              together
+                move Mx to C
+                move Bx to 3 5
+              end
+            """);
+        // the copies moved, the construction stayed
+        Assert.Equal((new Vec(0, 5), new Vec(3, 5)), (((GeoPoint)c.Objects["Mx"]).Position, ((GeoPoint)c.Objects["Bx"]).Position));
+        Assert.Equal((new Vec(2, 0), new Vec(4, 0)), (((GeoPoint)c.Objects["M"]).Position, ((GeoPoint)c.Objects["B"]).Position));
+        ErrorAt("point A = 0 0\ncircle k = center A radius 1\npoint X = copy k", 3, 16, "k is a circle, not a point");
+    }
+
+    [Fact]
     public void EmptyTogetherBlocksTakeNoTime()
     {
         AnimationData animation = ScriptCompiler.Compile("""
