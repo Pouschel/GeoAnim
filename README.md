@@ -175,7 +175,7 @@ default color navy
 
 Es gilt der Reihe nach: Voreinstellungen ohne Art, dann die für die Art, dann die Optionen des Objekts selbst – die spätere gewinnt. Eine weitere `default`-Zeile ergänzt die bisherigen für die folgenden Objekte. Wie bei einer Var wird übergangen, was nicht passt (`default width 2` betrifft keine Punkte). Vorsicht bei `size` ohne Art: das ist bei Punkten der Radius, bei Texten die Schriftgröße. Vars sind auch hier möglich: `default circle hilfs`.
 
-**Dateien einbinden:** `include pfad` (Rest der Zeile, relativ zur einbindenden Datei) setzt den Inhalt einer anderen Datei an dieser Stelle ein, als stünde er dort – typisch für gemeinsame Voreinstellungen und Vars (`include ../styles.geo`). Eingebundene Dateien dürfen selbst einbinden, aber nicht im Kreis. Fehler darin werden mit Datei und Zeile gemeldet (`styles.geo, line 3, column 1: …`), und `geoanim serve` übersetzt auch neu, wenn eine eingebundene Datei gespeichert wird. Hinweis: Tests und `exportdir` behandeln jede `.geo`-Datei als eigenes Skript; eine Datei nur mit Voreinstellungen und Vars ist das auch (mit leerer Animation).
+**Dateien einbinden:** `include pfad` (Rest der Zeile, relativ zur einbindenden Datei; auch in Anführungszeichen, `include "meine Stile.geo"`) setzt den Inhalt einer anderen Datei an dieser Stelle ein, als stünde er dort – typisch für gemeinsame Voreinstellungen und Vars (`include ../styles.geo`). Eingebundene Dateien dürfen selbst einbinden, aber nicht im Kreis. Fehler darin werden mit Datei und Zeile gemeldet (`styles.geo, line 3, column 1: …`), und `geoanim serve` übersetzt auch neu, wenn eine eingebundene Datei gespeichert wird. Hinweis: Tests und `exportdir` behandeln jede `.geo`-Datei als eigenes Skript; eine Datei nur mit Voreinstellungen und Vars ist das auch (mit leerer Animation).
 
 **Konstruktionen wiederverwenden (`use`):** Eine Datei kann eine andere wie eine Funktion benutzen. Die benutzte Datei nennt ihre Eingaben und Ergebnisse:
 
@@ -196,6 +196,7 @@ point D = use Prop1.geo A B draw offset 0 0.2
 - Läuft die Datei allein, ist `input` eine gewöhnliche Definition, und sie animiert sich wie immer – bis zum Ende.
 - `output` steht wie `input` vor einer Definition (`output point C = …`, `output segment res = A L`, auch `output D s = use …`). Die Kurzform `output C side` gibt Objekte aus, die vorher definiert wurden – oder eine Eingabe unverändert zurück.
 - **Beim `use` endet die Datei mit ihrer letzten `output`-Zeile.** Was danach kommt (ein Beweis, Bewegungen zur Veranschaulichung), gehört nur zum Alleinlaufen. Eine `output`-Zeile steht deshalb nach der Konstruktion ihrer Objekte; steht sie davor, ist das ein Fehler (auch beim Alleinlaufen). Mehrere `output`-Zeilen sind möglich, maßgeblich für das Ende ist die letzte.
+- Ein Pfad mit Leerzeichen steht in Anführungszeichen: `point D = use "Buch 1/Satz 1.geo" A B`.
 - Beim `use` stehen die Objekte des Aufrufers (in der Reihenfolge der `input`-Zeilen, von passender Art) für die Eingaben; die Ergebnisse bekommen die Namen links vom `=`. Optionen beim `use` gelten für die Ergebnisse, zusätzlich zu den Voreinstellungen des Aufrufers.
 - Welche Ergebnisse man abholt, sagt die Art vorne. Bei `output L res` (ein Punkt, eine Strecke):
 

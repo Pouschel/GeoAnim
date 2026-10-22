@@ -241,6 +241,29 @@ public sealed class UseTests : IDisposable
     }
 
     [Fact]
+    public void PathsWithSpacesStandInQuotes()
+    {
+        Directory.CreateDirectory(Path.Combine(folder, "Buch 1"));
+        File.WriteAllText(Path.Combine(folder, "Buch 1", "Satz 1.geo"), Equilateral);
+        File.WriteAllText(Path.Combine(folder, "meine Stile.geo"), "default point size 7");
+        var c = Compile("""
+            include "meine Stile.geo"
+            include meine Stile.geo
+            point P = 0 0
+            point Q = 2 0
+            point R = use "Buch 1/Satz 1.geo" P Q
+            step s
+              use "Buch 1/Satz 1.geo" Q P draw
+            """.Replace("include meine Stile.geo\n", ""));
+        Assert.Equal(7.0, c.Objects["P"].Options.Size);
+        Assert.Equal(Math.Sqrt(3), ((GeoPoint)c.Objects["R"]).Position.Y, 9);
+        // also without quotes, the rest of the line is an include's path
+        Assert.Equal(7.0, Compile("include meine Stile.geo\npoint P = 0 0").Objects["P"].Options.Size);
+        Assert.StartsWith("Line 1, column 15: File not found: Buch 2/Satz 1.geo", Error("point R = use \"Buch 2/Satz 1.geo\" P").ToString());
+        Assert.StartsWith("Line 1, column 10: File not found: fehlt.geo", Error("include \"fehlt.geo\"").ToString());
+    }
+
+    [Fact]
     public void MistakesAreReportedAtTheUse()
     {
         Assert.Equal("Line 3, column 15: equilateral.geo needs 2 inputs (point A point B), not 1.",

@@ -167,7 +167,7 @@
       "end": "$",
       "patterns": [
         {
-          "match": "\\G\\s*(use)\\s+(\\S+)",
+          "match": "\\G\\s*(use)\\s+(\"[^\"]*\"|\\S+)",
           "captures": {
             "1": {
               "name": "keyword.other.geo"
@@ -425,7 +425,7 @@
       ]
     },
     {
-      "begin": "^\\s*(use)\\s+(\\S+)",
+      "begin": "^\\s*(use)\\s+(\"[^\"]*\"|\\S+)",
       "beginCaptures": {
         "1": {
           "name": "keyword.control.geo"

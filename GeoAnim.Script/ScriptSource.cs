@@ -77,12 +77,18 @@ public sealed partial class ScriptSource
             }
             int column = include.Groups[1].Length + 1;
             string name = include.Groups[2].Value;
+            int nameColumn = include.Groups[2].Index + 1;
+            // a path in quotes (it may have spaces anyway: the rest of the line is the path)
+            if (name.Length >= 2 && name[0] == '"' && name[^1] == '"')
+            {
+                name = name.Substring(1, name.Length - 2).Replace("\\\"", "\"");
+                nameColumn++;
+            }
             if (name.Length == 0)
             {
                 throw Error(file, i + 1, column, "\"include\" needs a file name, like \"include styles.geo\".");
             }
             string path = Path.GetFullPath(Path.Combine(directory, name));
-            int nameColumn = include.Groups[2].Index + 1;
             if (chain.Contains(path, StringComparer.OrdinalIgnoreCase))
             {
                 throw Error(file, i + 1, nameColumn,

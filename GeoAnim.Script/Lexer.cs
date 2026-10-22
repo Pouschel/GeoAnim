@@ -165,10 +165,15 @@ internal static partial class Lexer
                 }
                 else if (word == "use")
                 {
-                    // the file: everything up to the next space ("../Book1/Prop1.geo")
+                    // the file: everything up to the next space ("../Book1/Prop1.geo"), or a path in quotes (with spaces),
+                    // which is read as an ordinary string
                     while (i < source.Length && source[i] is ' ' or '\t')
                     {
                         i++;
+                    }
+                    if (i < source.Length && source[i] == '"')
+                    {
+                        continue;
                     }
                     int pathStart = i;
                     while (i < source.Length && !char.IsWhiteSpace(source[i]))
