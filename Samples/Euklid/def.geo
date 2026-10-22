@@ -20,6 +20,7 @@ var opt_gg2 color green width 3
 var opt_h1 color grey
 var opt_h2 color cyan
 var opt_h3 color orange
+var opt_h4 color violet
 
 # Ergebnisobjekte
 var opt_r1 color violet  width 3 
@@ -28,3 +29,5 @@ var opt_r1 color violet  width 3
 # Animation 
 var opt_ani1 color red width 4
 
+view x -10 .. 10 y -7 .. 7
+speed 0.5

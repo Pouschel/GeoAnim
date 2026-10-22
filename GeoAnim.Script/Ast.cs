@@ -73,6 +73,9 @@ internal sealed record CircleRadiusDefinition(NameRef Center, double Radius) : D
 
 internal sealed record PolygonDefinition(IReadOnlyList<NameRef> Vertices) : Definition;
 
+/// <summary>"angle w = A B C": at B, counterclockwise from BA to BC.</summary>
+internal sealed record AngleDefinition(NameRef A, NameRef Vertex, NameRef C) : Definition;
+
 /// <summary>How a used file appears: only its results, its construction drawn in the current step, or its own steps.</summary>
 internal enum UseMode
 {

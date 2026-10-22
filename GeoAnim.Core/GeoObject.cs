@@ -70,5 +70,7 @@ internal static class Defaults
     public const double LabelSize = 24;
     public const double TextSize = 26;
     public const double FillOpacity = 0.2;
+    public const double AngleSize = 36;
+    public const double AngleWidth = 1.5;
     public static readonly Vec LabelOffset = new(7, 7);
 }

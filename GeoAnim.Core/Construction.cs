@@ -188,6 +188,10 @@ public sealed class Construction
     public GeoCircle Circle(string name, GeoPoint center, double radius, Options? options = null) =>
         Define(new GeoCircle(name, center, radius, options ?? Options.None));
 
+    /// <summary>The angle at <paramref name="vertex"/>, counterclockwise from the ray to <paramref name="a"/> to the ray to <paramref name="c"/>.</summary>
+    public GeoAngle Angle(string name, GeoPoint a, GeoPoint vertex, GeoPoint c, Options? options = null) =>
+        Define(new GeoAngle(name, a, vertex, c, options ?? Options.None));
+
     public GeoPolygon Polygon(string name, IReadOnlyList<GeoPoint> vertices, Options? options = null) =>
         Define(new GeoPolygon(name, vertices, options ?? Options.None));
 
@@ -544,7 +548,7 @@ public sealed class Construction
     {
         IEnumerable<string> texts = stepList.Select(s => s.Caption)
             .Concat(scene.Primitives
-                .Where(p => p.Type == "text" && p.Tracks.ContainsKey("text"))
+                .Where(p => p.Tracks.ContainsKey("text"))
                 .SelectMany(p => p.Tracks["text"].Select(key => (string)key.Value)));
         if (Title != null)
         {

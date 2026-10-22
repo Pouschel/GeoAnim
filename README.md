@@ -140,7 +140,7 @@ Hinter einer Anweisung, in beliebiger Reihenfolge:
 | `size 6` | Punkt (Radius), Text (Schriftgröße) | Größe in Punkt |
 | `labelsize 20` | Punkt, Strecke, Strahl, Gerade | Schriftgröße der Beschriftung in Punkt (Standard 24) |
 | `label "$A'$"` / `nolabel` | Punkt | Beschriftung (Standard: der Name als Formel) bzw. keine |
-| `label "$a$"` | Strecke, Strahl, Gerade | Beschriftung, die mit dem Objekt wandert; standardmäßig in der Mitte, knapp rechts von der Richtung A → B (beim gegen den Uhrzeigersinn benannten Dreieck also außen) |
+| `label "$a$"` | Strecke, Strahl, Gerade, Winkel | Beschriftung, die mit dem Objekt wandert; bei Linien standardmäßig in der Mitte, knapp rechts von der Richtung A → B (beim gegen den Uhrzeigersinn benannten Dreieck also außen), beim Winkel auf der Winkelhalbierenden im Sektor |
 | `labelpos 0.3` | Strecke, Strahl, Gerade | Lage der Beschriftung bei A + 0.3·(B − A) (Standard 0.5); beim Strahl auch über 1, bei der Geraden beliebig |
 | `offset 0.3 -0.5` | Punkt (Beschriftung), Text, Strecke/Strahl/Gerade (Beschriftung) | Lage in Koordinateneinheiten relativ zum Punkt bzw. zur Stelle `labelpos`: dort beginnt die Grundlinie des Textes (bei Text an festen Koordinaten und bei Linien: ihre Mitte); ohne `offset` steht die Beschriftung knapp daneben |
 | `fill lightblue` | Vieleck | Füllfarbe (Standard: die Linienfarbe) |
@@ -163,7 +163,7 @@ line m = S T rot width 3
 
 Eine Var gilt ab ihrer Zeile (eine spätere `var` mit demselben Namen ersetzt sie für die folgenden Zeilen) und darf andere Vars enthalten. Optionen gelten der Reihe nach, die spätere gewinnt: `rot color blue` ist blau mit allem Übrigen aus `rot`. Was aus einer Var für ein Objekt nicht passt, wird übergangen (ein Punkt mit `hilfs` nimmt die Farbe, ignoriert `width`); direkt geschriebene Optionen, die nicht passen, bleiben ein Fehler. Vars und Objekte haben verschiedene Namen.
 
-**Voreinstellungen:** `default arten… optionen…` legt Optionen für alle folgenden Objekte fest, damit nicht jedes einzelne sie braucht. Arten: `point`, `segment`, `line`, `ray`, `circle`, `polygon`, `text`, `show`, `hide`, `move`; ohne Art gilt die Voreinstellung für alle.
+**Voreinstellungen:** `default arten… optionen…` legt Optionen für alle folgenden Objekte fest, damit nicht jedes einzelne sie braucht. Arten: `point`, `segment`, `line`, `ray`, `circle`, `polygon`, `angle`, `text`, `show`, `hide`, `move`; ohne Art gilt die Voreinstellung für alle.
 
 ```
 default point size 4 labelsize 20

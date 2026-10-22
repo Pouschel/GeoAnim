@@ -7,7 +7,7 @@ internal sealed class Parser
     internal static readonly HashSet<string> Keywords = new(StringComparer.Ordinal)
     {
         "title", "description", "view", "background", "grid", "axes", "speed", "var", "default", "include", "input", "output", "use",
-        "draw", "steps", "copy", "set", "step", "point", "segment", "line", "ray", "circle", "polygon",
+        "draw", "steps", "copy", "set", "step", "point", "segment", "line", "ray", "circle", "polygon", "angle",
         "text", "show", "hide", "move", "pause", "together", "end", "midpoint", "intersect", "center", "through",
         "radius", "at", "to", "on", "x", "y",
         "duration", "color", "width", "fill", "opacity", "size", "labelsize", "labelpos", "label", "nolabel", "hidden", "offset",
@@ -16,14 +16,14 @@ internal sealed class Parser
 
     private static readonly HashSet<string> OptionNames = new(StringComparer.Ordinal)
     {
-        "duration", "color", "width", "fill", "opacity", "size", "labelsize", "labelpos", "label", "nolabel", "hidden", "offset",
+        "duration", "color", "width", "fill", "opacity", "size", "radius", "labelsize", "labelpos", "label", "nolabel", "hidden", "offset",
         "linear", "ease", "easein", "easeout", "easeinout",
     };
 
     /// <summary>The kinds a "default" can name.</summary>
     private static readonly HashSet<string> DefaultKinds = new(StringComparer.Ordinal)
     {
-        "point", "segment", "line", "ray", "circle", "polygon", "text", "show", "hide", "move",
+        "point", "segment", "line", "ray", "circle", "polygon", "angle", "text", "show", "hide", "move",
     };
 
     private readonly List<Token> tokens;
@@ -169,6 +169,7 @@ internal sealed class Parser
                         "segment" or "line" or "ray" => ParseStraight(Next()),
                         "circle" => ParseCircle(Next()),
                         "polygon" => ParsePolygon(Next()),
+                        "angle" => ParseAngle(Next()),
                         "text" => ParseText(Next()),
                         _ => null,
                     } : null;
@@ -218,6 +219,9 @@ internal sealed class Parser
                 break;
             case "polygon":
                 statement = ParsePolygon(word);
+                break;
+            case "angle":
+                statement = ParseAngle(word);
                 break;
             case "text":
                 statement = ParseText(word);
@@ -521,6 +525,18 @@ internal sealed class Parser
         return new DefineStatement(word.Line, word.Column, "polygon", [name], new PolygonDefinition(vertices), ParseOptions());
     }
 
+    private DefineStatement ParseAngle(Token word)
+    {
+        NameRef name = ExpectNewName();
+        ExpectSymbol("=");
+        if (TryParseUse() is { } use)
+        {
+            return new DefineStatement(word.Line, word.Column, "angle", [name], use, ParseOptions());
+        }
+        var definition = new AngleDefinition(ExpectName(), ExpectName(), ExpectName());
+        return new DefineStatement(word.Line, word.Column, "angle", [name], definition, ParseOptions());
+    }
+
     private DefineStatement ParseText(Token word)
     {
         NameRef name = ExpectNewName();
@@ -593,6 +609,7 @@ internal sealed class Parser
                 "duration" => ExpectNonNegative("the duration in milliseconds"),
                 "width" => ExpectNonNegative("the line width"),
                 "size" => ExpectPositive("the size"),
+                "radius" => ExpectPositive("the radius"),
                 "labelsize" => ExpectPositive("the label size"),
                 "labelpos" => ExpectNumber("the position of the label (0 at A, 1 at B)"),
                 "opacity" => ExpectOpacity(),

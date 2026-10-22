@@ -388,6 +388,36 @@ public class ScriptTests
     }
 
     [Fact]
+    public void AnglesRunCounterclockwiseFromTheFirstArm()
+    {
+        var c = ScriptCompiler.CompileConstruction("""
+            point B = 0 0
+            point A = 2 0
+            point C = 0 3
+            angle w = A B C label "$alpha$" fill yellow
+            angle v = C B A radius 0.8
+            point D = -1 -1
+            angle r = A B D
+            step s
+              move C to -3 0
+            """);
+        var w = (GeoAngle)c.Objects["w"];
+        var v = (GeoAngle)c.Objects["v"];
+        // after the move: from BA (0°) to BC (180°)
+        Assert.Equal((0.0, 180.0), (w.Start, Math.Round(w.Degrees, 9)));
+        Assert.Equal(180.0, Math.Round(v.Degrees, 9));
+        Assert.Equal(225.0, Math.Round(((GeoAngle)c.Objects["r"]).Degrees, 9));
+        Assert.Equal((Color.Parse("yellow"), 0.8), (w.Options.Fill, v.Options.Radius!.Value));
+        JsonElement angle = JsonDocument.Parse(c.Build().ToJson()).RootElement.GetProperty("primitives").EnumerateArray()
+            .First(p => p.GetProperty("type").GetString() == "angle");
+        Assert.Equal("$alpha$", angle.GetProperty("tracks").GetProperty("text")[0][1].GetString());
+        Assert.Equal(90.0, angle.GetProperty("tracks").GetProperty("sweep")[0][1].GetDouble(), 6);
+        Assert.True(c.Build().Formulas.ContainsKey("alpha"));
+        ErrorAt("point A = 0 0\nangle w = A A A", 2, 1, "cannot be constructed");
+        ErrorAt("point A = 0 0\npoint B = 1 0\npoint C = 1 1\nangle w = A B C width 2 size 3", 4, 25, "\"size\" is not possible for angle");
+    }
+
+    [Fact]
     public void OffsetIsInCoordinates()
     {
         JsonElement primitives = JsonDocument.Parse(ScriptCompiler.Compile("point A = 1 2 offset 0.5 -0.25\ntext t = \"x\" at A offset 1 1").ToJson())

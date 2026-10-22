@@ -158,6 +158,9 @@
       element.setAttribute('fill', v.fill)
       element.setAttribute('fill-opacity', v.fillOpacity)
     },
+    angle (element, v) {
+      drawAngle(element, v)
+    },
     // a group with the pieces of the text side by side: text elements and formulas (nested svg elements)
     text (element, v) {
       const size = v.size * unit
@@ -189,7 +192,102 @@
     }
   }
 
-  const TAGS = { dot: 'circle', line: 'line', arc: 'path', polygon: 'polygon', text: 'g' }
+  const TAGS = { dot: 'circle', line: 'line', arc: 'path', polygon: 'polygon', text: 'g', angle: 'g' }
+
+  // ------------------------------------------------------------------ angles
+
+  // a point at angle a (degrees, counterclockwise) and distance r (pixels) from (cx, cy)
+  const polar = (cx, cy, a, r) => [cx + r * Math.cos(a * Math.PI / 180), cy - r * Math.sin(a * Math.PI / 180)]
+
+  // an angle: a filled sector and its arc, the label on the bisector, a dot for a right angle (as in German schools).
+  // Without a radius the sector is sized so that the label fits between the arms (at least "base" points).
+  function drawAngle (element, v) {
+    if (!element.parts) {
+      element.parts = {
+        fill: create('path', { stroke: 'none' }, element),
+        arc: create('path', { fill: 'none', 'stroke-linecap': 'round' }, element),
+        dot: create('circle', {}, element),
+        label: create('g', {}, element)
+      }
+    }
+    const parts = element.parts
+    const reveal = v.reveal === undefined ? 1 : Math.max(0, Math.min(1, v.reveal))
+    const cx = toX(v.x)
+    const cy = toY(v.y)
+    const size = v.size * unit
+    let width = 0
+    let height = 0
+    if (v.text) {
+      const key = v.text + '\n' + size
+      if (parts.label.layoutKey !== key) {
+        const layout = layoutText(parts.label, v.text, size, 'middle')
+        parts.label.layoutWidth = layout.width
+        parts.label.layoutLines = layout.lines
+        parts.label.layoutKey = key
+      }
+      width = parts.label.layoutWidth
+      height = 0.7 * size + (parts.label.layoutLines - 1) * LINE_HEIGHT * size
+    } else if (parts.label.firstChild) {
+      parts.label.textContent = ''
+      parts.label.layoutKey = null
+    }
+    // the label's box: its extent along the bisector and across it
+    const bisector = (v.start + v.sweep / 2) * Math.PI / 180
+    const bx = Math.cos(bisector)
+    const by = Math.sin(bisector)
+    const along = Math.abs(bx) * width / 2 + Math.abs(by) * height / 2
+    const across = Math.abs(by) * width / 2 + Math.abs(bx) * height / 2
+    const pad = 6 * unit
+    const half = Math.min(v.sweep, 359.9) / 2 * Math.PI / 180
+    // far enough out on the bisector that the box keeps off both arms, and off the vertex's own label
+    let distance = v.text ? (half < Math.PI / 2 ? Math.max((across + pad) / Math.sin(half), along + pad) : along + pad) : 0
+    if (v.text) {
+      distance = Math.max(distance, 1.25 * size + along)
+    }
+    distance = Math.min(distance, 8 * v.base * unit)
+    let radius
+    if (v.radius > 0) {
+      radius = v.radius * scale
+      distance = Math.max(radius * 0.55, Math.min(distance, radius - along - pad))
+    } else {
+      radius = Math.max(v.base * unit, v.text ? distance + along + pad : 0)
+    }
+    const sweep = v.sweep * reveal
+    if (sweep < 0.01) {
+      parts.fill.setAttribute('d', '')
+      parts.arc.setAttribute('d', '')
+    } else if (sweep >= 359.99) {
+      const circle = `M ${cx + radius} ${cy} A ${radius} ${radius} 0 1 0 ${cx - radius} ${cy} A ${radius} ${radius} 0 1 0 ${cx + radius} ${cy}`
+      parts.fill.setAttribute('d', circle)
+      parts.arc.setAttribute('d', circle)
+    } else {
+      const [x0, y0] = polar(cx, cy, v.start, radius)
+      const [x1, y1] = polar(cx, cy, v.start + sweep, radius)
+      const arc = `A ${radius} ${radius} 0 ${sweep > 180 ? 1 : 0} 0 ${x1} ${y1}`
+      parts.fill.setAttribute('d', `M ${cx} ${cy} L ${x0} ${y0} ${arc} Z`)
+      parts.arc.setAttribute('d', `M ${x0} ${y0} ${arc}`)
+    }
+    parts.fill.setAttribute('fill', v.fill)
+    parts.fill.setAttribute('fill-opacity', v.fillOpacity)
+    parts.arc.setAttribute('stroke', v.color)
+    parts.arc.setAttribute('stroke-width', v.width * unit)
+    // a right angle: the arc with a dot
+    const right = Math.abs(v.sweep - 90) < 0.05
+    const [dx, dy] = polar(cx, cy, v.start + v.sweep / 2, radius * 0.45)
+    parts.dot.setAttribute('cx', dx)
+    parts.dot.setAttribute('cy', dy)
+    parts.dot.setAttribute('r', right ? Math.max(1.5, 1.4 * v.width) * unit : 0)
+    parts.dot.setAttribute('fill', v.color)
+    parts.dot.setAttribute('opacity', reveal)
+    if (v.text) {
+      const x = cx + bx * distance - width / 2
+      const y = cy - by * distance - height / 2 + 0.7 * size
+      parts.label.setAttribute('transform', `translate(${x} ${y})`)
+      parts.label.setAttribute('fill', v.color)
+      parts.label.style.color = v.color
+      parts.label.setAttribute('opacity', reveal)
+    }
+  }
 
   // ------------------------------------------------------------------ texts with formulas
 
@@ -1090,6 +1188,9 @@
       document.fonts.addEventListener('loadingdone', () => {
         for (const item of items) {
           item.element.layoutKey = null
+          if (item.element.parts) {
+            item.element.parts.label.layoutKey = null
+          }
         }
         if (animation) {
           render()

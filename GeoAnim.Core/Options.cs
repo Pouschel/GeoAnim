@@ -25,6 +25,9 @@ public sealed record Options
     /// </summary>
     public double? LabelPosition { get; init; }
 
+    /// <summary>Radius of an angle's sector in units (default: sized to its label).</summary>
+    public double? Radius { get; init; }
+
     /// <summary>Font size of the label of a point, segment, ray or line, in points.</summary>
     public double? LabelSize { get; init; }
 

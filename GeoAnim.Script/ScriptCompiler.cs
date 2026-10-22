@@ -287,6 +287,7 @@ public static class ScriptCompiler
             "polygon" => ["color", "width", "fill", "opacity", "draw"],
             "text" => ["color", "size", "offset", "draw"],
             "segment" or "line" or "ray" => ["color", "width", "label", "labelsize", "labelpos", "offset", "draw"],
+            "angle" => ["color", "width", "fill", "opacity", "label", "labelsize", "radius", "draw"],
             _ => ["color", "width", "draw"],
         };
 
@@ -405,6 +406,9 @@ public static class ScriptCompiler
                     break;
                 case CircleRadiusDefinition d:
                     created = c.Circle(name0, ResolvePoint(d.Center), d.Radius, options);
+                    break;
+                case AngleDefinition d:
+                    created = c.Angle(name0, ResolvePoint(d.A), ResolvePoint(d.Vertex), ResolvePoint(d.C), options);
                     break;
                 case PolygonDefinition d:
                     created = c.Polygon(name0, d.Vertices.Select(ResolvePoint).ToList(), options);
@@ -658,6 +662,7 @@ public static class ScriptCompiler
                     "opacity" => options with { FillOpacity = (double)option.Value! },
                     "size" => options with { Size = (double)option.Value! },
                     "labelsize" => options with { LabelSize = (double)option.Value! },
+                    "radius" => options with { Radius = (double)option.Value! },
                     "labelpos" => options with { LabelPosition = (double)option.Value! },
                     "label" => options with { Label = (string)option.Value! },
                     "nolabel" => options with { NoLabel = true },
