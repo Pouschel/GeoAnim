@@ -101,7 +101,9 @@ h1 a {
   font-size: 0.85em;
 }
 
+/* never squeezed: its height is measured and the picture gets the rest */
 #caption {
+  flex: none;
   box-sizing: border-box;
   min-height: 1.4em;
   padding: 10px 16px 6px;

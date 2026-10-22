@@ -19,7 +19,7 @@ internal static class Program
               Shows the animation in the browser and updates it whenever the file is saved.
           geoanim export <file.geo> [-o <file.html>]
               Writes the animation as one HTML file that plays without a server (default: next to the script).
-          geoanim exportdir <dir>
+          geoanim exportdir <dir>  [-o <output directory>]
               Writes the animation HTML next to every .geo file in directory dir and all subdirectories.
           geoanim daemon
               Compiles for an editor (the VS Code extension): JSON requests on standard input, answers on standard output.
