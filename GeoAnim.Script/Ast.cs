@@ -23,6 +23,9 @@ internal sealed record DefaultStatement(int Line, int Column, IReadOnlyList<stri
 
 internal sealed record StepStatement(int Line, int Column, string Caption) : Statement(Line, Column);
 
+/// <summary>"info …": an explanation for the current step, below its description.</summary>
+internal sealed record InfoStatement(int Line, int Column, string Text) : Statement(Line, Column);
+
 /// <summary>A definition: point, segment, line, ray, circle, polygon, text.</summary>
 internal sealed record DefineStatement(int Line, int Column, string Kind, IReadOnlyList<NameRef> Names, Definition Definition, OptionList Options)
     : Statement(Line, Column);

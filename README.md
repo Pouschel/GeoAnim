@@ -118,6 +118,7 @@ Koordinaten sind mathematisch: die y-Achse zeigt nach oben. Der Maßstab ist in 
 | Anweisung | Bedeutung |
 |---|---|
 | `step Beschreibung bis zum Zeilenende` | neuer Schritt; der Text erscheint unter dem Bild |
+| `info Erklärung …` | Erklärung zum aktuellen Schritt, unter seiner Beschreibung linksbündig (mehrzeilig mit `|`, Absätze, Markdown, Formeln; ein weiteres `info` wird ein neuer Absatz) |
 | `show A k1` | zeigt Objekte (zeichnet versteckte, blendet ausgeblendete ein) |
 | `hide k1 k2` | blendet Objekte aus |
 | `move A to 4 5` | bewegt einen freien Punkt |

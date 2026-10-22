@@ -90,6 +90,10 @@ public sealed class AnimationData
             {
                 json.WriteStartObject();
                 json.WriteString("caption", step.Caption);
+                if (step.Info != null)
+                {
+                    json.WriteString("info", step.Info);
+                }
                 json.WriteNumber("start", RoundTime(step.Start));
                 json.WriteNumber("end", RoundTime(step.End));
                 json.WriteEndObject();

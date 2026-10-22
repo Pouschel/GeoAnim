@@ -419,6 +419,17 @@ public sealed class Construction
         currentStep = new AnimationStep(CheckText(caption), time, time);
     }
 
+    /// <summary>An explanation for the current step, shown below its description; a second one becomes a new paragraph.</summary>
+    public void Info(string text)
+    {
+        if (currentStep == null)
+        {
+            throw new GeoException("\"info\" belongs to a step: it comes after the step line.");
+        }
+        CheckText(text);
+        currentStep = currentStep with { Info = currentStep.Info == null ? text : currentStep.Info + "\n" + text };
+    }
+
     private void RequireStep(string what)
     {
         if (currentStep == null)
@@ -547,6 +558,7 @@ public sealed class Construction
     private Dictionary<string, Formula> RenderFormulas(List<AnimationStep> stepList)
     {
         IEnumerable<string> texts = stepList.Select(s => s.Caption)
+            .Concat(stepList.Where(s => s.Info != null).Select(s => s.Info!))
             .Concat(scene.Primitives
                 .Where(p => p.Tracks.ContainsKey("text"))
                 .SelectMany(p => p.Tracks["text"].Select(key => (string)key.Value)));
@@ -571,4 +583,8 @@ public sealed class Construction
 }
 
 /// <summary>A step of the animation: its description and its time span in milliseconds.</summary>
-public sealed record AnimationStep(string Caption, double Start, double End);
+public sealed record AnimationStep(string Caption, double Start, double End)
+{
+    /// <summary>An explanation shown below the description (paragraphs separated by "\n"), or null.</summary>
+    public string? Info { get; init; }
+}

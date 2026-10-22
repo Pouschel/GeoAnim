@@ -418,6 +418,29 @@ public class ScriptTests
     }
 
     [Fact]
+    public void InfoExplainsTheCurrentStep()
+    {
+        AnimationData animation = ScriptCompiler.Compile("""
+            point P = 0 0
+            step Punkte markieren Orte
+            info Ein Punkt beschreibt eine genaue Lage.
+            | Er hat keine Ausdehnung.
+            info Ein zweiter Absatz mit $P$.
+              pause
+            step ohne
+              pause
+            """);
+        Assert.Equal("Ein Punkt beschreibt eine genaue Lage. Er hat keine Ausdehnung.\nEin zweiter Absatz mit $P$.", animation.Steps[0].Info);
+        Assert.Null(animation.Steps[1].Info);
+        JsonElement steps = JsonDocument.Parse(animation.ToJson()).RootElement.GetProperty("steps");
+        Assert.Equal("Ein Punkt beschreibt eine genaue Lage. Er hat keine Ausdehnung.\nEin zweiter Absatz mit $P$.", steps[0].GetProperty("info").GetString());
+        Assert.False(steps[1].TryGetProperty("info", out _));
+        Assert.True(animation.Formulas.ContainsKey("P"));
+        ErrorAt("point P = 0 0\ninfo zu früh", 2, 1, "belongs to a step");
+        ErrorAt("point P = 0 0\nstep s\ninfo kaputt $x", 3, 1, "no closing $");
+    }
+
+    [Fact]
     public void OffsetIsInCoordinates()
     {
         JsonElement primitives = JsonDocument.Parse(ScriptCompiler.Compile("point A = 1 2 offset 0.5 -0.25\ntext t = \"x\" at A offset 1 1").ToJson())

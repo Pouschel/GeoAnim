@@ -146,6 +146,12 @@ public static class ScriptCompiler
                         c.Step(s.Caption);
                     }
                     break;
+                case InfoStatement s:
+                    if (module == null || module.Mode == UseMode.Steps)
+                    {
+                        c.Info(s.Text);
+                    }
+                    break;
                 case InputStatement s:
                     // when the file runs alone, an input is an ordinary object; when it is used, it is bound already
                     if (module == null)

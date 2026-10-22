@@ -111,7 +111,40 @@ h1 a {
   font-size: 0.85em;
 }
 
-/* never squeezed: its height is measured and the picture gets the rest */
+/* description and info: never squeezed; their height is measured and the picture gets the rest */
+#texts {
+  flex: none;
+  box-sizing: border-box;
+}
+
+/* the explanation of a step: left-aligned in a column that stays easy to read */
+#info {
+  box-sizing: border-box;
+  max-width: 44em;
+  margin: 0 auto;
+  padding: 0 16px 10px;
+  color: #333;
+  font-size: 17px;
+  line-height: 1.45;
+  text-align: left;
+}
+
+#info[hidden] {
+  display: none;
+}
+
+#info a {
+  color: #1565c0;
+}
+
+#info code {
+  padding: 0 0.2em;
+  border-radius: 3px;
+  background: #e2e5ea;
+  font-family: Consolas, 'Cascadia Mono', monospace;
+  font-size: 0.85em;
+}
+
 #caption {
   flex: none;
   box-sizing: border-box;

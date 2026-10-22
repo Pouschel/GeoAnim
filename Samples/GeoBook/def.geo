@@ -1,0 +1,33 @@
+
+grid 0.5
+
+default point size 4 labelsize 30
+default segment line ray circle polygon width 2 
+default segment line ray circle color grey
+default polygon color lightgrey 
+default text size 30 
+default move duration 1500
+default color grey
+default text color black
+
+# Definietionen für Objekttypen
+
+# gegebene Objekte
+var opt_gg color blue width 3 
+var opt_gg2 color green width 3 
+
+# Hilfsobjekte
+var opt_h1 color grey
+var opt_h2 color cyan
+var opt_h3 color orange
+var opt_h4 color violet
+
+# Ergebnisobjekte
+var opt_r1 color violet  width 3 
+
+
+# Animation 
+var opt_ani1 color red width 4
+
+view x -10 .. 10 y -7 .. 7
+speed 0.5

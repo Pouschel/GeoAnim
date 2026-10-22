@@ -6,7 +6,7 @@ internal sealed class Parser
     /// <summary>Words that cannot be names of objects.</summary>
     internal static readonly HashSet<string> Keywords = new(StringComparer.Ordinal)
     {
-        "title", "description", "view", "background", "grid", "axes", "speed", "var", "default", "include", "input", "output", "use",
+        "title", "description", "info", "view", "background", "grid", "axes", "speed", "var", "default", "include", "input", "output", "use",
         "draw", "steps", "copy", "set", "step", "point", "segment", "line", "ray", "circle", "polygon", "angle",
         "text", "show", "hide", "move", "pause", "together", "end", "midpoint", "intersect", "center", "through",
         "radius", "at", "to", "on", "x", "y",
@@ -105,6 +105,9 @@ internal sealed class Parser
                 break;
             case "description":
                 statement = new DescriptionStatement(l, c, Next().Text);
+                break;
+            case "info":
+                statement = new InfoStatement(l, c, Next().Text);
                 break;
             case "view":
                 statement = ParseView(word);

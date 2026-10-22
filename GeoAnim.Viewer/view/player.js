@@ -713,15 +713,19 @@
     if (!animation) {
       return
     }
-    const box = $('caption')
-    const current = box.richText || ''
+    // description and info together
+    const box = $('texts')
+    const caption = $('caption')
+    const current = [caption.richText || '', $('info').richText || '']
     box.style.minHeight = ''
     let height = box.offsetHeight
     for (const step of steps()) {
-      setRichText(box, step.caption)
+      setRichText(caption, step.caption)
+      showInfo(step.info)
       height = Math.max(height, box.offsetHeight)
     }
-    setRichText(box, current)
+    setRichText(caption, current[0])
+    showInfo(current[1])
     box.style.minHeight = height + 'px'
   }
 
@@ -734,7 +738,7 @@
     const ratio = (view.xmax - view.xmin) / (view.ymax - view.ymin)
     // the space between title and control bar, without the description and the margins (16 left and right, 10 above)
     const content = $('content')
-    const available = Math.max(1, content.clientHeight - 10 - $('caption').offsetHeight)
+    const available = Math.max(1, content.clientHeight - 10 - $('texts').offsetHeight)
     const width = Math.max(1, Math.min(content.clientWidth - 32, available * ratio))
     const height = width / ratio
     // the stage gets the picture's height, so that picture and description stand together in the middle
@@ -849,6 +853,7 @@
     const list = steps()
     const index = currentStepIndex()
     setRichText($('caption'), index >= 0 ? list[index].caption : '')
+    showInfo(index >= 0 ? list[index].info : '')
     $('counter').textContent = (index + 1) + ' / ' + list.length
     const timeline = $('timeline')
     if (Number(timeline.value) !== Math.round(time)) {
@@ -856,6 +861,13 @@
     }
     $('play').classList.toggle('playing', playing)
     markMenu(index)
+  }
+
+  // the explanation of a step below its description ("info"), left-aligned
+  function showInfo (text) {
+    const info = $('info')
+    setRichText(info, text || '')
+    info.hidden = !text
   }
 
   // ------------------------------------------------------------------ the list of steps
