@@ -161,9 +161,12 @@
     // a group with the pieces of the text side by side: text elements and formulas (nested svg elements)
     text (element, v) {
       const size = v.size * unit
-      const key = v.text + '\n' + size
+      const align = v.nx !== undefined ? 'middle' : v.anchor || 'start'
+      const key = v.text + '\n' + size + '\n' + align
       if (element.layoutKey !== key) {
-        element.layoutWidth = layoutText(element, v.text, size)
+        const layout = layoutText(element, v.text, size, align)
+        element.layoutWidth = layout.width
+        element.layoutLines = layout.lines
         element.layoutKey = key
       }
       let x = toX(v.x) + (v.dx || 0) * unit
@@ -171,10 +174,10 @@
       if (v.nx !== undefined) {
         // the label of a line: its box moved along the normal (nx, ny) until it is gap points away from the line
         const width = element.layoutWidth
-        const height = 0.7 * size
+        const height = 0.7 * size + (element.layoutLines - 1) * LINE_HEIGHT * size
         const reach = Math.abs(v.nx) * width / 2 + Math.abs(v.ny) * height / 2 + v.gap * unit
         x += v.nx * reach - width / 2
-        y += -v.ny * reach + height / 2
+        y += -v.ny * reach - height / 2 + 0.7 * size
       } else if (v.anchor === 'middle') {
         x -= element.layoutWidth / 2
       } else if (v.anchor === 'end') {
@@ -227,29 +230,81 @@
     return element
   }
 
-  // lays out a text in the picture; returns its width in pixels
-  function layoutText (group, text, size) {
+  // distance of the lines of a text in the picture, in font sizes
+  const LINE_HEIGHT = 1.3
+
+  // lays out a text in the picture: its lines (a new paragraph: a new line) aligned to the left, centre or right, with
+  // bold, italic, code and links (underlined) from Markdown; the first baseline at y = 0. Returns width and lines.
+  function layoutText (group, text, size, align) {
     group.textContent = ''
-    let x = 0
-    for (const run of splitMath(text)) {
-      const formula = run.math ? formulaOf(run.text) : null
-      if (formula) {
-        const element = formulaElement(formula)
-        const [, top, width, height] = formula.box
-        element.setAttribute('x', x)
-        element.setAttribute('y', top / 1000 * size)
-        element.setAttribute('width', width / 1000 * size)
-        element.setAttribute('height', height / 1000 * size)
-        group.appendChild(element)
-        x += width / 1000 * size
+    const lines = [[]]
+    flattenInline(parseMarkdown(text), {}, lines)
+    let widest = 0
+    const widths = []
+    const rows = lines.map((pieces, index) => {
+      const row = create('g', {}, group)
+      let x = 0
+      for (const piece of pieces) {
+        const formula = piece.math !== undefined ? formulaOf(piece.math) : null
+        if (formula) {
+          const element = formulaElement(formula)
+          const [, top, width, height] = formula.box
+          element.setAttribute('x', x)
+          element.setAttribute('y', top / 1000 * size)
+          element.setAttribute('width', width / 1000 * size)
+          element.setAttribute('height', height / 1000 * size)
+          row.appendChild(element)
+          x += width / 1000 * size
+        } else {
+          const element = create('text', { x, y: 0, 'font-size': size, 'dominant-baseline': 'alphabetic' }, row)
+          element.style.whiteSpace = 'pre'
+          if (piece.bold) {
+            element.setAttribute('font-weight', 'bold')
+          }
+          if (piece.italic) {
+            element.setAttribute('font-style', 'italic')
+          }
+          if (piece.code) {
+            element.setAttribute('font-family', "Consolas, 'Cascadia Mono', monospace")
+          }
+          if (piece.link) {
+            element.setAttribute('text-decoration', 'underline')
+          }
+          element.textContent = piece.text !== undefined ? piece.text : piece.math
+          x += element.getComputedTextLength()
+        }
+      }
+      widths[index] = x
+      widest = Math.max(widest, x)
+      return row
+    })
+    rows.forEach((row, index) => {
+      const shift = align === 'middle' ? (widest - widths[index]) / 2 : align === 'end' ? widest - widths[index] : 0
+      row.setAttribute('transform', `translate(${shift} ${index * LINE_HEIGHT * size})`)
+    })
+    return { width: widest, lines: lines.length }
+  }
+
+  // Markdown pieces → lines of pieces with their style
+  function flattenInline (nodes, style, lines) {
+    for (const node of nodes) {
+      if (node.text !== undefined) {
+        node.text.split('\n').forEach((part, index) => {
+          if (index > 0) {
+            lines.push([])
+          }
+          if (part) {
+            lines[lines.length - 1].push({ text: part, ...style })
+          }
+        })
+      } else if (node.math !== undefined) {
+        lines[lines.length - 1].push({ math: node.math, ...style })
       } else {
-        const element = create('text', { x, y: 0, 'font-size': size, 'dominant-baseline': 'alphabetic' }, group)
-        element.style.whiteSpace = 'pre'
-        element.textContent = run.text
-        x += element.getComputedTextLength()
+        const inner = { ...style }
+        inner[{ strong: 'bold', em: 'italic', code: 'code', link: 'link' }[node.type]] = true
+        flattenInline(node.children, inner, lines)
       }
     }
-    return x
   }
 
   // a text with formulas in an HTML element (title, step description)
@@ -399,7 +454,13 @@
   function renderInline (parent, nodes) {
     for (const node of nodes) {
       if (node.text !== undefined) {
-        parent.appendChild(document.createTextNode(node.text))
+        // a new paragraph ("|" alone, "\n"): a new line
+        node.text.split('\n').forEach((part, index) => {
+          if (index > 0) {
+            parent.appendChild(document.createElement('br'))
+          }
+          parent.appendChild(document.createTextNode(part))
+        })
       } else if (node.math !== undefined) {
         const formula = formulaOf(node.math)
         if (!formula) {
@@ -441,7 +502,7 @@
     }
   }
 
-  const plainOf = nodes => nodes.map(n => n.text !== undefined ? n.text : n.math !== undefined ? n.math : plainOf(n.children)).join('')
+  const plainOf = nodes => nodes.map(n => n.text !== undefined ? n.text.replace(/\n/g, ' ') : n.math !== undefined ? n.math : plainOf(n.children)).join('')
   const plainText = text => plainOf(parseMarkdown(text))
 
   function buildScene () {
@@ -950,10 +1011,22 @@
   }
 
   async function start () {
-    // the fonts first: the labels are measured with them
+    // the fonts first: the labels are measured with them (bold and italic too, which load only when used)
     try {
+      await Promise.all(['400 16px', 'italic 400 16px', '700 16px'].map(face => document.fonts.load(face + ' "STIX Two Text"')))
       await document.fonts.ready
     } catch (error) {
+    }
+    // a font that arrives later: measure the texts again
+    if (document.fonts && document.fonts.addEventListener) {
+      document.fonts.addEventListener('loadingdone', () => {
+        for (const item of items) {
+          item.element.layoutKey = null
+        }
+        if (animation) {
+          render()
+        }
+      })
     }
     if (window.GEO_ANIMATION) {
       setAnimation(window.GEO_ANIMATION, false)

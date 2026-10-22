@@ -348,12 +348,43 @@ public class ScriptTests
             pont X = 1 1
             """.Replace("pont X = 1 1", "  pause"));
         Assert.Equal("Ein langer Titel", animation.Title);
-        Assert.Equal("Wir zeichnen um $A$ einen Kreis mit dem Radius $|AB|$ und erhalten so alle Punkte, die gleich weit entfernt sind.",
+        // the "|" alone starts a new paragraph
+        Assert.Equal("Wir zeichnen um $A$ einen Kreis mit dem Radius $|AB|$ und erhalten so alle Punkte,\ndie gleich weit entfernt sind.",
             animation.Steps[0].Caption);
         Assert.Equal("zweiter", animation.Steps[1].Caption);
         // line numbers after continuation lines stay right
         ErrorAt("step a\n| b\n| c\npont X = 1 1", 4, 1, "Unknown command");
         ErrorAt("point A = 0 0\n| b", 2, 1, "continues the text of the title or step line");
+    }
+
+    [Fact]
+    public void BarAloneStartsAParagraphAndSetNamesTexts()
+    {
+        var c = ScriptCompiler.CompileConstruction("""
+            title Zwei
+            |
+            | Absätze
+            set hinweis = Die Strecke $bar(AP)$ ist **genauso lang**
+            | wie $c$.
+            |
+            |
+            | Damit ist der Satz bewiesen.
+            set kurz = $A_1$
+            point A = 0 0 label kurz
+            text t = hinweis at 3 2
+            text u = "erste\nzweite Zeile" at 1 1
+            step s
+            |
+              pause
+            """);
+        Assert.Equal("Zwei\nAbsätze", c.Title);
+        Assert.Equal("Die Strecke $bar(AP)$ ist **genauso lang** wie $c$.\nDamit ist der Satz bewiesen.", ((GeoText)c.Objects["t"]).Content);
+        Assert.Equal("erste\nzweite Zeile", ((GeoText)c.Objects["u"]).Content);
+        Assert.Equal("$A_1$", c.Objects["A"].Options.Label);
+        ErrorAt("set w = a\npoint w = 0 0", 2, 7, "already the name of a text");
+        ErrorAt("var v color red\nset v = a", 2, 5, "already the name of a var");
+        ErrorAt("point A = 0 0\ntext t = nichts at 1 1", 2, 10, "or the name of a text from \"set\"");
+        ErrorAt("set = a", 1, 5, "Expected the name of an object");
     }
 
     [Fact]

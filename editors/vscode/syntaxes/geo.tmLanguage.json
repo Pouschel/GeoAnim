@@ -27,6 +27,28 @@
       }
     },
     {
+      "match": "^\\s*(set)\\s+([A-Za-z_][A-Za-z0-9_]*'*)\\s*(=)(.*)$",
+      "captures": {
+        "1": {
+          "name": "keyword.control.geo"
+        },
+        "2": {
+          "name": "entity.name.function.var.geo"
+        },
+        "3": {
+          "name": "keyword.operator.geo"
+        },
+        "4": {
+          "name": "string.unquoted.caption.geo",
+          "patterns": [
+            {
+              "include": "#inline"
+            }
+          ]
+        }
+      }
+    },
+    {
       "match": "^\\s*(\\|)(.*)$",
       "captures": {
         "1": {

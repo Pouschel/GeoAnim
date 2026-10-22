@@ -16,14 +16,11 @@ segment s = A B color blue
 step Wir zeichnen um $A$ einen Kreis mit dem Radius $|AB|$
 circle k_1 = center A through B color cyan
 
-
 step Wir zeichnen um $B$ einen Kreis mit dem Radius $|AB|$
 circle k_2 = center B through A color cyan
 
-
 step $C$ sein ein Schnittpunkt der beiden Kreise
 point C = intersect k_1 k_2 offset 0 0.2
-
 
 step $C$ mit $A$ und $B$ verbinden
 segment ca = C A color blue

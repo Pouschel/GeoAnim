@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace GeoAnim.Script;
 
@@ -33,10 +34,11 @@ internal readonly record struct Token(TokenKind Kind, string Text, int Line, int
 /// Splits a script into tokens: names (letters, digits, _ and trailing primes like A'), numbers (with a decimal point),
 /// strings in double quotes, colours (#rgb or #rrggbb), the symbols = and .. and line ends. A # that does not start a
 /// colour starts a comment until the end of the line. After "title" or "step" at the start of a line, the rest of the
-/// line (trimmed, taken literally, # included) is one string; following lines beginning with "|" continue it. Values are separated by spaces only: commas and parentheses
+/// line (trimmed, taken literally, # included) is one string; following lines beginning with "|" continue it (a "|"
+/// alone: a new paragraph). The same for the text of "set name = text". In strings in quotes, "\n" is a line break. Values are separated by spaces only: commas and parentheses
 /// are errors with a hint.
 /// </summary>
-internal static class Lexer
+internal static partial class Lexer
 {
     public static List<Token> Tokenize(string source)
     {
@@ -88,6 +90,12 @@ internal static class Lexer
                     if (source[i] == '\\' && i + 1 < source.Length && (source[i + 1] == '"' || source[i + 1] == '\\'))
                     {
                         text.Append(source[i + 1]);
+                        i += 2;
+                    }
+                    else if (source[i] == '\\' && i + 1 < source.Length && source[i + 1] == 'n')
+                    {
+                        // a line break (a new paragraph)
+                        text.Append('\n');
                         i += 2;
                     }
                     else if (source[i] == '"')
@@ -145,33 +153,15 @@ internal static class Lexer
                 tokens.Add(new Token(TokenKind.Name, word, line, column));
                 if (startsLine && word is "title" or "step")
                 {
-                    Token text = RestOfLine(source, ref i, line, lineStart);
-                    // continuation lines: "| more text", joined with a space
-                    var full = new StringBuilder(text.Text);
-                    while (i < source.Length)
-                    {
-                        int next = i + 1;
-                        while (next < source.Length && source[next] is ' ' or '\t')
-                        {
-                            next++;
-                        }
-                        if (next >= source.Length || source[next] != '|')
-                        {
-                            break;
-                        }
-                        line++;
-                        lineStart = i + 1;
-                        i = next + 1;
-                        int end = source.IndexOf('\n', i);
-                        end = end < 0 ? source.Length : end;
-                        string more = source.Substring(i, end - i).Trim();
-                        i = end;
-                        if (more.Length > 0)
-                        {
-                            full.Append(full.Length > 0 ? " " : string.Empty).Append(more);
-                        }
-                    }
-                    tokens.Add(text with { Text = full.ToString() });
+                    tokens.Add(TextWithContinuations());
+                }
+                else if (startsLine && word == "set" && SetHead().Match(source, i) is { Success: true } head)
+                {
+                    // set name = text (with continuation lines)
+                    tokens.Add(new Token(TokenKind.Name, head.Groups[1].Value, line, head.Groups[1].Index - lineStart + 1));
+                    tokens.Add(new Token(TokenKind.Symbol, "=", line, head.Groups[2].Index - lineStart + 1));
+                    i = head.Index + head.Length;
+                    tokens.Add(TextWithContinuations());
                 }
                 else if (word == "use")
                 {
@@ -221,7 +211,48 @@ internal static class Lexer
         tokens.Add(new Token(TokenKind.NewLine, "\n", line, i - lineStart + 1));
         tokens.Add(new Token(TokenKind.End, string.Empty, line + 1, 1));
         return tokens;
+
+        // the rest of the line and the lines after it that begin with "|": "| more" is joined with a space, a "|" alone
+        // starts a new paragraph ("\n")
+        Token TextWithContinuations()
+        {
+            Token text = RestOfLine(source, ref i, line, lineStart);
+            var full = new StringBuilder(text.Text);
+            bool paragraph = false;
+            while (i < source.Length)
+            {
+                int next = i + 1;
+                while (next < source.Length && source[next] is ' ' or '\t')
+                {
+                    next++;
+                }
+                if (next >= source.Length || source[next] != '|')
+                {
+                    break;
+                }
+                line++;
+                lineStart = i + 1;
+                i = next + 1;
+                int end = source.IndexOf('\n', i);
+                end = end < 0 ? source.Length : end;
+                string more = source.Substring(i, end - i).Trim();
+                i = end;
+                if (more.Length == 0)
+                {
+                    paragraph = full.Length > 0;
+                }
+                else
+                {
+                    full.Append(full.Length == 0 ? string.Empty : paragraph ? "\n" : " ").Append(more);
+                    paragraph = false;
+                }
+            }
+            return text with { Text = full.ToString() };
+        }
     }
+
+    [GeneratedRegex(@"\G[ \t]+([A-Za-z_][A-Za-z0-9_]*'*)[ \t]*(=)")]
+    private static partial Regex SetHead();
 
     // the text after "title" or "step": up to the end of the line, without the spaces around it
     private static Token RestOfLine(string source, ref int i, int line, int lineStart)

@@ -47,14 +47,28 @@ Weitere Beispiele in `Samples/`: Umkreis eines Dreiecks (mit bewegtem Eckpunkt) 
 
 Eine Anweisung pro Zeile; Einrückung ist egal. Alle Angaben werden nur durch Leerzeichen getrennt, ohne Kommas und Klammern (Koordinaten: `2 3`). `#` beginnt einen Kommentar (außer `#rgb` / `#rrggbb` als Farbe). Zahlen mit Punkt (`2.5`, `-0.5`). Hinter `title` und `step` ist der Rest der Zeile der Text, so wie er dasteht, ohne Anführungszeichen (auch `#` gehört dann dazu). Andere Texte (`text`, `label`) stehen in doppelten Anführungszeichen (`\"` für ein Anführungszeichen darin), weil danach noch Optionen folgen können. Namen bestehen aus Buchstaben, Ziffern und `_`, gefolgt von beliebig vielen `'` (`A'`, `P_1`); Groß-/Kleinschreibung zählt. Schlüsselwörter (`point`, `to`, `x`, …) sind als Namen nicht erlaubt.
 
-**Lange Texte und Auszeichnungen:** Eine Zeile, die mit `|` beginnt, setzt den Text der `title`- oder `step`-Zeile davor fort (mit einem Leerzeichen angehängt):
+**Lange Texte und Auszeichnungen:** Eine Zeile, die mit `|` beginnt, setzt den Text der `title`-, `step`- oder `set`-Zeile davor fort (mit einem Leerzeichen angehängt); eine Zeile mit nur `|` beginnt einen neuen Absatz:
 
 ```
 step Wir zeichnen um $A$ einen Kreis mit dem Radius $|AB|$
 | und erhalten so alle Punkte, die von $A$ so weit entfernt sind wie $B$.
+|
+| Ein zweiter Absatz.
 ```
 
-Titel und Schrittbeschreibungen verstehen etwas Markdown: `**fett**`, `*kursiv*` oder `_kursiv_`, `` `Code` ``, Links `[Satz 1](Prop1.html)` und `<Prop1.html>`; Formeln dürfen darin stehen. `\*` usw. hält ein Zeichen fest. In einer exportierten Datei öffnet ein Link auf eine andere Animation diese im selben Fenster (die HTML-Dateien eines Ordners werden so zu einem verlinkten Buch), Links auf andere Seiten öffnen ein neues Fenster; bei `geoanim serve` öffnen alle Links ein neues Fenster, in der VS-Code-Vorschau öffnet `Prop1.html` die Datei `Prop1.geo` im Editor.
+Längere Texte für das Bild bekommen mit `set` einen Namen und stehen dann bei `text` und `label` statt `"…"` (in Anführungszeichen ist `\n` ein Zeilenumbruch):
+
+```
+set hinweis = Die Strecke $bar(AP)$ ist **genauso lang**
+| wie $c$.
+|
+| *Damit ist der Satz bewiesen.*
+text t = hinweis at 5 3.5
+```
+
+Ein Text gilt ab seiner Zeile; Texte, Vars und Objekte haben verschiedene Namen.
+
+Alle Texte verstehen etwas Markdown: `**fett**`, `*kursiv*` oder `_kursiv_`, `` `Code` ``, Links `[Satz 1](Prop1.html)` und `<Prop1.html>`; Formeln dürfen darin stehen. `\*` usw. hält ein Zeichen fest. Im Bild werden Texte mehrzeilig gesetzt (bei `text` an festen Koordinaten zentriert), Links dort nur unterstrichen. In einer exportierten Datei öffnet ein Link auf eine andere Animation diese im selben Fenster (die HTML-Dateien eines Ordners werden so zu einem verlinkten Buch), Links auf andere Seiten öffnen ein neues Fenster; bei `geoanim serve` öffnen alle Links ein neues Fenster, in der VS-Code-Vorschau öffnet `Prop1.html` die Datei `Prop1.geo` im Editor.
 
 **Formeln:** In allen Texten (`title`, `step`, `text`, `label`) steht zwischen zwei `$` eine Formel in [AsciiMath](https://asciimath.org): `step Kreis um $A$ mit Radius $|AB|$`, `text t = "$alpha + beta = 180^@$" at 2 3`, `$bar(AB)$`, `$vec(BD)$`, `$NN sub RR$`. `\$` ist ein Dollarzeichen. Ein `$` ohne Gegenstück ist ein Fehler mit Zeile und Spalte. Punkte sind standardmäßig mit ihrem Namen als Formel beschriftet: kursiv, `P_1` mit tiefgestellter 1, `A'` mit Strich.
 
@@ -69,6 +83,7 @@ Koordinaten sind mathematisch: die y-Achse zeigt nach oben. Der Maßstab ist in 
 | `background white` | Hintergrundfarbe |
 | `grid` / `grid 0.5` | Gitter mit Abstand 1 bzw. 0.5 |
 | `axes` | Koordinatenachsen mit Zahlen |
+| `set name = Text …` | benannter Text (mehrzeilig mit `|`) für `text` und `label` (siehe unten) |
 | `default point size 4 labelsize 20` | Voreinstellung: Optionen, die für alle folgenden Objekte der genannten Arten zuerst gelten (siehe unten) |
 | `include styles.geo` | bindet eine andere Datei an dieser Stelle ein (siehe unten) |
 | `input point A = -3 0` / `output C` | Eingaben und Ergebnisse, wenn die Datei mit `use` benutzt wird (siehe unten) |
@@ -254,5 +269,5 @@ GeoAnim steht unter der MIT-Lizenz (`LICENSE`). Fremde Bestandteile:
 ## Ideen für später
 
 - Winkelmarkierungen, Kreisbögen als eigene Objekte, gestrichelte Linien, Pfeile
-- Farbe oder Breite eines Objekts in einem späteren Schritt ändern (`set k color red`)
+- Farbe oder Breite eines Objekts in einem späteren Schritt ändern (etwa `change k color red`)
 - Export als Video oder animiertes SVG

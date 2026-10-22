@@ -7,7 +7,7 @@ internal sealed class Parser
     internal static readonly HashSet<string> Keywords = new(StringComparer.Ordinal)
     {
         "title", "view", "background", "grid", "axes", "speed", "var", "default", "include", "input", "output", "use",
-        "draw", "steps", "copy", "step", "point", "segment", "line", "ray", "circle", "polygon",
+        "draw", "steps", "copy", "set", "step", "point", "segment", "line", "ray", "circle", "polygon",
         "text", "show", "hide", "move", "pause", "together", "end", "midpoint", "intersect", "center", "through",
         "radius", "at", "to", "on", "x", "y",
         "duration", "color", "width", "fill", "opacity", "size", "labelsize", "labelpos", "label", "nolabel", "hidden", "offset",
@@ -31,6 +31,9 @@ internal sealed class Parser
 
     // "var name options…": named groups of options, valid from their line on
     private readonly Dictionary<string, List<OptionValue>> vars = new(StringComparer.Ordinal);
+
+    // "set name = text": named texts for "text" and "label", valid from their line on
+    private readonly Dictionary<string, string> texts = new(StringComparer.Ordinal);
 
     // names given to objects so far (a var cannot take one of them, and the other way round)
     private readonly HashSet<string> objectNames = new(StringComparer.Ordinal);
@@ -119,6 +122,19 @@ internal sealed class Parser
                 ParseVar();
                 ExpectLineEnd();
                 return null;
+            case "set":
+                {
+                    Token nameToken = Current;
+                    NameRef name = ExpectName();
+                    if (objectNames.Contains(name.Name) || vars.ContainsKey(name.Name))
+                    {
+                        throw Error(nameToken, $"{name.Name} is already the name of {(vars.ContainsKey(name.Name) ? "a var" : "an object")}.");
+                    }
+                    ExpectSymbol("=");
+                    texts[name.Name] = Next().Text;
+                    ExpectLineEnd();
+                    return null;
+                }
             case "default":
                 statement = ParseDefault(word);
                 break;
@@ -289,9 +305,9 @@ internal sealed class Parser
     {
         Token token = Current;
         NameRef name = ExpectName();
-        if (objectNames.Contains(name.Name))
+        if (objectNames.Contains(name.Name) || texts.ContainsKey(name.Name))
         {
-            throw Error(token, $"{name.Name} is already the name of an object.");
+            throw Error(token, $"{name.Name} is already the name of {(texts.ContainsKey(name.Name) ? "a text (\"set\")" : "an object")}.");
         }
         if (Current.Kind == TokenKind.Name && !OptionNames.Contains(Current.Text) && !vars.ContainsKey(Current.Text))
         {
@@ -466,7 +482,7 @@ internal sealed class Parser
     {
         NameRef name = ExpectNewName();
         ExpectSymbol("=");
-        string content = ExpectString("the text");
+        string content = ExpectText("the text");
         ExpectWord("at");
         TextDefinition definition = Current.Kind == TokenKind.Number
             ? new TextDefinition(content, ParseCoordinates(), null)
@@ -538,7 +554,7 @@ internal sealed class Parser
                 "labelpos" => ExpectNumber("the position of the label (0 at A, 1 at B)"),
                 "opacity" => ExpectOpacity(),
                 "color" or "fill" => ExpectColor(),
-                "label" => ExpectString("the label"),
+                "label" => ExpectText("the label"),
                 "offset" => ParseCoordinates(),
                 "nolabel" or "hidden" or "linear" or "ease" or "easein" or "easeout" or "easeinout" => null,
                 _ => throw Error(option, $"Unknown option or var \"{option.Text}\" (possible options: {string.Join(", ", OptionNames.Order())})."),
@@ -610,15 +626,26 @@ internal sealed class Parser
         {
             throw Error(name, $"{name.Name} is already the name of a var.");
         }
+        if (texts.ContainsKey(name.Name))
+        {
+            throw Error(name, $"{name.Name} is already the name of a text (\"set\").");
+        }
         objectNames.Add(name.Name);
     }
 
-    private string ExpectString(string what)
+
+    // a text in quotes or the name of a text from "set"
+    private string ExpectText(string what)
     {
         Token token = Current;
+        if (token.Kind == TokenKind.Name && texts.TryGetValue(token.Text, out string? text))
+        {
+            position++;
+            return text;
+        }
         if (token.Kind != TokenKind.String)
         {
-            throw Error(token, $"Expected {what} in double quotes, not {token.Describe()}.");
+            throw Error(token, $"Expected {what} in double quotes or the name of a text from \"set\", not {token.Describe()}.");
         }
         position++;
         return token.Text;
