@@ -438,8 +438,9 @@ public static class ScriptCompiler
                 throw InModule(d, null, e);
             }
 
-            List<DefineStatement> inputs = statements.OfType<InputStatement>().Select(i => i.Define).ToList();
-            List<NameRef> outputs = statements.OfType<OutputStatement>().SelectMany(o => o.Names).ToList();
+            // inputs and outputs in their order, also inside "together" blocks
+            List<DefineStatement> inputs = AllStatements(statements).OfType<InputStatement>().Select(i => i.Define).ToList();
+            List<NameRef> outputs = AllStatements(statements).OfType<OutputStatement>().SelectMany(o => o.Names).ToList();
             if (outputs.Count == 0)
             {
                 throw AtPath($"{d.Path} has no \"output\" line, so it gives no results.");
@@ -523,6 +524,22 @@ public static class ScriptCompiler
                 c.HideVisible(inner.Internals);
             }
             // a later "hide" of an internal object of the used file is not possible: its names are its own
+        }
+
+        /// <summary>All statements in their order, those inside "together" blocks included.</summary>
+        private static IEnumerable<Statement> AllStatements(IEnumerable<Statement> statements)
+        {
+            foreach (Statement statement in statements)
+            {
+                yield return statement;
+                if (statement is TogetherStatement together)
+                {
+                    foreach (Statement inner in AllStatements(together.Body))
+                    {
+                        yield return inner;
+                    }
+                }
+            }
         }
 
         /// <summary>The kinds of the objects a file defines (looked up before it runs): name → "point", "segment", …</summary>

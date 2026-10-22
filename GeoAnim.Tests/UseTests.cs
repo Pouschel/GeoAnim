@@ -148,6 +148,26 @@ public sealed class UseTests : IDisposable
     }
 
     [Fact]
+    public void InputsAndOutputsMayStandInTogetherBlocks()
+    {
+        File.WriteAllText(Path.Combine(folder, "four.geo"), """
+            input point A = 0 0
+            step zwei Punkte zugleich
+              together
+                input point B = 2 0
+                input point C = 0 2
+                output M
+              end
+              point M = midpoint B C
+            """);
+        var c = Compile("point P = 0 0\npoint Q = 4 0\npoint R = 0 4\npoint X = use four.geo P Q R");
+        Assert.Equal(new Vec(2, 2), ((GeoPoint)c.Objects["X"]).Position);
+        // drawn, the inputs in the block are bound too (and the block draws only the file's own objects)
+        var drawn = Compile("point P = 0 0\npoint Q = 4 0\npoint R = 0 4\nstep s\n  point X = use four.geo P Q R draw");
+        Assert.Equal(new Vec(2, 2), ((GeoPoint)drawn.Objects["X"]).Position);
+    }
+
+    [Fact]
     public void MistakesAreReportedAtTheUse()
     {
         Assert.Equal("Line 3, column 15: equilateral.geo needs 2 inputs (point A point B), not 1.",

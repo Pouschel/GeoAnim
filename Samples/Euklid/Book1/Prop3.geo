@@ -3,20 +3,20 @@ include ../def.geo
 title Streckensubtraktion
 
 view x -10 .. 10 y -7 .. 7
-
+output P # Punkt auf AB, sodass AP die kürzere Strecke ist
 speed 0.5
 
 step Gegeben ist eine längere Strecke $bar(AB)$ ...
 together
-  point A = -2 -1 opt_gg
-  point B = 8.6 -1 opt_gg
+  input point A = -2 -1 opt_gg # gegebene Länge
+  input point B = 8.6 -1 opt_gg
 end
 segment AB = A B opt_gg
 pause 200
 
 step ...und eine kürzere Strecke $c$
-point C1 = -9 5 hidden
-point C2 = -5 5 hidden
+input point C1 = -9 5 hidden # Länge die Subtrahiert werden soll
+input point C2 = -5 5 hidden
 segment c = C1 C2 opt_gg2  label "$c$" offset 0 0.1
 
 step Trage an $A$ eine Strecke $bar(AD)$ der Länge $c$ an (<Prop2.html>)
