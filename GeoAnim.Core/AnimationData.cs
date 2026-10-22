@@ -56,6 +56,9 @@ public sealed class AnimationData
 
     internal IReadOnlyList<Primitive> Primitives => primitives;
 
+    /// <summary>Whether nothing is drawn (e.g. a file with only defaults and vars).</summary>
+    public bool IsEmpty => primitives.Count == 0;
+
     /// <summary>The animation as JSON for the player.</summary>
     public string ToJson()
     {

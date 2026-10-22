@@ -19,8 +19,10 @@ internal static class Program
               Shows the animation in the browser and updates it whenever the file is saved.
           geoanim export <file.geo> [-o <file.html>]
               Writes the animation as one HTML file that plays without a server (default: next to the script).
-          geoanim exportdir <dir>  [-o <output directory>]
-              Writes the animation HTML next to every .geo file in directory dir and all subdirectories.
+          geoanim exportdir <dir> [-o <output directory>] [-index]
+              Writes the animation HTML for every .geo file in directory dir and all subdirectories: next to it, or
+              with -o in the same folder structure below the output directory. With -index also an index.html with
+              links to all pages.
           geoanim daemon
               Compiles for an editor (the VS Code extension): JSON requests on standard input, answers on standard output.
         """;
@@ -40,13 +42,26 @@ internal static class Program
         }
         if (args[0] == "exportdir")
         {
-            if (args.Length > 2)
+            string? outputFolder = null;
+            bool index = false;
+            for (int i = 2; i < args.Length; i++)
             {
-                Console.Error.WriteLine("Unknown option " + args[2]);
-                Console.WriteLine(Usage);
-                return 1;
+                if (args[i] is "-o" or "--output" && i + 1 < args.Length)
+                {
+                    outputFolder = args[++i];
+                }
+                else if (args[i] is "-index" or "--index")
+                {
+                    index = true;
+                }
+                else
+                {
+                    Console.Error.WriteLine("Unknown option " + args[i]);
+                    Console.WriteLine(Usage);
+                    return 1;
+                }
             }
-            return ExportDirectory(args[1]);
+            return ExportDirectory(args[1], outputFolder, index);
         }
         string file = args[1];
         if (!File.Exists(file))
@@ -80,11 +95,15 @@ internal static class Program
                 throw new ArgumentException("Unknown option " + options[i]);
             }
         }
-        return ExportFile(file, output, Path.GetFileName(file)) ? 0 : 1;
+        return ExportFile(file, output, Path.GetFileName(file)) != null ? 0 : 1;
     }
 
-    /// <summary>Exports every .geo file below <paramref name="folder"/>; a faulty script does not stop the others.</summary>
-    internal static int ExportDirectory(string folder)
+    /// <summary>
+    /// Exports every .geo file below <paramref name="folder"/>: next to it, or with <paramref name="outputFolder"/> in
+    /// the same folder structure below that folder (so relative links between the pages still work); with
+    /// <paramref name="index"/> also an index.html there with links to all pages. A faulty script does not stop the others.
+    /// </summary>
+    internal static int ExportDirectory(string folder, string? outputFolder = null, bool index = false)
     {
         if (!Directory.Exists(folder))
         {
@@ -92,25 +111,50 @@ internal static class Program
             return 1;
         }
         string root = Path.GetFullPath(folder);
+        string target = outputFolder == null ? root : Path.GetFullPath(outputFolder);
         List<string> files = Directory.EnumerateFiles(root, "*.geo", SearchOption.AllDirectories).Order(StringComparer.Ordinal).ToList();
-        int failed = files.Count(file => !ExportFile(file, Path.ChangeExtension(file, ".html"), Path.GetRelativePath(root, file)));
+        var pages = new List<(string Path, AnimationData Animation)>();
+        int failed = 0;
+        foreach (string file in files)
+        {
+            string relative = Path.GetRelativePath(root, file);
+            string output = Path.ChangeExtension(Path.Combine(target, relative), ".html");
+            Directory.CreateDirectory(Path.GetDirectoryName(output)!);
+            AnimationData? animation = ExportFile(file, output, relative);
+            if (animation == null)
+            {
+                failed++;
+            }
+            else
+            {
+                pages.Add((Path.ChangeExtension(relative, ".html").Replace('\\', '/'), animation));
+            }
+        }
+        if (index)
+        {
+            Directory.CreateDirectory(target);
+            string indexFile = Path.Combine(target, "index.html");
+            File.WriteAllText(indexFile, IndexPage.Create(Path.GetFileName(root), pages), new UTF8Encoding(false));
+            Console.WriteLine($"Written: {indexFile} ({pages.Count(p => !p.Animation.IsEmpty)} links)");
+        }
         Console.WriteLine($"{files.Count - failed} of {files.Count} files exported" + (failed > 0 ? $", {failed} with errors." : "."));
         return failed > 0 ? 1 : 0;
     }
 
-    private static bool ExportFile(string file, string output, string displayName)
+    // the animation written, or null after an error (reported)
+    private static AnimationData? ExportFile(string file, string output, string displayName)
     {
         try
         {
             AnimationData animation = ScriptCompiler.CompileFile(file);
             File.WriteAllText(output, HtmlExporter.Export(animation), new UTF8Encoding(false));
             Console.WriteLine($"Written: {output} ({animation.Steps.Count} steps, {animation.Duration / 1000:0.0} s)");
-            return true;
+            return animation;
         }
         catch (ScriptError e)
         {
             Console.Error.WriteLine(displayName + ": " + e);
-            return false;
+            return null;
         }
     }
 

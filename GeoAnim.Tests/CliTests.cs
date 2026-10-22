@@ -60,6 +60,37 @@ public sealed class CliTests : IDisposable
         Assert.True(File.Exists(Path.Combine(folder, "three.html")));
         Assert.False(File.Exists(Path.Combine(folder, "sub", "bad.html")));
         Assert.Equal(1, Program.ExportDirectory(Path.Combine(folder, "missing")));
+
+        // with an output folder: the same structure there, the sources stay clean
+        File.Delete(Path.Combine(folder, "sub", "bad.geo"));
+        string output = Path.Combine(folder, "..", Path.GetFileName(folder) + "-html");
+        try
+        {
+            Assert.Equal(0, Program.ExportDirectory(folder, output));
+            Assert.True(File.Exists(Path.Combine(output, "one.html")));
+            Assert.True(File.Exists(Path.Combine(output, "sub", "deeper", "two.html")));
+            Assert.False(File.Exists(Path.Combine(output, "one.geo")));
+            Assert.False(File.Exists(Path.Combine(output, "index.html")));
+
+            // with an index: links to the pages with something drawn, in natural order, by folder
+            Write("Prop10.geo", "title Satz **10**\npoint A = 1 1\nstep Zehn");
+            Write("Prop2.geo", "title Satz 2\npoint A = 1 1\nstep Zwei mit $bar(AB)$");
+            Write(Path.Combine("sub", "deeper", "three.geo"), "point A = 1 1");
+            Write("styles.geo", "default point size 3");
+            Assert.Equal(0, Program.ExportDirectory(folder, output, index: true));
+            string index = File.ReadAllText(Path.Combine(output, "index.html"));
+            Assert.Contains("<a href=\"one.html\">one</a>", index);
+            Assert.Contains("<a href=\"Prop2.html\">Satz 2</a><p>Zwei mit AB.</p>", index);
+            Assert.True(index.IndexOf("Prop2.html") < index.IndexOf("Prop10.html") && index.IndexOf("Prop10.html") < index.IndexOf("<h2>"), index);
+            Assert.Contains("<h2>sub / deeper</h2>", index);
+            Assert.Contains("<a href=\"sub/deeper/three.html\">three</a>", index);
+            Assert.DoesNotContain("styles.html", index);
+            Assert.Contains("Satz 10</a>", index);
+        }
+        finally
+        {
+            Directory.Delete(output, recursive: true);
+        }
     }
 
     [Fact]
