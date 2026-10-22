@@ -730,6 +730,18 @@
     box.style.minHeight = height + 'px'
   }
 
+  // title, description and info in points at a picture width of REFERENCE_WIDTH (like the labels in the picture),
+  // never smaller than the minimum in pixels, so that they stay readable in a small window
+  const TEXT_SIZES = { title: [30, 18], caption: [26, 15], info: [22, 14] }
+
+  function setTextScale (factor) {
+    const style = document.documentElement.style
+    for (const name in TEXT_SIZES) {
+      const [size, minimum] = TEXT_SIZES[name]
+      style.setProperty('--' + name + '-size', Math.max(minimum, size * factor).toFixed(1) + 'px')
+    }
+  }
+
   // the picture gets the shape of the view, as large as the window allows
   function layout () {
     if (!animation) {
@@ -737,10 +749,21 @@
     }
     const view = animation.view
     const ratio = (view.xmax - view.xmin) / (view.ymax - view.ymin)
-    // the space between title and control bar, without the description and the margins (16 left and right, 10 above)
+    // the space between title and control bar, without the description and the margins (16 left and right, 10 above).
+    // The texts grow with the picture, so their height depends on its width and the other way round: a few rounds
+    // settle it (starting with the full width)
     const content = $('content')
-    const available = Math.max(1, content.clientHeight - 10 - $('texts').offsetHeight)
-    const width = Math.max(1, Math.min(content.clientWidth - 32, available * ratio))
+    let width = Math.max(1, content.clientWidth - 32)
+    for (let round = 0; round < 3; round++) {
+      const before = width
+      setTextScale(width / REFERENCE_WIDTH)
+      reserveCaptionSpace()
+      const available = Math.max(1, content.clientHeight - 10 - $('texts').offsetHeight)
+      width = Math.max(1, Math.min(content.clientWidth - 32, available * ratio))
+      if (Math.abs(width - before) < 2) {
+        break
+      }
+    }
     const height = width / ratio
     // the stage gets the picture's height, so that picture and description stand together in the middle
     stage.style.flex = 'none'

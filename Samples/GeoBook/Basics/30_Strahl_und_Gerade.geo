@@ -10,6 +10,7 @@ var namen_unten offset 0 -1
 var geradenname namen_unten labelpos 1.5
 
 step Von der Strecke zum Strahl
+keyword Strahl/s/en
 info Wir setzen die Strecke $bar(AB)$ über $B$ hinaus unbegrenzt fort.
 | So entsteht ein **Strahl**, auch **Halbgerade** genannt.
 | $A$ bleibt sein Anfangspunkt. $B$ liegt auf dem Strahl und ist kein Endpunkt mehr.
@@ -53,6 +54,7 @@ together
 end
 
 step Vom Strahl zur Geraden
+keyword Gerade/n
 info Wir gehen wieder vom Strahl $vec(AB)$ aus und setzen ihn auch über $A$ hinaus fort.
 | Die entstehende **Gerade** erstreckt sich in beiden Richtungen unbegrenzt.
 | Sie hat **keine Endpunkte**. Der Bildrand begrenzt nur unsere Darstellung.

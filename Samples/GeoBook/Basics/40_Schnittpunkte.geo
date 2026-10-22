@@ -43,6 +43,7 @@ info Wir bewegen $P$ weiter auf die andere Seite der Geraden.
 move P to -3 -4
 
 step Zwei Halbebenen
+keyword Halbebene/n
 info Eine Gerade teilt die Ebene in zwei **Halbebenen**.
 | Die Gerade bildet ihre gemeinsame Grenze.
 |
