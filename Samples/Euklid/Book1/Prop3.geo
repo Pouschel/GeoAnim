@@ -3,7 +3,6 @@ include ../def.geo
 title Streckensubtraktion
 
 view x -10 .. 10 y -7 .. 7
-output P # Punkt auf AB, sodass AP die kürzere Strecke ist
 speed 0.5
 
 step Gegeben ist eine längere Strecke $bar(AB)$ ...
@@ -31,6 +30,7 @@ point P = intersect kf AB  opt_r1 duration 400
 
 step Die Strecke $bar(AP)$ ist genauso lang wie $c$
 segment r1 = A P opt_r1 width 4
+output P # Punkt auf AB, sodass AP die kürzere Strecke ist
 
 
 point C1x = copy A hidden

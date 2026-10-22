@@ -11,7 +11,6 @@ input point A = -1.5 2 opt_gg2 offset -0.3 0.1
 step Gegeben ist die Verbindungsstrecke durch die Punkte $B$ und $C$
 input point B = 0 0 offset -0.4 -0.3 opt_gg
 input point C = 3 0 offset 0 -0.3 opt_gg
-output L res # gibt den konstruierten Punkt und die Stecke zurück
 
 segment s = B C opt_gg
 
@@ -44,6 +43,7 @@ pause 300
 
 step Die Strecke $bar(AL)$ ist genauso lang wie die Strecke $bar(BC)$
 segment res = A L opt_r1
+output L res # gibt den konstruierten Punkt und die Stecke zurück
 
 step Animation der Konstruktion
 together  duration 1500 

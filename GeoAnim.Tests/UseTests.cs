@@ -12,7 +12,6 @@ public sealed class UseTests : IDisposable
         title Gleichseitiges Dreieck
         input point A = -3 0
         input point B = 3 0
-        output C
         step Kreise um $A$ und $B$
           circle k1 = center A through B color gray
           circle k2 = center B through A color gray
@@ -20,6 +19,9 @@ public sealed class UseTests : IDisposable
           point C T = intersect k1 k2 color red
           pause 700
           segment AC = A C
+        output C
+        step Beweis (nur, wenn die Datei allein läuft)
+          circle proof = center C through A
         """;
 
     public UseTests() => File.WriteAllText(Path.Combine(folder, "equilateral.geo"), Equilateral);
@@ -109,9 +111,9 @@ public sealed class UseTests : IDisposable
         File.WriteAllText(Path.Combine(folder, "lib.geo"), """
             input point U = 0 0
             input point V = 1 0
-            output W
             point M = midpoint U V
             point W = use equilateral.geo M V draw
+            output W
             """);
         var c = Compile("point P = 0 0\npoint Q = 4 0\nstep s\n  point X = use lib.geo P Q draw");
         Assert.Equal(3, ((GeoPoint)c.Objects["X"]).Position.X, 9);
@@ -126,9 +128,9 @@ public sealed class UseTests : IDisposable
         File.WriteAllText(Path.Combine(folder, "two.geo"), """
             input point A = 0 0
             input point B = 2 0
-            output C side
             point C = use equilateral.geo A B
             segment side = A C
+            output C side
             """);
         // with a kind: the outputs of that kind
         var c = Compile("point P = 0 0\npoint Q = 2 0\npoint R = use two.geo P Q color red\nsegment s = use two.geo Q P");
@@ -156,15 +158,35 @@ public sealed class UseTests : IDisposable
               together
                 input point B = 2 0
                 input point C = 0 2
+              end
+              together
+                point M = midpoint B C
                 output M
               end
-              point M = midpoint B C
             """);
         var c = Compile("point P = 0 0\npoint Q = 4 0\npoint R = 0 4\npoint X = use four.geo P Q R");
         Assert.Equal(new Vec(2, 2), ((GeoPoint)c.Objects["X"]).Position);
         // drawn, the inputs in the block are bound too (and the block draws only the file's own objects)
         var drawn = Compile("point P = 0 0\npoint Q = 4 0\npoint R = 0 4\nstep s\n  point X = use four.geo P Q R draw");
         Assert.Equal(new Vec(2, 2), ((GeoPoint)drawn.Objects["X"]).Position);
+    }
+
+    [Fact]
+    public void AUsedFileEndsWithItsLastOutputLine()
+    {
+        // alone: the proof after the output runs
+        var alone = ScriptCompiler.CompileConstruction(ScriptSource.FromFile(Path.Combine(folder, "equilateral.geo")));
+        Assert.Contains("proof", alone.Objects.Keys);
+        Assert.Equal(3, alone.Build().Steps.Count);
+        // used, with its steps: the proof is not part of it
+        var used = Compile("point P = 0 0\npoint Q = 2 0\nstep Wir konstruieren\n  point R = use equilateral.geo P Q steps");
+        Assert.DoesNotContain(used.Objects.Keys, name => name.EndsWith(".proof", StringComparison.Ordinal));
+        Assert.Equal(["Wir konstruieren", "Kreise um $A$ und $B$", "Der Schnittpunkt $C$"], used.Build().Steps.Select(s => s.Caption));
+        // an output before its object is a mistake, also when the file runs alone
+        File.WriteAllText(Path.Combine(folder, "early.geo"), "input point A = 0 0\noutput B\npoint B = 1 1");
+        Assert.Equal("Line 2, column 8: B is not defined yet: \"output\" comes after the construction of its objects (a used file ends with its last output line).",
+            Assert.Throws<ScriptError>(() => ScriptCompiler.CompileFile(Path.Combine(folder, "early.geo"))).ToString());
+        Assert.Contains("In early.geo, line 2, column 8: B is not defined yet", Error("point P = 0 0\npoint R = use early.geo P").Message);
     }
 
     [Fact]
@@ -180,12 +202,12 @@ public sealed class UseTests : IDisposable
             Error("point P = 0 0\npoint Q = 2 0\ncircle k = use equilateral.geo P Q").Message);
         Assert.StartsWith("Line 1, column 15: File not found: missing.geo", Error("point R = use missing.geo").ToString());
         // an error inside the file: with its line, without the internal names
-        Assert.StartsWith("Line 3, column 15: In equilateral.geo, line 6, column 3: circle k1 ",
+        Assert.StartsWith("Line 3, column 15: In equilateral.geo, line 5, column 3: circle k1 ",
             Error("point P = 0 0\npoint Q = 0 0\npoint R = use equilateral.geo P Q").ToString());
-        File.WriteAllText(Path.Combine(folder, "self.geo"), "input point A = 0 0\noutput B\npoint B = use self.geo A");
+        File.WriteAllText(Path.Combine(folder, "self.geo"), "input point A = 0 0\npoint B = use self.geo A\noutput B");
         Assert.Contains("self.geo is already being used (circle: main.geo → self.geo → self.geo)",
             Error("point P = 0 0\npoint R = use self.geo P").Message);
-        File.WriteAllText(Path.Combine(folder, "mover.geo"), "input point A = 0 0\noutput B\npoint B = 1 1\nstep s\n  move A to 2 2");
+        File.WriteAllText(Path.Combine(folder, "mover.geo"), "input point A = 0 0\npoint B = 1 1\nstep s\n  move A to 2 2\noutput B");
         Assert.Contains("A used file cannot move its input A", Error("point P = 0 0\nstep s\n  point R = use mover.geo P draw").Message);
         File.WriteAllText(Path.Combine(folder, "none.geo"), "point A = 0 0");
         Assert.Contains("has no \"output\" line", Error("point R = use none.geo").Message);

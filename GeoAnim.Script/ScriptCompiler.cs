@@ -149,7 +149,16 @@ public static class ScriptCompiler
                         Define(s.Define);
                     }
                     break;
-                case OutputStatement:
+                case OutputStatement s:
+                    // the results must be constructed by now: a used file ends with its last output line
+                    foreach (NameRef name in s.Names)
+                    {
+                        if (!(module != null && module.Inputs.ContainsKey(name.Name)) && !c.Objects.ContainsKey(Global(name.Name)))
+                        {
+                            throw new ScriptError(name.Line, name.Column,
+                                $"{name.Name} is not defined yet: \"output\" comes after the construction of its objects (a used file ends with its last output line).");
+                        }
+                    }
                     break;
                 case DefineStatement s:
                     Define(s);
@@ -494,7 +503,9 @@ public static class ScriptCompiler
             UseMode mode = OnlyResult ? UseMode.Result : d.Mode;
             var inner = new Module($"{Path.GetFileNameWithoutExtension(path)}#{++counter.Next}", mode, bound, results);
             var executor = new Executor(c, moduleSource, [.. files, path], counter, inner);
-            foreach (Statement statement in statements)
+            // the file ends with its last output line (what follows, e.g. a proof, is for running it alone)
+            int last = statements.FindLastIndex(s => AllStatements([s]).Any(x => x is OutputStatement));
+            foreach (Statement statement in statements.Take(last + 1))
             {
                 try
                 {

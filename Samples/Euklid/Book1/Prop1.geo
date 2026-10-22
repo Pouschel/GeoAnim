@@ -10,7 +10,6 @@ speed 0.7
 step Gegeben ist die Verbindungsstrecke $s$ durch die Punkte $A$ und $B$
 input point A = -3 0 offset -0.4 0
 input point B = 3 0
-output C
 segment s = A B color blue
 
 step Wir zeichnen um $A$ einen Kreis mit dem Radius $|AB|$
@@ -28,6 +27,7 @@ segment cb = C B color blue
 
 step $ABC$ ist das gesuchte gleichseitige Dreieck
 polygon D = A B C  color lightblue 
+output C
 
 step Beweis
 set t1c=Nach Konstruktion ist
