@@ -376,13 +376,20 @@ async function openLink (href) {
   }
   const target = path.resolve(path.dirname(previewDocument.uri.fsPath), decodeURIComponent(href.split(/[?#]/)[0]))
   const script = target.replace(/\.html?$/i, '.geo')
-  const file = fs.existsSync(script) ? script : target
-  if (!fs.existsSync(file)) {
-    vscode.window.showInformationMessage(`GeoAnim: ${href} gibt es nicht (gesucht: ${script}).`)
+  if (!fs.existsSync(script)) {
+    vscode.window.showInformationMessage(`GeoAnim: Zu ${href} gibt es kein Skript (gesucht: ${script}).`)
     return
   }
-  const document = await vscode.workspace.openTextDocument(file)
-  vscode.window.showTextDocument(document, { viewColumn: vscode.ViewColumn.One })
+  const document = await vscode.workspace.openTextDocument(script)
+  // in the editor group of the script shown so far – never in the preview's group, so that the preview stays visible
+  const previewColumn = preview ? preview.viewColumn : undefined
+  const shown = (vscode.window.visibleTextEditors || []).find(editor => editor.document === previewDocument)
+  let column = shown ? shown.viewColumn : undefined
+  if (!column || column === previewColumn) {
+    column = previewColumn === vscode.ViewColumn.One ? vscode.ViewColumn.Two : vscode.ViewColumn.One
+  }
+  await vscode.window.showTextDocument(document, { viewColumn: column, preview: false })
+  // the preview follows the newly opened script (onDidChangeActiveTextEditor)
 }
 
 // the step the cursor is in: the number of "step" lines up to it, minus one (-1: the starting picture); undefined if the
