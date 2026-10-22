@@ -1,6 +1,7 @@
 include ../def.geo
 
 title Strecken und ihre Länge
+keyword Strecke/n 
 
 # Für diese Seite: Strecke mit Überstrich, Länge mit senkrechten Strichen.
 # Alle Vergleiche sind reine Verschiebungen. Beide Endpunkte einer

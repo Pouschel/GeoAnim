@@ -1,6 +1,6 @@
 include ../def.geo
 
-title title Punktlage, Halbebenen und Schnittpunkte
+title Punktlage, Halbebenen und Schnittpunkte
 
 # Größen, Tempo und Bildbereich kommen aus def.geo.
 var hilfspunkt hidden nolabel

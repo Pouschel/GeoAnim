@@ -38,6 +38,9 @@ public sealed class AnimationData
     /// <summary>The page description given in the script (meta description), or null.</summary>
     public string? Description { get; internal init; }
 
+    /// <summary>The word forms that link to this page from the other pages of "geoanim exportdir" ("keyword").</summary>
+    public IReadOnlyList<string> Keywords { get; internal init; } = [];
+
     public ViewWindow View { get; }
 
     public Color Background { get; }
@@ -55,6 +58,14 @@ public sealed class AnimationData
     public IReadOnlyDictionary<string, Formula> Formulas { get; }
 
     internal IReadOnlyList<Primitive> Primitives => primitives;
+
+    /// <summary>The same animation with other step texts (e.g. with links).</summary>
+    public AnimationData WithSteps(IReadOnlyList<AnimationStep> steps) =>
+        new(Title, View, Background, GridStep, Axes, Duration, steps, primitives, timeScale, Formulas)
+        {
+            Description = Description,
+            Keywords = Keywords,
+        };
 
     /// <summary>Whether nothing is drawn (e.g. a file with only defaults and vars).</summary>
     public bool IsEmpty => primitives.Count == 0;

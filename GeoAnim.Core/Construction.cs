@@ -50,6 +50,14 @@ public sealed class Construction
     /// </summary>
     public string? Description { get; set; }
 
+    private readonly List<string> keywords = [];
+
+    /// <summary>
+    /// Adds keywords of the page ("Punkt/e/en/es Strecke/n", phrases in quotes): "geoanim exportdir" links their first
+    /// occurrence in each step of the other pages to this one.
+    /// </summary>
+    public void Keyword(string text) => keywords.AddRange(GeoAnim.Keywords.Parse(text));
+
     /// <summary>The title; like all texts it may contain formulas in AsciiMath between $…$ ("\$" for a dollar sign).</summary>
     public string? Title
     {
@@ -578,6 +586,7 @@ public sealed class Construction
         return new AnimationData(Title, view, Background, GridStep, Axes, time * scale, scaledSteps, scene.Primitives, scale, RenderFormulas(scaledSteps))
         {
             Description = Description,
+            Keywords = keywords.Distinct(StringComparer.Ordinal).ToList(),
         };
     }
 

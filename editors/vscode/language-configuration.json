@@ -14,7 +14,7 @@
   "wordPattern": "[A-Za-z_][A-Za-z0-9_]*'*|-?\\d*\\.?\\d+",
   "onEnterRules": [
     {
-      "beforeText": "^\\s*(info|description)\\b.*$",
+      "beforeText": "^\\s*(info|description|keyword)\\b.*$",
       "action": { "indent": "none", "appendText": "| " }
     },
     {

@@ -8,6 +8,9 @@ internal sealed record TitleStatement(int Line, int Column, string Title) : Stat
 /// <summary>"description …": the page description of an exported file (meta description).</summary>
 internal sealed record DescriptionStatement(int Line, int Column, string Description) : Statement(Line, Column);
 
+/// <summary>"keyword Punkt/e/en Strecke/n": words that link to this page from the others (geoanim exportdir).</summary>
+internal sealed record KeywordStatement(int Line, int Column, string Text) : Statement(Line, Column);
+
 internal sealed record ViewStatement(int Line, int Column, ViewWindow View) : Statement(Line, Column);
 
 internal sealed record BackgroundStatement(int Line, int Column, Color Color) : Statement(Line, Column);

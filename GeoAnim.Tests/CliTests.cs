@@ -94,6 +94,24 @@ public sealed class CliTests : IDisposable
     }
 
     [Fact]
+    public void ExportDirectoryLinksKeywordsToTheirPages()
+    {
+        Directory.CreateDirectory(Path.Combine(folder, "Basics"));
+        Directory.CreateDirectory(Path.Combine(folder, "Mehr"));
+        Write(Path.Combine("Basics", "10_Punkte.geo"), "keyword Punkt/e\npoint A = 1 1\nstep Ein Punkt");
+        Write(Path.Combine("Mehr", "Strecken.geo"), "keyword Strecke/n\npoint A = 1 1\nstep Zwei Punkte und eine Strecke");
+        Assert.Equal(0, Program.ExportDirectory(folder));
+        string strecken = File.ReadAllText(Path.Combine(folder, "Mehr", "Strecken.html"));
+        Assert.Contains("[Punkte](../Basics/10_Punkte.html)", strecken);
+        Assert.DoesNotContain("[Strecke]", strecken);
+        Assert.DoesNotContain("](", File.ReadAllText(Path.Combine(folder, "Basics", "10_Punkte.html")).Split("GEO_ANIMATION")[1].Split("</script>")[0]);
+
+        // a keyword of two pages
+        Write("Doppelt.geo", "keyword Punkt\npoint A = 1 1");
+        Assert.Equal(1, Program.ExportDirectory(folder));
+    }
+
+    [Fact]
     public async Task LiveScriptNoticesChangedIncludes()
     {
         string styles = Write("styles.geo", "title one");

@@ -1,4 +1,5 @@
 include ../def.geo
+keyword Punkt/e/en
 
 title Punkte und ihre Lage
 

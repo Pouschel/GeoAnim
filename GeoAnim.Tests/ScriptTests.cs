@@ -478,6 +478,40 @@ public class ScriptTests
     }
 
     [Fact]
+    public void KeywordsLinkTheFirstOccurrenceInEachStep()
+    {
+        AnimationData page = ScriptCompiler.Compile("""
+            keyword Punkt/e/en "rechter Winkel/s"
+            | Gerade/n
+            point A = 0 0
+            """);
+        Assert.Equal(["Punkt", "Punkte", "Punkten", "rechter Winkel", "rechter Winkels", "Gerade", "Geraden"], page.Keywords);
+        ErrorAt("point A = 0 0\nstep s\nkeyword Punkt", 3, 1, "before the first step");
+        ErrorAt("keyword Punkt//e", 1, 1, "an ending after /");
+        ErrorAt("keyword \"Punkt", 1, 1, "no closing");
+
+        AnimationData animation = ScriptCompiler.Compile("""
+            point A = 0 0
+            step Punkte auf einer Geraden, ein Punkt mehr
+            info Der Punkt $Punkt$ und `Punkt`, [Punkte](x.html), Punktsymmetrie, gerade,
+            | ein rechter  Winkel und **Gerade**.
+            step Noch ein Punkt
+            """);
+        var links = new Dictionary<string, string>
+        {
+            ["Punkt"] = "p.html", ["Punkte"] = "p.html", ["Gerade"] = "g.html", ["Geraden"] = "g.html",
+            ["rechter Winkel"] = "w.html", ["Winkel"] = "x.html",
+        };
+        AnimationData linked = Keywords.Link(animation, links);
+        Assert.Equal("[Punkte](p.html) auf einer [Geraden](g.html), ein Punkt mehr", linked.Steps[0].Caption);
+        Assert.Equal("Der Punkt $Punkt$ und `Punkt`, [Punkte](x.html), Punktsymmetrie, gerade, ein [rechter  Winkel](w.html) und **Gerade**.",
+            linked.Steps[0].Info);
+        Assert.Equal("Noch ein [Punkt](p.html)", linked.Steps[1].Caption);
+        Assert.Equal("../Basics/10_Punkte.html", Keywords.RelativeAddress("Mehr/a.html", "Basics/10_Punkte.html"));
+        Assert.Equal("b%20%282%29.html", Keywords.RelativeAddress("a.html", "b (2).html"));
+    }
+
+    [Fact]
     public void OffsetIsInCoordinates()
     {
         JsonElement primitives = JsonDocument.Parse(ScriptCompiler.Compile("point A = 1 2 offset 0.5 -0.25\ntext t = \"x\" at A offset 1 1").ToJson())

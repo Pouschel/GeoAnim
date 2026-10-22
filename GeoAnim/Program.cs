@@ -115,20 +115,48 @@ internal static class Program
         List<string> files = Directory.EnumerateFiles(root, "*.geo", SearchOption.AllDirectories).Order(StringComparer.Ordinal).ToList();
         var pages = new List<(string Path, AnimationData Animation)>();
         int failed = 0;
+        // first all scripts: the keywords of every page are needed for the links in the others
+        var compiled = new List<(string File, string Relative, string Page, AnimationData Animation)>();
         foreach (string file in files)
         {
             string relative = Path.GetRelativePath(root, file);
-            string output = Path.ChangeExtension(Path.Combine(target, relative), ".html");
-            Directory.CreateDirectory(Path.GetDirectoryName(output)!);
-            AnimationData? animation = ExportFile(file, output, relative);
+            AnimationData? animation = CompileFile(file, relative);
             if (animation == null)
             {
                 failed++;
             }
             else
             {
-                pages.Add((Path.ChangeExtension(relative, ".html").Replace('\\', '/'), animation));
+                compiled.Add((file, relative, Path.ChangeExtension(relative, ".html").Replace('\\', '/'), animation));
             }
+        }
+        // keyword → its page; a keyword of two pages is an error (the first one keeps it)
+        int conflicts = 0;
+        var keywordPages = new Dictionary<string, (string Page, string Relative)>(StringComparer.Ordinal);
+        foreach (var page in compiled)
+        {
+            foreach (string form in page.Animation.Keywords)
+            {
+                if (keywordPages.TryGetValue(form, out var other))
+                {
+                    Console.Error.WriteLine($"{page.Relative}: the keyword {form} is already the keyword of {other.Relative}.");
+                    conflicts++;
+                }
+                else
+                {
+                    keywordPages[form] = (page.Page, page.Relative);
+                }
+            }
+        }
+        foreach (var page in compiled)
+        {
+            var links = keywordPages.Where(k => k.Value.Page != page.Page)
+                .ToDictionary(k => k.Key, k => Keywords.RelativeAddress(page.Page, k.Value.Page), StringComparer.Ordinal);
+            AnimationData animation = Keywords.Link(page.Animation, links);
+            string output = Path.ChangeExtension(Path.Combine(target, page.Relative), ".html");
+            Directory.CreateDirectory(Path.GetDirectoryName(output)!);
+            Write(animation, output);
+            pages.Add((page.Page, animation));
         }
         if (index)
         {
@@ -137,25 +165,40 @@ internal static class Program
             File.WriteAllText(indexFile, IndexPage.Create(Path.GetFileName(root), pages), new UTF8Encoding(false));
             Console.WriteLine($"Written: {indexFile} ({pages.Count(p => !p.Animation.IsEmpty)} links)");
         }
-        Console.WriteLine($"{files.Count - failed} of {files.Count} files exported" + (failed > 0 ? $", {failed} with errors." : "."));
-        return failed > 0 ? 1 : 0;
+        Console.WriteLine($"{files.Count - failed} of {files.Count} files exported" + (failed > 0 ? $", {failed} with errors." : ".")
+            + (conflicts > 0 ? $" {conflicts} keyword(s) given twice." : ""));
+        return failed > 0 || conflicts > 0 ? 1 : 0;
     }
 
     // the animation written, or null after an error (reported)
     private static AnimationData? ExportFile(string file, string output, string displayName)
     {
+        AnimationData? animation = CompileFile(file, displayName);
+        if (animation != null)
+        {
+            Write(animation, output);
+        }
+        return animation;
+    }
+
+    // the animation, or null after an error (reported)
+    private static AnimationData? CompileFile(string file, string displayName)
+    {
         try
         {
-            AnimationData animation = ScriptCompiler.CompileFile(file);
-            File.WriteAllText(output, HtmlExporter.Export(animation), new UTF8Encoding(false));
-            Console.WriteLine($"Written: {output} ({animation.Steps.Count} steps, {animation.Duration / 1000:0.0} s)");
-            return animation;
+            return ScriptCompiler.CompileFile(file);
         }
         catch (ScriptError e)
         {
             Console.Error.WriteLine(displayName + ": " + e);
             return null;
         }
+    }
+
+    private static void Write(AnimationData animation, string output)
+    {
+        File.WriteAllText(output, HtmlExporter.Export(animation), new UTF8Encoding(false));
+        Console.WriteLine($"Written: {output} ({animation.Steps.Count} steps, {animation.Duration / 1000:0.0} s)");
     }
 
     private static int Serve(string file, List<string> options)

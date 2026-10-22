@@ -92,7 +92,7 @@ public static class ScriptCompiler
         private void Run(Statement statement)
         {
             // a used file: its settings and steps belong to it running alone
-            if (module != null && statement is TitleStatement or DescriptionStatement or ViewStatement or BackgroundStatement or GridStatement or AxesStatement or SpeedStatement)
+            if (module != null && statement is TitleStatement or DescriptionStatement or KeywordStatement or ViewStatement or BackgroundStatement or GridStatement or AxesStatement or SpeedStatement)
             {
                 return;
             }
@@ -105,6 +105,10 @@ public static class ScriptCompiler
                 case DescriptionStatement s:
                     RequireSetup(s, "description");
                     c.Description = s.Description;
+                    break;
+                case KeywordStatement s:
+                    RequireSetup(s, "keyword");
+                    c.Keyword(s.Text);
                     break;
                 case ViewStatement s:
                     if (hadObject)
