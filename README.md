@@ -79,6 +79,7 @@ Koordinaten sind mathematisch: die y-Achse zeigt nach oben. Der Maßstab ist in 
 | Anweisung | Bedeutung |
 |---|---|
 | `title Mittelsenkrechte` | Überschrift über dem Bild (Rest der Zeile) |
+| `description Kurzbeschreibung …` | Beschreibung der exportierten Seite für Suchmaschinen (`meta description`, mehrzeilig mit `|`); ohne sie beschreibt sich die Seite mit dem Anfang ihrer Schrittbeschreibungen (Formeln lesbar gemacht, etwa 250 Zeichen) |
 | `view x -1 .. 11 y -1 .. 7` | sichtbarer Bereich (Standard wie hier); vor dem ersten Objekt |
 | `background white` | Hintergrundfarbe |
 | `grid` / `grid 0.5` | Gitter mit Abstand 1 bzw. 0.5 |

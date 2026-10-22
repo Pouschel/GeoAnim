@@ -151,7 +151,7 @@ internal static partial class Lexer
                 string word = source.Substring(start, i - start);
                 bool startsLine = tokens.Count == 0 || tokens[^1].Kind == TokenKind.NewLine;
                 tokens.Add(new Token(TokenKind.Name, word, line, column));
-                if (startsLine && word is "title" or "step")
+                if (startsLine && word is "title" or "step" or "description")
                 {
                     tokens.Add(TextWithContinuations());
                 }

@@ -5,6 +5,9 @@ internal abstract record Statement(int Line, int Column);
 
 internal sealed record TitleStatement(int Line, int Column, string Title) : Statement(Line, Column);
 
+/// <summary>"description …": the page description of an exported file (meta description).</summary>
+internal sealed record DescriptionStatement(int Line, int Column, string Description) : Statement(Line, Column);
+
 internal sealed record ViewStatement(int Line, int Column, ViewWindow View) : Statement(Line, Column);
 
 internal sealed record BackgroundStatement(int Line, int Column, Color Color) : Statement(Line, Column);

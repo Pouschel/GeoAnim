@@ -44,6 +44,12 @@ public sealed class Construction
     private double speed = 1;
     private string? title;
 
+    /// <summary>
+    /// The description of an exported page for search engines (meta description); without it, the page describes itself
+    /// with the beginning of its step descriptions.
+    /// </summary>
+    public string? Description { get; set; }
+
     /// <summary>The title; like all texts it may contain formulas in AsciiMath between $…$ ("\$" for a dollar sign).</summary>
     public string? Title
     {
@@ -527,7 +533,10 @@ public sealed class Construction
         }
         double scale = 1 / speed;
         List<AnimationStep> scaledSteps = steps.Select(s => s with { Start = s.Start * scale, End = s.End * scale }).ToList();
-        return new AnimationData(Title, view, Background, GridStep, Axes, time * scale, scaledSteps, scene.Primitives, scale, RenderFormulas(scaledSteps));
+        return new AnimationData(Title, view, Background, GridStep, Axes, time * scale, scaledSteps, scene.Primitives, scale, RenderFormulas(scaledSteps))
+        {
+            Description = Description,
+        };
     }
 
     // all formulas of the title, the step descriptions and the texts in the picture, as SVG

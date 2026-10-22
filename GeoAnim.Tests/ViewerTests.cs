@@ -50,6 +50,27 @@ public class ViewerTests
     }
 
     [Fact]
+    public void PagesDescribeThemselves()
+    {
+        AnimationData auto = ScriptCompiler.Compile("""
+            title Satz
+            point A = 0 0
+            step Gegeben ist das Dreieck $Delta ABC$
+            step Zeichne um $B$ einen Kreis mit dem Radius $bar(BC)$:
+            step Die Winkel $alpha$ und $beta$ sind **gleich** ("<Prop5.html>")
+            """);
+        string html = HtmlExporter.Export(auto);
+        Assert.Contains("<meta name=\"description\" content=\"Gegeben ist das Dreieck ΔABC. Zeichne um B einen Kreis mit dem Radius BC: "
+            + "Die Winkel α und β sind gleich (&quot;Prop5.html&quot;).\">", html);
+        // given in the script, over several lines; a long one is cut at a word
+        AnimationData given = ScriptCompiler.Compile("description Euklid I.2: eine Strecke\n| antragen\npoint A = 0 0");
+        Assert.Contains("content=\"Euklid I.2: eine Strecke antragen\"", HtmlExporter.Export(given));
+        string longOne = HtmlExporter.DescriptionOf(ScriptCompiler.Compile("description " + string.Join(" ", Enumerable.Repeat("Wort", 100))));
+        Assert.True(longOne.Length <= HtmlExporter.DescriptionLength + 2 && longOne.EndsWith("Wort …"), longOne);
+        Assert.Contains("only possible", Assert.Throws<ScriptError>(() => ScriptCompiler.Compile("point A = 0 0\nstep s\ndescription x")).Message.Replace("must come before the first step", "only possible"));
+    }
+
+    [Fact]
     public void TitleIsEscaped()
     {
         var c = new Construction { Title = "A < B & C" };

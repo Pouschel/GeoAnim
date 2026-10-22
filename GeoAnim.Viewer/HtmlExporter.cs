@@ -25,6 +25,56 @@ public static partial class HtmlExporter
     [GeneratedRegex(@"\[([^\]]*)\]\([^)\s]*\)|<([^>\s]+)>|\\([*_`$])|\*\*|[*`$]|(?<![\p{L}\p{N}])_|_(?![\p{L}\p{N}])")]
     private static partial Regex MarkdownPattern();
 
+    /// <summary>The length a description is cut to (at a word).</summary>
+    internal const int DescriptionLength = 250;
+
+    /// <summary>
+    /// The page description: the one from the script, else the step descriptions one after the other – as plain text,
+    /// formulas readable ($bar(AB)$ → AB), cut at a word after about <see cref="DescriptionLength"/> characters.
+    /// </summary>
+    internal static string DescriptionOf(AnimationData animation)
+    {
+        string text = animation.Description ?? string.Join(" ", animation.Steps
+            .Select(step => ReadableFormulas(step.Caption).Trim())
+            .Where(caption => caption.Length > 0)
+            .Select(caption => ".!?:…".Contains(caption[^1]) ? caption : caption + "."));
+        text = WhiteSpace().Replace(PlainText(ReadableFormulas(text)), " ").Trim();
+        if (text.Length <= DescriptionLength)
+        {
+            return text;
+        }
+        int cut = text.LastIndexOf(' ', DescriptionLength);
+        return text.Substring(0, cut > DescriptionLength / 2 ? cut : DescriptionLength).TrimEnd(',', ';', ' ') + " …";
+    }
+
+    // AsciiMath in $…$ made readable for a description: bar(AB) → AB, Delta → Δ, ^@ → °
+    private static string ReadableFormulas(string text) => FormulaPattern().Replace(text, m =>
+    {
+        string formula = m.Groups[1].Value;
+        formula = DecorationPattern().Replace(formula, d => d.Groups[2].Value);
+        foreach ((string name, string letter) in Greek)
+        {
+            formula = Regex.Replace(formula, $@"\b{name}\b ?", letter);
+        }
+        return formula.Replace("^@", "°").Replace("*", "·").Replace("!=", "≠").Replace("<=", "≤").Replace(">=", "≥");
+    });
+
+    private static readonly (string, string)[] Greek =
+    [
+        ("Delta", "Δ"), ("Gamma", "Γ"), ("Omega", "Ω"), ("alpha", "α"), ("beta", "β"), ("gamma", "γ"), ("delta", "δ"),
+        ("epsilon", "ε"), ("lambda", "λ"), ("mu", "μ"), ("pi", "π"), ("phi", "φ"), ("sigma", "σ"), ("omega", "ω"),
+        ("angle", "∠"), ("perp", "⊥"), ("cong", "≅"), ("sim", "∼"),
+    ];
+
+    [GeneratedRegex(@"(?<!\\)\$([^$]*)\$")]
+    private static partial Regex FormulaPattern();
+
+    [GeneratedRegex(@"\b(bar|vec|hat|overline|overset|ul|tilde|dot)\(([^()]*)\)")]
+    private static partial Regex DecorationPattern();
+
+    [GeneratedRegex(@"\s+")]
+    private static partial Regex WhiteSpace();
+
     /// <summary>A title or description as plain text (for the page's title).</summary>
     internal static string PlainText(string text) =>
         MarkdownPattern().Replace(text, m => m.Groups[1].Success ? m.Groups[1].Value : m.Groups[2].Success ? m.Groups[2].Value : m.Groups[3].Value)
@@ -34,7 +84,8 @@ public static partial class HtmlExporter
     public static string Export(AnimationData animation)
     {
         string html = ViewerFiles.ReadText("player.html");
-        html = TitlePattern().Replace(html, "<title>" + WebUtility.HtmlEncode(animation.Title == null ? "GeoAnim" : PlainText(animation.Title)) + "</title>", 1);
+        html = TitlePattern().Replace(html, "<title>" + WebUtility.HtmlEncode(animation.Title == null ? "GeoAnim" : PlainText(animation.Title)) + "</title>"
+            + "\n    <meta name=\"description\" content=\"" + WebUtility.HtmlEncode(DescriptionOf(animation)) + "\">", 1);
         html = StylesheetPattern().Replace(html, m => "<style>\n" + InlineCss(m.Groups[1].Value) + "</style>");
         html = ScriptPattern().Replace(html, m =>
             // the JSON escapes <, > and &, so it cannot end the script element

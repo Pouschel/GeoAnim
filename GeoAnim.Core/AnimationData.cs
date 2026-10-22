@@ -35,6 +35,9 @@ public sealed class AnimationData
 
     public string? Title { get; }
 
+    /// <summary>The page description given in the script (meta description), or null.</summary>
+    public string? Description { get; internal init; }
+
     public ViewWindow View { get; }
 
     public Color Background { get; }
