@@ -260,6 +260,10 @@ h1 a {
   background: #fff;
   border-top: 1px solid #d5d8de;
   user-select: none;
+  /* never wider than the window: a wider bar would make a phone zoom out, and the page would end in the middle */
+  /* (clip, not hidden: the speed menu opens above the bar) */
+  min-width: 0;
+  overflow-x: clip;
 }
 
 #controls button {
@@ -397,6 +401,45 @@ body.live #scene {
 
 #controls #speed[aria-expanded="true"] {
   background: #eceef2;
+}
+
+/* narrow windows (phones): fewer buttons, less space; to the start and the end via the list of steps */
+@media (max-width: 520px) {
+  #controls {
+    padding: 0 4px;
+  }
+
+  #controls #first,
+  #controls #last {
+    display: none;
+  }
+
+  #controls #play {
+    margin: 0 2px;
+  }
+
+  #controls #replay {
+    margin-left: 0;
+  }
+
+  #timeline-box {
+    min-width: 40px;
+    margin: 0 4px;
+  }
+
+  #counter {
+    min-width: 40px;
+  }
+}
+
+@media (max-width: 380px) {
+  #controls #replay {
+    display: none;
+  }
+
+  #controls #speed {
+    min-width: 40px;
+  }
 }
 
 /* the choice of speeds, opening upwards above the button */

@@ -164,7 +164,7 @@
     },
     // a group with the pieces of the text side by side: text elements and formulas (nested svg elements)
     text (element, v) {
-      const size = v.size * unit
+      const size = textSize(v.size)
       const align = v.nx !== undefined ? 'middle' : v.anchor || 'start'
       const key = v.text + '\n' + size + '\n' + align
       if (element.layoutKey !== key) {
@@ -193,6 +193,10 @@
     }
   }
 
+  // texts in the picture grow with it, but stay readable in a small one (like the description below it)
+  const MIN_TEXT_SIZE = 12
+  const textSize = points => Math.max(Math.min(points, MIN_TEXT_SIZE), points * unit)
+
   const TAGS = { dot: 'circle', line: 'line', arc: 'path', polygon: 'polygon', text: 'g', angle: 'g' }
 
   // ------------------------------------------------------------------ angles
@@ -215,7 +219,7 @@
     const reveal = v.reveal === undefined ? 1 : Math.max(0, Math.min(1, v.reveal))
     const cx = toX(v.x)
     const cy = toY(v.y)
-    const size = v.size * unit
+    const size = textSize(v.size)
     let width = 0
     let height = 0
     if (v.text) {
