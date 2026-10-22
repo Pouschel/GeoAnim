@@ -6,6 +6,7 @@ html, body {
 }
 
 body {
+  position: relative;
   display: flex;
   flex-direction: column;
   background: #eceef2;
@@ -15,8 +16,16 @@ body {
 }
 
 header {
-  padding: 10px 16px 0;
+  padding: 10px 52px 0;
   text-align: center;
+}
+
+#content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 0;
 }
 
 h1 {
@@ -25,9 +34,10 @@ h1 {
   font-weight: 700;
 }
 
+/* until an animation is there, the stage fills the space; then it gets the height of the picture */
 #stage {
   position: relative;
-  flex: 1;
+  flex: 1 1 auto;
   min-height: 0;
   margin: 10px 16px 0;
 }
@@ -98,6 +108,100 @@ h1 a {
   font-size: 20px;
   line-height: 1.4;
   text-align: center;
+}
+
+/* the list of steps, opened with the button at the top left */
+#menu-button {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 21;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.85);
+  color: #4a5160;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+}
+
+#menu-button:hover:not(:disabled),
+#menu-button[aria-expanded="true"] {
+  background: #fff;
+  color: #000;
+}
+
+#menu-button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+#menu-button svg {
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
+}
+
+#menu {
+  position: absolute;
+  top: 0;
+  bottom: 47px;
+  left: 0;
+  z-index: 20;
+  box-sizing: border-box;
+  width: min(400px, 88vw);
+  padding: 52px 0 12px;
+  overflow-y: auto;
+  background: #fff;
+  box-shadow: 2px 0 12px rgba(0, 0, 0, 0.2);
+}
+
+#menu[hidden] {
+  display: none;
+}
+
+#menu-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+#menu-list li {
+  display: flex;
+  gap: 10px;
+  padding: 8px 16px;
+  font-size: 17px;
+  line-height: 1.35;
+  cursor: pointer;
+}
+
+#menu-list li:hover {
+  background: #eceef2;
+}
+
+#menu-list li.current {
+  background: #e1eaf7;
+}
+
+#menu-list .number {
+  min-width: 1.6em;
+  color: #6b7280;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+#menu-list li.current .number {
+  color: #1565c0;
+  font-weight: 700;
+}
+
+#menu-list a {
+  color: #1565c0;
 }
 
 #controls {

@@ -634,8 +634,14 @@
     }
     const view = animation.view
     const ratio = (view.xmax - view.xmin) / (view.ymax - view.ymin)
-    const width = Math.max(1, Math.min(stage.clientWidth, stage.clientHeight * ratio))
+    // the space between title and control bar, without the description and the margins (16 left and right, 10 above)
+    const content = $('content')
+    const available = Math.max(1, content.clientHeight - 10 - $('caption').offsetHeight)
+    const width = Math.max(1, Math.min(content.clientWidth - 32, available * ratio))
     const height = width / ratio
+    // the stage gets the picture's height, so that picture and description stand together in the middle
+    stage.style.flex = 'none'
+    stage.style.height = height + 'px'
     scene.setAttribute('width', width)
     scene.setAttribute('height', height)
     scene.setAttribute('viewBox', `0 0 ${width} ${height}`)
@@ -751,7 +757,61 @@
       timeline.value = String(Math.round(time))
     }
     $('play').classList.toggle('playing', playing)
+    markMenu(index)
   }
+
+  // ------------------------------------------------------------------ the list of steps
+
+  function buildMenu () {
+    const list = $('menu-list')
+    list.textContent = ''
+    const entries = [{ caption: 'Start', time: 0 }].concat(steps().map(step => ({ caption: step.caption, time: step.end })))
+    entries.forEach((entry, index) => {
+      const item = document.createElement('li')
+      const number = document.createElement('span')
+      number.className = 'number'
+      number.textContent = index > 0 ? String(index) : ''
+      const text = document.createElement('span')
+      setRichText(text, entry.caption)
+      item.append(number, text)
+      item.addEventListener('click', event => {
+        // a link in a description opens the link
+        if (event.target.closest('a')) {
+          return
+        }
+        pause()
+        setTime(entry.time)
+        openMenu(false)
+      })
+      list.appendChild(item)
+    })
+    list.markedIndex = null
+  }
+
+  // the entry of the current step (0: the start)
+  function markMenu (stepIndex) {
+    const list = $('menu-list')
+    const index = stepIndex + 1
+    if (list.markedIndex === index) {
+      return
+    }
+    list.markedIndex = index
+    Array.from(list.children).forEach((item, i) => item.classList.toggle('current', i === index))
+  }
+
+  function openMenu (open) {
+    const menu = $('menu')
+    menu.hidden = !open
+    $('menu-button').setAttribute('aria-expanded', String(open))
+    if (open) {
+      const current = $('menu-list').querySelector('.current')
+      if (current) {
+        current.scrollIntoView({ block: 'nearest' })
+      }
+    }
+  }
+
+  const toggleMenu = () => openMenu($('menu').hidden)
 
   function drawMarks () {
     const marks = $('marks')
@@ -784,7 +844,8 @@
     buildScene()
     $('timeline').max = String(Math.max(1, Math.round(data.duration)))
     drawMarks()
-    document.querySelectorAll('#controls button, #timeline').forEach(control => { control.disabled = false })
+    buildMenu()
+    document.querySelectorAll('#controls button, #timeline, #menu-button').forEach(control => { control.disabled = false })
     if (keepPosition && stepIndex >= 0 && stepIndex < data.steps.length) {
       time = atStepEnd ? data.steps[stepIndex].end : Math.min(time, data.duration)
     } else if (keepPosition) {
@@ -940,7 +1001,12 @@
     if (!$('speed-box').contains(event.target)) {
       openSpeedMenu(false)
     }
+    if (!$('menu').contains(event.target) && !$('menu-button').contains(event.target)) {
+      openMenu(false)
+    }
   })
+  $('menu-button').addEventListener('mousedown', event => event.preventDefault())
+  $('menu-button').addEventListener('click', toggleMenu)
 
   function toggleStops () {
     stopAtSteps = !stopAtSteps
@@ -966,7 +1032,9 @@
       S: toggleStops,
       '-': () => changeSpeed(-1),
       '+': () => changeSpeed(1),
-      Escape: () => openSpeedMenu(false)
+      m: toggleMenu,
+      M: toggleMenu,
+      Escape: () => { openSpeedMenu(false); openMenu(false) }
     }
     if (actions[event.key]) {
       event.preventDefault()

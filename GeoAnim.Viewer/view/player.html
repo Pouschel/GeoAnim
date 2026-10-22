@@ -10,15 +10,24 @@
     <link rel="stylesheet" href="player.css">
   </head>
   <body>
+    <button id="menu-button" type="button" title="Steps (M)" aria-haspopup="true" aria-expanded="false" disabled>
+      <svg viewBox="0 0 24 24"><path d="M4 6h16v2H4zM4 11h16v2H4zM4 16h16v2H4z"/></svg>
+    </button>
     <header id="header" hidden>
       <h1 id="title"></h1>
     </header>
-    <main id="stage">
-      <svg id="scene" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title caption"></svg>
-      <div id="message">Loading…</div>
-      <div id="error" hidden></div>
-    </main>
-    <div id="caption" aria-live="polite"></div>
+    <!-- picture and description together, centred in the space between title and control bar -->
+    <div id="content">
+      <main id="stage">
+        <svg id="scene" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title caption"></svg>
+        <div id="message">Loading…</div>
+        <div id="error" hidden></div>
+      </main>
+      <div id="caption" aria-live="polite"></div>
+    </div>
+    <nav id="menu" aria-label="Steps" hidden>
+      <ol id="menu-list"></ol>
+    </nav>
     <nav id="controls" aria-label="Animation controls">
       <!-- start/end: double arrow with bar; step back/forward: single arrow with bar; play: the large round button -->
       <button id="first" type="button" title="Start (Home)" disabled>
