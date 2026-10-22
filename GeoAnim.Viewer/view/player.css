@@ -88,6 +88,16 @@ h1 {
   display: none;
 }
 
+/* the message lets the mouse through (coordinates, Shift+click) and fades while the mouse is over the picture */
+#error {
+  pointer-events: none;
+  transition: opacity 0.15s;
+}
+
+#stage:hover #error {
+  opacity: 0.3;
+}
+
 #caption a,
 h1 a {
   color: #1565c0;
