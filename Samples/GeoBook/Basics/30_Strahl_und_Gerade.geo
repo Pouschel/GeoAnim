@@ -1,6 +1,7 @@
 include ../def.geo
 
 title Strahl und Gerade
+description Aus einer Strecke entstehen durch einseitiges und beidseitiges Fortsetzen ein Strahl und eine Gerade. Ihre Bezeichnungen und Unterschiede.
 
 # Größen, Linienbreiten, Tempo und Bildbereich kommen aus def.geo.
 # Die lokalen VARs bündeln nur die zusätzlich benötigten Optionen.

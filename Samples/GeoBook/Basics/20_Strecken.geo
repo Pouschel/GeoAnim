@@ -1,6 +1,7 @@
 include ../def.geo
 
 title Strecken und ihre Länge
+description Von den Endpunkten einer Strecke über den Längenvergleich zum Messen mit einer Einheitsstrecke.
 
 
 # Für diese Seite: Strecke mit Überstrich, Länge mit senkrechten Strichen.

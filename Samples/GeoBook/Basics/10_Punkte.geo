@@ -1,5 +1,6 @@
 include ../def.geo
 title Punkte und ihre Lage
+description Was ein Punkt ist, wie wir ihn bezeichnen und wann zwei Punktnamen dieselbe Lage beschreiben.
 
 step Definition 
 info Ein **Punkt** beschreibt eine genaue Lage. Er hat keine Ausdehnung. Damit wir ihn sehen können, stellen wir ihn durch einen kleinen Kreis dar.

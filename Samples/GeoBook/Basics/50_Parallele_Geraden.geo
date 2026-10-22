@@ -1,7 +1,7 @@
 include ../def.geo
 
 title Parallele Geraden
-description Vom Schnittpunkt zur Parallelität: Zwei verschiedene Geraden in der Ebene sind parallel, wenn sie keinen gemeinsamen Punkt haben. Schreibweise und Parallelverschiebung.
+description Sich schneidende, parallele und identische Geraden. Schreibweisen, Parallelverschiebung und das Zusammenfallen zweier Geraden.
 
 # Größen, Linienbreiten, Tempo und Bildbereich kommen aus def.geo.
 var hilfspunkt hidden nolabel
