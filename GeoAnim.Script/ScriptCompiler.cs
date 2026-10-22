@@ -185,7 +185,20 @@ public static class ScriptCompiler
                         }
                         List<GeoObject> targets = s.Targets.Select(t => NotInput(t, s.Show ? "show" : "hide")).ToList();
                         Options options = ToOptions(s.Options, s.Show ? "show" : "hide", ["duration", "easing"]);
-                        if (s.Show)
+                        if (s.Label)
+                        {
+                            foreach ((NameRef name, GeoObject target) in s.Targets.Zip(targets))
+                            {
+                                if (!target.HasLabel)
+                                {
+                                    throw new ScriptError(name.Line, name.Column, target is GeoStraight or GeoAngle
+                                        ? $"The {target.Kind} {name.Name} has no label: give it one with label \"…\"."
+                                        : $"A {target.Kind} has no label.");
+                                }
+                            }
+                            c.ShowLabels(targets, s.Show, options.Duration, options.Easing);
+                        }
+                        else if (s.Show)
                         {
                             c.Show(targets, options.Duration, options.Easing);
                         }

@@ -285,7 +285,7 @@
       parts.label.setAttribute('transform', `translate(${x} ${y})`)
       parts.label.setAttribute('fill', v.color)
       parts.label.style.color = v.color
-      parts.label.setAttribute('opacity', reveal)
+      parts.label.setAttribute('opacity', reveal * (v.labelOpacity === undefined ? 1 : v.labelOpacity))
     }
   }
 

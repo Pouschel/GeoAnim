@@ -67,6 +67,33 @@ internal sealed class FadeAction(GeoObject target, double toOpacity, double dura
     public override void Apply(double progress) => target.Opacity = fromOpacity + (toOpacity - fromOpacity) * progress;
 }
 
+/// <summary>Fades the label of a drawn object in or out ("show label", "hide label").</summary>
+internal sealed class LabelFadeAction(GeoObject target, double toOpacity, double duration, Easing easing) : TimelineAction(duration, easing)
+{
+    private double fromOpacity;
+
+    public override IEnumerable<GeoObject> Objects => [target];
+
+    public override void Begin(RenderContext context, double time)
+    {
+        fromOpacity = target.LabelOpacity;
+        if (!target.LabelUsed)
+        {
+            // the label's primitive appears (still invisible) at the start
+            target.LabelUsed = true;
+            target.Render(context, Span.At(time));
+        }
+    }
+
+    public override void End(RenderContext context, Span span)
+    {
+        target.LabelOpacity = toOpacity;
+        target.Render(context, span);
+    }
+
+    public override void Apply(double progress) => target.LabelOpacity = fromOpacity + (toOpacity - fromOpacity) * progress;
+}
+
 /// <summary>Moves a free point; everything that depends on it follows.</summary>
 internal sealed class MoveAction(GeoPoint point, Vec target, double duration, Easing easing) : TimelineAction(duration, easing)
 {

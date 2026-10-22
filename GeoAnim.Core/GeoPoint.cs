@@ -92,8 +92,10 @@ public sealed class GeoPoint : GeoObject
         }
     }
 
+    public override bool HasLabel => true;
+
     // the name as a formula: italic, P_1 with subscript, A' with prime
-    internal string? LabelText => Options.NoLabel ? null : Options.Label ?? "$" + Name + "$";
+    internal string LabelText => Options.Label ?? "$" + Name + "$";
 
     internal override void Render(RenderContext context, Span span)
     {
@@ -101,12 +103,12 @@ public sealed class GeoPoint : GeoObject
         {
             IsDrawn = true;
             dot = context.Scene.Create("dot", Layers.Point);
-            if (LabelText != null)
-            {
-                label = context.Scene.Create("text", Layers.Label);
-                label.Animate("text", span, LabelText);
-                label.Animate("anchor", span, "start");
-            }
+        }
+        if (label == null && LabelUsed)
+        {
+            label = context.Scene.Create("text", Layers.Label);
+            label.Animate("text", span, LabelText);
+            label.Animate("anchor", span, "start");
         }
         Color color = ColorOr(Defaults.PointColor);
         double visibility = Visibility;
@@ -123,7 +125,7 @@ public sealed class GeoPoint : GeoObject
             // an offset is in coordinates; the default distance is in points
             Vec offset = Options.Offset ?? new Vec(0, 0);
             Vec distance = Options.Offset == null ? Defaults.LabelOffset : new Vec(0, 0);
-            label.Animate("opacity", span, visibility * Reveal);
+            label.Animate("opacity", span, visibility * Reveal * LabelOpacity);
             if (IsDefined)
             {
                 label.Animate("x", span, position.X + offset.X);

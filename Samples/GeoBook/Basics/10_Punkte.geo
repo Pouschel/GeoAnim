@@ -10,12 +10,23 @@ point P= 0 0 pdef color black
 point Q= 4 6 pdef
 point A= -8 4 pdef color red
 point B= 7 -2 pdef color green
-point M= -9 -6 pdef
+point M= -9 -6 pdef color red
 
 step Bezeichnung 
-info Punkte werden in der Regel mit Großbuchstaben bezeichnet.
+info Punkte werden in der Regel mit Großbuchstaben 
+|wie $A$, $P$ oder $Q$ bezeichnet.
+show label A B P Q M
 
 step Lagebeziehung
+info Die Punkte $M$ und $Q$ liegen an verschiedenen Orten. 
+| Sie sind verschiedene Punkte. Schreibweise: $M != Q$.
+hide A B P
+
+
+
+
+
+
 
 
 

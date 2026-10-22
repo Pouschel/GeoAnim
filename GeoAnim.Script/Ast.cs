@@ -38,7 +38,9 @@ internal sealed record InputStatement(int Line, int Column, DefineStatement Defi
 /// </summary>
 internal sealed record OutputStatement(int Line, int Column, IReadOnlyList<NameRef> Names, DefineStatement? Define = null) : Statement(Line, Column);
 
-internal sealed record ShowStatement(int Line, int Column, bool Show, IReadOnlyList<NameRef> Targets, OptionList Options) : Statement(Line, Column);
+/// <summary>"show A k" / "hide A k", or with <see cref="Label"/> "show label A B": only the labels.</summary>
+internal sealed record ShowStatement(int Line, int Column, bool Show, IReadOnlyList<NameRef> Targets, OptionList Options, bool Label = false)
+    : Statement(Line, Column);
 
 /// <summary>
 /// "move P to x y" (Target), "move P to 90" (Parameter: angle or position on a path) or "move P to Q" (TargetPoint: where

@@ -441,6 +441,43 @@ public class ScriptTests
     }
 
     [Fact]
+    public void ShowLabelFadesLabelsInAndOut()
+    {
+        AnimationData animation = ScriptCompiler.Compile("""
+            point A = 0 0 nolabel
+            point B = 4 0 nolabel
+            point C = 9 9 nolabel
+            segment s = A B label "$a$" nolabel
+            angle w = B A C label "$alpha$"
+            step Namen
+              show label A s
+              hide label w duration 200
+            step weg
+              hide label A
+              move A to 1 1
+            """);
+        JsonElement primitives = JsonDocument.Parse(animation.ToJson()).RootElement.GetProperty("primitives");
+        JsonElement[] texts = primitives.EnumerateArray().Where(p => p.GetProperty("type").GetString() == "text").ToArray();
+        // labels of A and s, none for B and C (never shown)
+        Assert.Equal(["$A$", "$a$"], texts.Select(t => t.GetProperty("tracks").GetProperty("text")[0][1].GetString()).Order(StringComparer.Ordinal));
+        JsonElement opacityA = texts.Single(t => t.GetProperty("tracks").GetProperty("text")[0][1].GetString() == "$A$")
+            .GetProperty("tracks").GetProperty("opacity");
+        Assert.Equal(0, opacityA[0][1].GetDouble());
+        Assert.Equal(1, opacityA.EnumerateArray().Max(k => k[1].GetDouble()));
+        Assert.Equal(0, opacityA[opacityA.GetArrayLength() - 1][1].GetDouble());
+        JsonElement angleLabel = primitives.EnumerateArray().Single(p => p.GetProperty("type").GetString() == "angle")
+            .GetProperty("tracks").GetProperty("labelOpacity");
+        Assert.Equal([1.0, 1.0, 0.0], angleLabel.EnumerateArray().Select(k => k[1].GetDouble()));
+        // a label hidden before the object is drawn: it appears without label
+        JsonElement later = JsonDocument.Parse(ScriptCompiler.Compile("point A = 0 0\nstep s\n  point P = 1 1 hidden\n  hide label P\n  show P")
+            .ToJson()).RootElement.GetProperty("primitives");
+        Assert.Single(later.EnumerateArray(), p => p.GetProperty("type").GetString() == "text");
+        ErrorAt("point A = 0 0\npoint B = 1 0\nsegment s = A B\nstep x\nshow label s", 5, 12, "has no label");
+        ErrorAt("point A = 0 0\ncircle k = center A radius 1\nstep x\nhide label k", 4, 12, "has no label");
+        ErrorAt("point A = 0 0\nstep x\nshow label", 3, 11, "needs the names");
+    }
+
+    [Fact]
     public void OffsetIsInCoordinates()
     {
         JsonElement primitives = JsonDocument.Parse(ScriptCompiler.Compile("point A = 1 2 offset 0.5 -0.25\ntext t = \"x\" at A offset 1 1").ToJson())

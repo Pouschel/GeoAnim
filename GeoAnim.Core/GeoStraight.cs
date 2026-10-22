@@ -27,6 +27,8 @@ public sealed class GeoStraight : GeoObject
         _ => "line",
     };
 
+    public override bool HasLabel => Options.Label != null;
+
     internal override double DefaultDuration => 800;
 
     /// <summary>The allowed parameters t of A + t·(B − A): [0, 1] for a segment, [0, ∞) for a ray.</summary>
@@ -83,7 +85,7 @@ public sealed class GeoStraight : GeoObject
         }
         line.Animate("color", span, ColorOr(Defaults.LineColor).ToHex());
         line.Animate("width", span, WidthOr(Defaults.LineWidth));
-        if (Options.Label != null && !Options.NoLabel)
+        if (HasLabel && LabelUsed)
         {
             RenderLabel(context, span, part != null);
         }
@@ -102,7 +104,7 @@ public sealed class GeoStraight : GeoObject
             label = context.Scene.Create("text", Layers.Label);
             label.Animate("text", span, Options.Label!);
         }
-        label.Animate("opacity", span, visible ? Opacity * Reveal : 0);
+        label.Animate("opacity", span, visible ? Opacity * Reveal * LabelOpacity : 0);
         if (IsDefined)
         {
             Vec at = A.Position + (Options.LabelPosition ?? 0.5) * Direction;

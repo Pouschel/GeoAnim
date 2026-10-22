@@ -11,6 +11,8 @@ public abstract class GeoObject
         Name = name;
         Options = options;
         Parents = parents;
+        LabelOpacity = options.NoLabel ? 0 : 1;
+        LabelUsed = !options.NoLabel;
     }
 
     public string Name { get; }
@@ -29,6 +31,15 @@ public abstract class GeoObject
     internal double Reveal { get; set; }
 
     internal double Opacity { get; set; } = 1;
+
+    /// <summary>Whether the object has a label that "show label" can show (a point always: its name).</summary>
+    public virtual bool HasLabel => false;
+
+    /// <summary>The opacity of the label on top of the object's own (0 with "nolabel" or after "hide label").</summary>
+    internal double LabelOpacity { get; set; }
+
+    /// <summary>Whether the label is ever shown: only then it gets a primitive.</summary>
+    internal bool LabelUsed { get; set; }
 
     /// <summary>Whether it has primitives in the animation (it was shown once).</summary>
     internal bool IsDrawn { get; private protected set; }

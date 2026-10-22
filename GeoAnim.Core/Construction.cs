@@ -298,6 +298,33 @@ public sealed class Construction
     }
 
     /// <summary>Fades out those of the objects that are visible or about to be drawn; the others are left alone.</summary>
+    /// <summary>
+    /// Shows or hides the labels of objects (fading in 400 ms). The label of an object that is not drawn yet changes at
+    /// once: it appears (or not) when the object is drawn.
+    /// </summary>
+    public void ShowLabels(IEnumerable<GeoObject> items, bool show, double? duration = null, Easing? easing = null)
+    {
+        var actions = new List<TimelineAction>();
+        foreach (GeoObject item in items)
+        {
+            if (!item.HasLabel)
+            {
+                throw new GeoException($"{item} has no label.");
+            }
+            if (item.IsDrawn)
+            {
+                actions.Add(new LabelFadeAction(item, show ? 1 : 0, duration ?? 400, easing ?? Easing.EaseOut));
+            }
+            else
+            {
+                // no primitive yet: a label shown later gets one then
+                item.LabelOpacity = show ? 1 : 0;
+                item.LabelUsed = show;
+            }
+        }
+        RunOrQueue(actions);
+    }
+
     public void HideVisible(IEnumerable<GeoObject> items, double? duration = null, Easing? easing = null)
     {
         List<GeoObject> visible = items.Where(item => (item.IsDrawn || IsQueued(item)) && item.Opacity > 0).ToList();

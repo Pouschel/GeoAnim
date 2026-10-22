@@ -554,6 +554,12 @@ internal sealed class Parser
 
     private ShowStatement ParseShow(Token word)
     {
+        // "show label A B": only the labels
+        bool label = Current.Kind == TokenKind.Name && Current.Text == "label";
+        if (label)
+        {
+            Next();
+        }
         var targets = new List<NameRef>();
         while (Current.Kind == TokenKind.Name && !IsOption(Current.Text))
         {
@@ -561,9 +567,11 @@ internal sealed class Parser
         }
         if (targets.Count == 0)
         {
-            throw Error(Current, $"\"{word.Text}\" needs the names of objects.");
+            throw Error(Current, label
+                ? $"\"{word.Text} label\" needs the names of objects."
+                : $"\"{word.Text}\" needs the names of objects.");
         }
-        return new ShowStatement(word.Line, word.Column, word.Text == "show", targets, ParseOptions());
+        return new ShowStatement(word.Line, word.Column, word.Text == "show", targets, ParseOptions(), label);
     }
 
     private MoveStatement ParseMove(Token word)

@@ -32,6 +32,8 @@ public sealed class GeoAngle : GeoObject
     /// <summary>The size of the angle in degrees, 0 to 360.</summary>
     public double Degrees { get; private set; }
 
+    public override bool HasLabel => Options.Label != null;
+
     internal override double DefaultDuration => 600;
 
     internal override Easing DefaultEasing => Easing.EaseOut;
@@ -63,10 +65,15 @@ public sealed class GeoAngle : GeoObject
         {
             IsDrawn = true;
             sector = context.Scene.Create("angle", Layers.Polygon);
-            if (Options.Label != null && !Options.NoLabel)
+            if (HasLabel)
             {
-                sector.Animate("text", span, Options.Label);
+                // also a hidden label: it sizes the sector, which then stays the same when the label is shown
+                sector.Animate("text", span, Options.Label!);
             }
+        }
+        if (HasLabel)
+        {
+            sector.Animate("labelOpacity", span, LabelOpacity);
         }
         sector.Animate("opacity", span, Visibility);
         sector.Animate("reveal", span, Reveal);
