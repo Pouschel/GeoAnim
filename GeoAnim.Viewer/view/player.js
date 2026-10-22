@@ -732,7 +732,7 @@
 
   // title, description and info in points at a picture width of REFERENCE_WIDTH (like the labels in the picture),
   // never smaller than the minimum in pixels, so that they stay readable in a small window
-  const TEXT_SIZES = { title: [30, 18], caption: [26, 15], info: [22, 14] }
+  const TEXT_SIZES = { title: [38, 18], caption: [30, 15], info: [28, 14] }
 
   function setTextScale (factor) {
     const style = document.documentElement.style
