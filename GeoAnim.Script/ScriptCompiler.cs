@@ -150,6 +150,10 @@ public static class ScriptCompiler
                     }
                     break;
                 case OutputStatement s:
+                    if (s.Define != null)
+                    {
+                        Define(s.Define);
+                    }
                     // the results must be constructed by now: a used file ends with its last output line
                     foreach (NameRef name in s.Names)
                     {
@@ -519,6 +523,11 @@ public static class ScriptCompiler
 
             foreach ((NameRef output, NameRef name) in taken)
             {
+                // an input given back: the caller's own object under the new name
+                if (bound.TryGetValue(output.Name, out GeoObject? input) && !c.Objects.ContainsKey(results[output.Name].Name))
+                {
+                    c.Alias(results[output.Name].Name, input);
+                }
                 if (!c.Objects.TryGetValue(results[output.Name].Name, out GeoObject? result))
                 {
                     throw AtPath($"{d.Path} does not define its output {output.Name}.");
@@ -565,6 +574,12 @@ public static class ScriptCompiler
                         kinds[input.Define.Names[0].Name] = input.Define.Kind;
                         break;
                     case DefineStatement { Kind: not "" } define:
+                        foreach (NameRef name in define.Names)
+                        {
+                            kinds[name.Name] = define.Kind;
+                        }
+                        break;
+                    case OutputStatement { Define: { Kind: not "" } define }:
                         foreach (NameRef name in define.Names)
                         {
                             kinds[name.Name] = define.Kind;

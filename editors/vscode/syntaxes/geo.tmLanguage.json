@@ -110,7 +110,7 @@
       ]
     },
     {
-      "match": "^\\s*(output)\\b(.*?)(?=\\s*(?:#|$))",
+      "match": "^\\s*(output)\\b(?!\\s+(?:point|segment|line|ray|circle|polygon|text)\\b)(?!(?:\\s+[A-Za-z_][A-Za-z0-9_]*'*)+\\s*=)(.*?)(?=\\s*(?:#|$))",
       "captures": {
         "1": {
           "name": "keyword.control.geo"
@@ -143,7 +143,7 @@
       ]
     },
     {
-      "begin": "^\\s*(?:(input)\\s+)?(?:(point|segment|line|ray|circle|polygon|text)\\s+)?((?:[A-Za-z_][A-Za-z0-9_]*'*\\s+)*[A-Za-z_][A-Za-z0-9_]*'*)\\s*(=)(?=\\s*use\\b)",
+      "begin": "^\\s*(?:(input|output)\\s+)?(?:(point|segment|line|ray|circle|polygon|text)\\s+)?((?:[A-Za-z_][A-Za-z0-9_]*'*\\s+)*[A-Za-z_][A-Za-z0-9_]*'*)\\s*(=)(?=\\s*use\\b)",
       "beginCaptures": {
         "1": {
           "name": "keyword.control.geo"
@@ -199,7 +199,7 @@
       ]
     },
     {
-      "begin": "^\\s*(?:(input)\\s+)?(point)\\s+((?:[A-Za-z_][A-Za-z0-9_]*'*\\s+)*[A-Za-z_][A-Za-z0-9_]*'*)\\s*(=)",
+      "begin": "^\\s*(?:(input|output)\\s+)?(point)\\s+((?:[A-Za-z_][A-Za-z0-9_]*'*\\s+)*[A-Za-z_][A-Za-z0-9_]*'*)\\s*(=)",
       "beginCaptures": {
         "1": {
           "name": "keyword.control.geo"
@@ -254,7 +254,7 @@
       ]
     },
     {
-      "begin": "^\\s*(?:(input)\\s+)?(segment|line|ray)\\s+([A-Za-z_][A-Za-z0-9_]*'*)\\s*(=)\\s*([A-Za-z_][A-Za-z0-9_]*'*)\\s+([A-Za-z_][A-Za-z0-9_]*'*)",
+      "begin": "^\\s*(?:(input|output)\\s+)?(segment|line|ray)\\s+([A-Za-z_][A-Za-z0-9_]*'*)\\s*(=)\\s*([A-Za-z_][A-Za-z0-9_]*'*)\\s+([A-Za-z_][A-Za-z0-9_]*'*)",
       "beginCaptures": {
         "1": {
           "name": "keyword.control.geo"
@@ -291,7 +291,7 @@
       ]
     },
     {
-      "begin": "^\\s*(?:(input)\\s+)?(circle)\\s+([A-Za-z_][A-Za-z0-9_]*'*)\\s*(=)\\s*(center)\\s+([A-Za-z_][A-Za-z0-9_]*'*)\\s+(?:(through)\\s+([A-Za-z_][A-Za-z0-9_]*'*)|(radius)\\s+(-?(?:\\d+(?:\\.\\d+)?|\\.\\d+)))",
+      "begin": "^\\s*(?:(input|output)\\s+)?(circle)\\s+([A-Za-z_][A-Za-z0-9_]*'*)\\s*(=)\\s*(center)\\s+([A-Za-z_][A-Za-z0-9_]*'*)\\s+(?:(through)\\s+([A-Za-z_][A-Za-z0-9_]*'*)|(radius)\\s+(-?(?:\\d+(?:\\.\\d+)?|\\.\\d+)))",
       "beginCaptures": {
         "1": {
           "name": "keyword.control.geo"
@@ -326,7 +326,7 @@
       ]
     },
     {
-      "begin": "^\\s*(polygon)\\s+([A-Za-z_][A-Za-z0-9_]*'*)\\s*(=)",
+      "begin": "^\\s*(?:output\\s+)?(polygon)\\s+([A-Za-z_][A-Za-z0-9_]*'*)\\s*(=)",
       "beginCaptures": {
         "1": {
           "name": "keyword.control.geo"
@@ -362,7 +362,7 @@
       ]
     },
     {
-      "begin": "^\\s*(text)\\s+([A-Za-z_][A-Za-z0-9_]*'*)\\s*(=)",
+      "begin": "^\\s*(?:output\\s+)?(text)\\s+([A-Za-z_][A-Za-z0-9_]*'*)\\s*(=)",
       "beginCaptures": {
         "1": {
           "name": "keyword.control.geo"

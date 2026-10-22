@@ -239,6 +239,16 @@ public sealed class Construction
         objects.Add(item);
     }
 
+    /// <summary>A second name for an object (e.g. an input a used file gives back as its result); nothing is drawn.</summary>
+    public void Alias(string name, GeoObject item)
+    {
+        if (objectsByName.ContainsKey(name))
+        {
+            throw new GeoException($"The name {name} is already used.");
+        }
+        objectsByName[name] = item;
+    }
+
     private static DrawAction DrawActionFor(GeoObject item, Options? options) =>
         new(item, options?.Duration ?? item.DefaultDuration, options?.Easing ?? item.DefaultEasing);
 

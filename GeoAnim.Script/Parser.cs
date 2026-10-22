@@ -143,6 +143,30 @@ internal sealed class Parser
                 break;
             case "output":
                 {
+                    // with a definition: "output point C = …", "output D s = use …"
+                    DefineStatement? define = Current.Kind == TokenKind.Name ? Current.Text switch
+                    {
+                        "point" => ParsePoint(Next()),
+                        "segment" or "line" or "ray" => ParseStraight(Next()),
+                        "circle" => ParseCircle(Next()),
+                        "polygon" => ParsePolygon(Next()),
+                        "text" => ParseText(Next()),
+                        _ => null,
+                    } : null;
+                    if (define == null && Current.Kind == TokenKind.Name)
+                    {
+                        define = ParseUseWithoutKind(Next());
+                        if (define == null)
+                        {
+                            position--;
+                        }
+                    }
+                    if (define != null)
+                    {
+                        statement = new OutputStatement(l, c, define.Names.Where(n => n.Name != "_").ToList(), define);
+                        break;
+                    }
+                    // the names of results defined before
                     var names = new List<NameRef>();
                     while (Current.Kind == TokenKind.Name)
                     {
@@ -150,7 +174,7 @@ internal sealed class Parser
                     }
                     if (names.Count == 0)
                     {
-                        throw Error(Current, "\"output\" needs the names of the results, like \"output C\".");
+                        throw Error(Current, "\"output\" needs a definition or the names of the results, like \"output point C = …\" or \"output C\".");
                     }
                     statement = new OutputStatement(l, c, names);
                     break;

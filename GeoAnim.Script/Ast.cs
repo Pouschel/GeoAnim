@@ -27,8 +27,10 @@ internal sealed record DefineStatement(int Line, int Column, string Kind, IReadO
 /// <summary>"input point A = -3 0": an input of the file when it is used; when it runs alone, an ordinary definition.</summary>
 internal sealed record InputStatement(int Line, int Column, DefineStatement Define) : Statement(Line, Column);
 
-/// <summary>"output C": the results of the file when it is used.</summary>
-internal sealed record OutputStatement(int Line, int Column, IReadOnlyList<NameRef> Names) : Statement(Line, Column);
+/// <summary>
+/// "output C" or "output point C = …" (with the definition of the result): the results of the file when it is used.
+/// </summary>
+internal sealed record OutputStatement(int Line, int Column, IReadOnlyList<NameRef> Names, DefineStatement? Define = null) : Statement(Line, Column);
 
 internal sealed record ShowStatement(int Line, int Column, bool Show, IReadOnlyList<NameRef> Targets, OptionList Options) : Statement(Line, Column);
 

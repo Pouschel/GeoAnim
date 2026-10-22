@@ -190,6 +190,30 @@ public sealed class UseTests : IDisposable
     }
 
     [Fact]
+    public void OutputCanStandBeforeTheDefinitionLikeInput()
+    {
+        File.WriteAllText(Path.Combine(folder, "prefix.geo"), """
+            input point A = 0 0
+            input point B = 2 0
+            output point M = midpoint A B
+            circle k = center A through B hidden
+            line g = A B
+            output point S T = intersect k g
+            """);
+        var c = Compile("point P = 0 0\npoint Q = 4 0\nM S T = use prefix.geo P Q");
+        Assert.Equal(new Vec(2, 0), ((GeoPoint)c.Objects["M"]).Position);
+        Assert.Equal(new Vec(4, 0), ((GeoPoint)c.Objects["T"]).Position);
+        // the kinds are known before the file runs
+        Assert.Contains("gives only 3 points", Error("point P = 0 0\npoint Q = 4 0\npoint A B C D = use prefix.geo P Q").Message);
+        // without a kind, with use, and the short form for an input given back
+        File.WriteAllText(Path.Combine(folder, "chain.geo"), "input point A = 0 0\ninput point B = 2 0\noutput X _ Y = use prefix.geo A B\noutput A");
+        var chain = Compile("point P = 0 0\npoint Q = 4 0\nR S U = use chain.geo P Q");
+        Assert.Equal((new Vec(2, 0), new Vec(0, 0)), (((GeoPoint)chain.Objects["R"]).Position, ((GeoPoint)chain.Objects["U"]).Position));
+        Assert.Same(chain.Objects["P"], chain.Objects["U"]);
+        Assert.Contains("needs a definition or the names", Error("point P = 0 0\noutput").Message);
+    }
+
+    [Fact]
     public void MistakesAreReportedAtTheUse()
     {
         Assert.Equal("Line 3, column 15: equilateral.geo needs 2 inputs (point A point B), not 1.",

@@ -38,12 +38,11 @@ step Zeichne um $D$ einen Kreis mit dem Radius $bar(DG)$
 circle kd = center D through G   opt_h3
 
 step Sei $L$ der Schnittpunkt dieses Kreises mit dem Strahl $vec(DA)$
-point L = intersect dar kd opt_r1 offset -0 0.1
+output point L = intersect dar kd opt_r1 offset -0 0.1
 pause 300
 
 step Die Strecke $bar(AL)$ ist genauso lang wie die Strecke $bar(BC)$
-segment res = A L opt_r1
-output L res # gibt den konstruierten Punkt und die Stecke zurück
+output segment res = A L opt_r1 # gibt mit L die konstruierte Strecke zurück
 
 step Animation der Konstruktion
 together  duration 1500 

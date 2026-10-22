@@ -183,7 +183,7 @@ Es gilt der Reihe nach: Voreinstellungen ohne Art, dann die für die Art, dann d
 input point A = -3 0      # der Wert gilt nur, wenn die Datei allein läuft
 input point B = 3 0
 …die Konstruktion wie gewohnt, mit Schritten…
-output C
+output point C = intersect k_1 k_2   # oder: output C, nach der Definition von C
 …was nur beim Alleinlaufen gezeigt wird, z. B. ein Beweis…
 ```
 
@@ -193,6 +193,7 @@ point D = use Prop1.geo A B draw offset 0 0.2
 ```
 
 - Läuft die Datei allein, ist `input` eine gewöhnliche Definition, und sie animiert sich wie immer – bis zum Ende.
+- `output` steht wie `input` vor einer Definition (`output point C = …`, `output segment res = A L`, auch `output D s = use …`). Die Kurzform `output C side` gibt Objekte aus, die vorher definiert wurden – oder eine Eingabe unverändert zurück.
 - **Beim `use` endet die Datei mit ihrer letzten `output`-Zeile.** Was danach kommt (ein Beweis, Bewegungen zur Veranschaulichung), gehört nur zum Alleinlaufen. Eine `output`-Zeile steht deshalb nach der Konstruktion ihrer Objekte; steht sie davor, ist das ein Fehler (auch beim Alleinlaufen). Mehrere `output`-Zeilen sind möglich, maßgeblich für das Ende ist die letzte.
 - Beim `use` stehen die Objekte des Aufrufers (in der Reihenfolge der `input`-Zeilen, von passender Art) für die Eingaben; die Ergebnisse bekommen die Namen links vom `=`. Optionen beim `use` gelten für die Ergebnisse, zusätzlich zu den Voreinstellungen des Aufrufers.
 - Welche Ergebnisse man abholt, sagt die Art vorne. Bei `output L res` (ein Punkt, eine Strecke):
