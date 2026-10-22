@@ -23,14 +23,12 @@ together
 end
 pause 500
 segment AB = A B color blue label "$bar(AB)$" nolabel offset 0 -0.85 duration 1500
-pause 1400
 
 step Endpunkte und Bezeichnung
 info $A$ und $B$ heißen **Endpunkte** der Strecke. Sie gehören zur Strecke.
 | Wir schreiben $bar(AB)$. Auch $bar(BA)$ bezeichnet dieselbe Strecke.
 
 show label A B AB
-pause 2500
 
 step Streckenlänge
 info Die **Länge einer Strecke** ist der Abstand zwischen ihren Endpunkten.
@@ -43,7 +41,7 @@ pause 700
 move B to 7 1.5
 pause 700
 move B to 6 1.5
-pause 1200
+
 hide label AB
 
 step Kürzer
@@ -63,7 +61,6 @@ together
   move D to 2 1.5
 end
 text kurz = "$|CD| < |AB|$" at 0 4 
-pause 2400
 
 step Länger
 info $bar(EF)$ ist **länger** als $bar(AB)$.
@@ -83,7 +80,7 @@ together
   move F to 9 1.5
 end
 text lang = "$|EF| > |AB|$" at 0 4 
-pause 2400
+
 
 step Gleich lang
 info Lassen sich zwei Strecken vollständig zur Deckung bringen, sind sie **gleich lang**.
@@ -102,7 +99,7 @@ together
   move H to B
 end
 text gleich = "$|GH| = |AB|$" at 0 4 color black
-pause 2400
+
 var tsz size 32
 
 step Eine Längeneinheit festlegen
@@ -118,7 +115,6 @@ end
 segment UV = U V einheit
 text einheitsname = "Einheitsstrecke" at -4.5 -3.4 tsz size 32 color green
 text einheitsmass = "1 Einheit" at -4.5 -1.6 tsz color green
-pause 2600
 
 step Messen
 info Beim **Messen** vergleichen wir eine Länge mit der 
@@ -178,7 +174,6 @@ end
 text nummer4 = "4" at 4.5 0.5 color black tsz
 hide zaehler3 duration 100
 text zaehler4 = "4 Einheiten abgetragen" at 3 -2.5 color black tsz
-pause 1400
 
 step Messergebnis
 info Die Einheitsstrecke passt **genau viermal** in $bar(AB)$.
@@ -186,4 +181,4 @@ info Die Einheitsstrecke passt **genau viermal** in $bar(AB)$.
 | Messen heißt hier: vergleichen und zählen, wie oft die gewählte Einheit hineinpasst.
 
 text ergebnis = "Länge von $bar(AB)$: **4 Einheiten**" at 0 4 tsz
-pause 3500
+

@@ -23,7 +23,8 @@
   let stopTime = null
   let speed = 1
   // off: the animation runs through; on (S): it stops at the end of every step
-  let stopAtSteps = false
+  // stop after each step: on by default (S or the button switches it off)
+  let stopAtSteps = true
   let previousTimestamp = null
   // the mapping from mathematical coordinates to the pixels of the picture
   let scale = 1
