@@ -17,4 +17,3 @@ end
 pause 100
 hide l1t l1u
 
-output A1 # dummy output

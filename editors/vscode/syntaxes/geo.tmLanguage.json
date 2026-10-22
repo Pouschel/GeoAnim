@@ -425,6 +425,27 @@
       ]
     },
     {
+      "begin": "^\\s*(use)\\s+(\\S+)",
+      "beginCaptures": {
+        "1": {
+          "name": "keyword.control.geo"
+        },
+        "2": {
+          "name": "string.other.link.path.geo"
+        }
+      },
+      "end": "$",
+      "patterns": [
+        {
+          "include": "#comment"
+        },
+        {
+          "match": "\\b(draw|steps)\\b",
+          "name": "keyword.other.geo"
+        }
+      ]
+    },
+    {
       "begin": "^\\s*(show|hide)\\b",
       "beginCaptures": {
         "1": {

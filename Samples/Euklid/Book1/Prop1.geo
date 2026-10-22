@@ -34,13 +34,13 @@ set t1c=Nach Konstruktion ist
 |
 | $bar(AC) = bar (AB)$
 text t1= t1c at -5.5 3
-point _ = use ../SameLenAni.geo A C A B draw
+use ../SameLenAni.geo A C A B
 
 set t1c=Nach Konstruktion ist
 |
 | $bar(BC) = bar (AB)$
 text t2= t1c at 4.7 3
-point _ = use ../SameLenAni.geo B C B A draw
+use ../SameLenAni.geo B C B A
 
 
 

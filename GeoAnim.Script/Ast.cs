@@ -79,6 +79,9 @@ internal enum UseMode
     Result,
     Draw,
     Steps,
+
+    /// <summary>"use file A B" without results: like Draw, but with the file's pauses (the file is the animation).</summary>
+    Play,
 }
 
 /// <summary>"use Prop1.geo A B": the outputs of another file, constructed from these inputs.</summary>

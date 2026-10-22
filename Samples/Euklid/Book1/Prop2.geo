@@ -51,16 +51,16 @@ set b0=$bar(DL)=bar(DG)$, da $L$ und $G$
 |
 |auf einem Kreis um $D$ liegen
 text tb0=b0 at -7 5 
-point _ = use ../SameLenAni.geo D L D G draw
+use ../SameLenAni.geo D L D G
 
 set b1=Da $Delta ABD$  gleichseitig ist,
 |
 | gilt $bar(DA)=bar(DB)$
 text tb1=b1 at -1 4 
-point _ = use ../SameLenAni.geo D A D B draw
+use ../SameLenAni.geo D A D B
 
 set b2=Da $bar(DL)=bar(DG)$ war,  
 |
 |gilt auch $bar(AL)=bar(BC)$
 text tb2=b2 at -6.5 -1
-point _ = use ../SameLenAni.geo A L B C draw
+use ../SameLenAni.geo A L B C

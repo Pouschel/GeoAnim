@@ -214,6 +214,33 @@ public sealed class UseTests : IDisposable
     }
 
     [Fact]
+    public void UseWithoutResultsDrawsTheFile()
+    {
+        File.WriteAllText(Path.Combine(folder, "flash.geo"), """
+            input point A = 0 0
+            input point B = 1 0
+            step zeigen
+            segment s = A B color red
+            pause 100
+            hide s
+            """);
+        var c = Compile("point P = 0 0\npoint Q = 2 0\nstep s\n  use flash.geo P Q");
+        AnimationData animation = c.Build();
+        // drawn in the step (800), its pause (100) and fading out (400); the whole file, as it has no output line
+        Assert.Single(animation.Steps);
+        Assert.Equal(1300, animation.Duration);
+        // "draw" leaves out the pauses
+        Assert.Equal(1200, Compile("point P = 0 0\npoint Q = 2 0\nstep s\n  use flash.geo P Q draw").Build().Duration);
+        Assert.Contains(c.Objects.Keys, name => name.EndsWith(".s", StringComparison.Ordinal));
+        // with its steps
+        Assert.Equal(["s", "zeigen"], Compile("point P = 0 0\npoint Q = 2 0\nstep s\n  use flash.geo P Q steps").Build().Steps.Select(s => s.Caption));
+        Assert.Contains("takes no options", Error("point P = 0 0\npoint Q = 2 0\nstep s\n  use flash.geo P Q color red").Message);
+        Assert.Contains("needs 2 inputs", Error("point P = 0 0\nstep s\n  use flash.geo P").Message);
+        // a file without output still gives no results to names
+        Assert.Contains("has no \"output\" line", Error("point P = 0 0\npoint Q = 2 0\npoint R = use flash.geo P Q").Message);
+    }
+
+    [Fact]
     public void MistakesAreReportedAtTheUse()
     {
         Assert.Equal("Line 3, column 15: equilateral.geo needs 2 inputs (point A point B), not 1.",

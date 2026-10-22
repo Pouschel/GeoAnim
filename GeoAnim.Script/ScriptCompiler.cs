@@ -214,7 +214,7 @@ public static class ScriptCompiler
                     }
                 case PauseStatement s:
                     // a used file drawn in one step goes without its pauses
-                    if (module == null || module.Mode == UseMode.Steps)
+                    if (module == null || module.Mode is UseMode.Steps or UseMode.Play)
                     {
                         c.Pause(s.Duration);
                     }
@@ -430,7 +430,10 @@ public static class ScriptCompiler
 
         // ------------------------------------------------------------------ use
 
-        /// <summary>"point D = use Prop1.geo A B": runs the file with A and B as its inputs; its output becomes D.</summary>
+        /// <summary>
+        /// "point D = use Prop1.geo A B": runs the file with A and B as its inputs; its output becomes D. "use file A B"
+        /// (without names) only shows the file's construction.
+        /// </summary>
         private void Use(DefineStatement s, UseDefinition d)
         {
             string path = Path.GetFullPath(Path.Combine(source.DirectoryOf(s.Line), d.Path));
@@ -458,7 +461,7 @@ public static class ScriptCompiler
             // inputs and outputs in their order, also inside "together" blocks
             List<DefineStatement> inputs = AllStatements(statements).OfType<InputStatement>().Select(i => i.Define).ToList();
             List<NameRef> outputs = AllStatements(statements).OfType<OutputStatement>().SelectMany(o => o.Names).ToList();
-            if (outputs.Count == 0)
+            if (outputs.Count == 0 && s.Names.Count > 0)
             {
                 throw AtPath($"{d.Path} has no \"output\" line, so it gives no results.");
             }
@@ -469,7 +472,7 @@ public static class ScriptCompiler
                 ? outputs
                 : outputs.Where(o => KindOf(kinds, o.Name) is var kind && (kind == s.Kind || kind == "object")).ToList();
             string described = string.Join(", ", outputs.Select(o => $"{KindOf(kinds, o.Name)} {o.Name}"));
-            if (offered.Count == 0)
+            if (offered.Count == 0 && s.Names.Count > 0)
             {
                 throw new ScriptError(s.Line, s.Column, $"{d.Path} has no {s.Kind} among its results ({described}).");
             }
@@ -512,7 +515,8 @@ public static class ScriptCompiler
             var inner = new Module($"{Path.GetFileNameWithoutExtension(path)}#{++counter.Next}", mode, bound, results);
             var executor = new Executor(c, moduleSource, [.. files, path], counter, inner);
             // the file ends with its last output line (what follows, e.g. a proof, is for running it alone)
-            int last = statements.FindLastIndex(s => AllStatements([s]).Any(x => x is OutputStatement));
+            // (a file without output lines runs to its end)
+            int last = outputs.Count == 0 ? statements.Count - 1 : statements.FindLastIndex(s => AllStatements([s]).Any(x => x is OutputStatement));
             foreach (Statement statement in statements.Take(last + 1))
             {
                 try

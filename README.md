@@ -209,6 +209,7 @@ point D = use Prop1.geo A B draw offset 0 0.2
   Hinten dürfen Namen fehlen. Ohne Art gelten Optionen nur für die Ergebnisse, zu denen sie passen. Nicht abgeholte Ergebnisse werden trotzdem konstruiert, zählen aber zu den Hilfsobjekten.
 - Alle anderen Objekte der Datei bleiben in ihr: Sie bekommen intern eigene Namen und sind für den Aufrufer unsichtbar, Namen können also nicht kollidieren. Die Abhängigkeiten sind echt: Bewegt sich später eine Eingabe, folgen die Ergebnisse.
 - Titel, `view`, `grid`, `axes`, `background` und `speed` der Datei gelten nur, wenn sie allein läuft. Ihre Voreinstellungen, Vars und `include`s gelten für sie selbst.
+- **Ohne Ergebnis:** `use datei A B` am Zeilenanfang zeigt nur die Konstruktion bzw. Animation der Datei – etwa eine wiederkehrende Veranschaulichung wie „diese Strecken sind gleich lang“. Die Datei läuft dann im aktuellen Schritt samt ihren Pausen ab (`draw` lässt die Pausen weg, `steps` übernimmt ihre Schritte); sie braucht keine `output`-Zeile und läuft, wenn sie keine hat, bis zum Ende.
 - Was man sieht:
   - `use datei …` (Standard): nur die Ergebnisse, gezeichnet wie gewöhnliche Objekte; die Hilfskonstruktion bleibt unsichtbar.
   - `use datei … draw`: die Konstruktion der Datei wird im aktuellen Schritt gezeichnet (ohne ihre Schrittbeschreibungen und Pausen); am Ende blenden die Hilfsobjekte aus, die Ergebnisse bleiben.

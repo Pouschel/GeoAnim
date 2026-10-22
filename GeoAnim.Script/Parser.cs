@@ -141,6 +141,22 @@ internal sealed class Parser
             case "default":
                 statement = ParseDefault(word);
                 break;
+            case "use":
+                {
+                    // "use file A B": no results, only the animation of the file (with its pauses; "draw" without them)
+                    position--;
+                    UseDefinition use = TryParseUse()!;
+                    if (use.Mode == UseMode.Result)
+                    {
+                        use = use with { Mode = UseMode.Play };
+                    }
+                    if (Current.Kind == TokenKind.Name && IsOption(Current.Text))
+                    {
+                        throw Error(Current, "A \"use\" without results takes no options (they are for the results: \"point D = use … color red\").");
+                    }
+                    statement = new DefineStatement(l, c, "", [], use, OptionList.Empty);
+                    break;
+                }
             case "input":
                 statement = ParseInput(word);
                 break;
