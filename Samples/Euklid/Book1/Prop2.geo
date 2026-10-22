@@ -41,11 +41,26 @@ step Sei $L$ der Schnittpunkt dieses Kreises mit dem Strahl $vec(DA)$
 output point L = intersect dar kd opt_r1 offset -0 0.1
 pause 300
 
-step Die Strecke $bar(AL)$ ist genauso lang wie die Strecke $bar(BC)$
+step Die Strecke $bar(AL)$ ist genauso lang 
+|wie die Strecke $bar(BC)$
 output segment res = A L opt_r1 # gibt mit L die konstruierte Strecke zurück
 
-step Animation der Konstruktion
-together  duration 1500 
-  move A to -2 1
-  move C to 4 0
-end
+step Beweis
+
+set b0=$bar(DL)=bar(DG)$, da $L$ und $G$ 
+|
+|auf einem Kreis um $D$ liegen
+text tb0=b0 at -7 5 
+point _ = use ../SameLenAni.geo D L D G draw
+
+set b1=Da $Delta ABD$  gleichseitig ist,
+|
+| gilt $bar(DA)=bar(DB)$
+text tb1=b1 at -1 4 
+point _ = use ../SameLenAni.geo D A D B draw
+
+set b2=Da $bar(DL)=bar(DG)$ war,  
+|
+|gilt auch $bar(AL)=bar(BC)$
+text tb2=b2 at -6.5 -1
+point _ = use ../SameLenAni.geo A L B C draw

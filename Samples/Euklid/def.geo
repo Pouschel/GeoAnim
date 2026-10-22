@@ -8,6 +8,7 @@ default polygon color lightgrey
 default text size 30 
 default move duration 1500
 default color grey
+default text color black
 
 # Definietionen für Objekttypen
 
@@ -22,6 +23,7 @@ var opt_h3 color orange
 
 # Ergebnisobjekte
 var opt_r1 color violet  width 3 
+
 
 # Animation 
 var opt_ani1 color red width 4

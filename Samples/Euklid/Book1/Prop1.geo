@@ -33,23 +33,14 @@ step Beweis
 set t1c=Nach Konstruktion ist
 |
 | $bar(AC) = bar (AB)$
-
 text t1= t1c at -5.5 3
-together
-    segment l1t= A C opt_ani1
-    segment l1u= A B opt_ani1
-end
-hide l1t l1u
+point _ = use ../SameLenAni.geo A C A B draw
 
 set t1c=Nach Konstruktion ist
 |
 | $bar(BC) = bar (AB)$
-
 text t2= t1c at 4.7 3
-together
-    segment l2t= B C opt_ani1
-    segment l2u= B A opt_ani1
-end
+point _ = use ../SameLenAni.geo B C B A draw
 
-hide l2t l2u
+
 
