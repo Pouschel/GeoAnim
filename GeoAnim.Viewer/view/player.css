@@ -78,6 +78,19 @@ h1 {
   display: none;
 }
 
+#caption a,
+h1 a {
+  color: #1565c0;
+}
+
+#caption code {
+  padding: 0 0.2em;
+  border-radius: 3px;
+  background: #e2e5ea;
+  font-family: Consolas, 'Cascadia Mono', monospace;
+  font-size: 0.85em;
+}
+
 #caption {
   box-sizing: border-box;
   min-height: 1.4em;

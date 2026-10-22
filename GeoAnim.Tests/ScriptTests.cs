@@ -333,6 +333,30 @@ public class ScriptTests
     }
 
     [Fact]
+    public void TitleAndStepContinueOnLinesBeginningWithABar()
+    {
+        AnimationData animation = ScriptCompiler.Compile("""
+            title Ein langer
+              | Titel
+            point A = 0 0
+            step Wir zeichnen um $A$ einen Kreis mit dem Radius $|AB|$
+            |   und erhalten so alle Punkte,
+            |
+            | die gleich weit entfernt sind.
+              pause
+            step zweiter
+            pont X = 1 1
+            """.Replace("pont X = 1 1", "  pause"));
+        Assert.Equal("Ein langer Titel", animation.Title);
+        Assert.Equal("Wir zeichnen um $A$ einen Kreis mit dem Radius $|AB|$ und erhalten so alle Punkte, die gleich weit entfernt sind.",
+            animation.Steps[0].Caption);
+        Assert.Equal("zweiter", animation.Steps[1].Caption);
+        // line numbers after continuation lines stay right
+        ErrorAt("step a\n| b\n| c\npont X = 1 1", 4, 1, "Unknown command");
+        ErrorAt("point A = 0 0\n| b", 2, 1, "continues the text of the title or step line");
+    }
+
+    [Fact]
     public void OffsetIsInCoordinates()
     {
         JsonElement primitives = JsonDocument.Parse(ScriptCompiler.Compile("point A = 1 2 offset 0.5 -0.25\ntext t = \"x\" at A offset 1 1").ToJson())

@@ -41,6 +41,15 @@ public class ViewerTests
     }
 
     [Fact]
+    public void PageTitleIsPlainText()
+    {
+        Assert.Equal("Satz I.4 über Dreiecke, k_1 und a",
+            HtmlExporter.PlainText("Satz **I.4** über *Dreiecke*, `k_1` und $a$"));
+        Assert.Equal("siehe Satz 1 und Prop2.html, 5 $", HtmlExporter.PlainText("siehe [Satz 1](Prop1.html) und <Prop2.html>, 5 \\$"));
+        Assert.Contains("<title>Satz I.4</title>", HtmlExporter.Export(new Construction { Title = "Satz **I.4**" }.Build()));
+    }
+
+    [Fact]
     public void TitleIsEscaped()
     {
         var c = new Construction { Title = "A < B & C" };

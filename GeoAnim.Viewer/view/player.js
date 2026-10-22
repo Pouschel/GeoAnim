@@ -29,6 +29,8 @@
   let scale = 1
   let unit = 1
   let liveVersion = null
+  // the editor around an embedded preview (VS Code's webview API), if any
+  let host = null
 
   // ------------------------------------------------------------------ values over time
 
@@ -257,22 +259,190 @@
     }
     element.richText = text
     element.textContent = ''
+    renderInline(element, parseMarkdown(text))
+  }
+
+  // ------------------------------------------------------------------ Markdown in titles and descriptions
+
+  // a little Markdown within a paragraph: **bold**, *italic* or _italic_, `code`, [text](address), <address>;
+  // a backslash keeps a mark ("\*"). Formulas ($…$) are whole pieces, so marks inside them do not count.
+  function parseMarkdown (text) {
+    const items = []
     for (const run of splitMath(text)) {
-      const formula = run.math ? formulaOf(run.text) : null
-      if (formula) {
+      if (run.math) {
+        items.push({ math: run.text })
+      } else {
+        items.push(...run.text)
+      }
+    }
+    return parseInline(items, 0, null).nodes
+  }
+
+  const isSpace = c => c === undefined || c === ' '
+  const isWordChar = c => typeof c === 'string' && /[\p{L}\p{N}]/u.test(c)
+  const startsWith = (items, i, mark) => [...mark].every((c, k) => items[i + k] === c)
+
+  // the pieces from position i up to the closing mark (null: it does not close)
+  function parseInline (items, i, closer) {
+    const nodes = []
+    let text = ''
+    const flush = () => {
+      if (text) {
+        nodes.push({ text })
+        text = ''
+      }
+    }
+    while (i < items.length) {
+      const c = items[i]
+      const doubleStar = c === '*' && items[i + 1] === '*'
+      if (closer && startsWith(items, i, closer) && !isSpace(items[i - 1]) && !(closer === '*' && doubleStar && items[i + 2] !== undefined) &&
+          !(closer === '_' && isWordChar(items[i + closer.length]))) {
+        flush()
+        return { nodes, end: i + closer.length }
+      }
+      if (typeof c !== 'string') {
+        flush()
+        nodes.push(c)
+        i++
+        continue
+      }
+      if (c === '\\' && typeof items[i + 1] === 'string' && '*_`[]<>\\'.includes(items[i + 1])) {
+        text += items[i + 1]
+        i += 2
+        continue
+      }
+      let found = null
+      if (doubleStar) {
+        found = wrapped(items, i, '**', 'strong')
+      } else if (c === '*') {
+        found = wrapped(items, i, '*', 'em')
+      } else if (c === '_' && !isWordChar(items[i - 1])) {
+        found = wrapped(items, i, '_', 'em')
+      } else if (c === '`') {
+        found = code(items, i)
+      } else if (c === '[') {
+        found = link(items, i)
+      } else if (c === '<') {
+        found = autolink(items, i)
+      }
+      if (found) {
+        flush()
+        nodes.push(found.node)
+        i = found.end
+      } else {
+        text += c
+        i++
+      }
+    }
+    if (closer) {
+      return null
+    }
+    flush()
+    return { nodes, end: i }
+  }
+
+  function wrapped (items, i, mark, type) {
+    if (isSpace(items[i + mark.length])) {
+      return null
+    }
+    const inner = parseInline(items, i + mark.length, mark)
+    return inner && inner.nodes.length ? { node: { type, children: inner.nodes }, end: inner.end } : null
+  }
+
+  function code (items, i) {
+    let text = ''
+    for (let k = i + 1; k < items.length; k++) {
+      if (items[k] === '`') {
+        return text ? { node: { type: 'code', children: [{ text }] }, end: k + 1 } : null
+      }
+      text += typeof items[k] === 'string' ? items[k] : '$' + items[k].math + '$'
+    }
+    return null
+  }
+
+  // [text](address)
+  function link (items, i) {
+    const label = parseInline(items, i + 1, ']')
+    if (!label || items[label.end] !== '(') {
+      return null
+    }
+    let href = ''
+    for (let k = label.end + 1; k < items.length; k++) {
+      if (items[k] === ')') {
+        return href ? { node: { type: 'link', href, children: label.nodes }, end: k + 1 } : null
+      }
+      if (typeof items[k] !== 'string' || items[k] === ' ') {
+        return null
+      }
+      href += items[k]
+    }
+    return null
+  }
+
+  // <Prop1.html>, <https://…>
+  function autolink (items, i) {
+    let href = ''
+    for (let k = i + 1; k < items.length; k++) {
+      if (items[k] === '>') {
+        return /[.:/]/.test(href) ? { node: { type: 'link', href, children: [{ text: href }] }, end: k + 1 } : null
+      }
+      if (typeof items[k] !== 'string' || items[k] === ' ' || items[k] === '<') {
+        return null
+      }
+      href += items[k]
+    }
+    return null
+  }
+
+  const TAG = { strong: 'strong', em: 'em', code: 'code', link: 'a' }
+
+  function renderInline (parent, nodes) {
+    for (const node of nodes) {
+      if (node.text !== undefined) {
+        parent.appendChild(document.createTextNode(node.text))
+      } else if (node.math !== undefined) {
+        const formula = formulaOf(node.math)
+        if (!formula) {
+          parent.appendChild(document.createTextNode(node.math))
+          continue
+        }
         const [, top, width, height] = formula.box
         const svg = formulaElement(formula)
         svg.setAttribute('width', (width / 1000) + 'em')
         svg.setAttribute('height', (height / 1000) + 'em')
         svg.style.verticalAlign = (-(top + height) / 1000) + 'em'
-        element.appendChild(svg)
+        parent.appendChild(svg)
       } else {
-        element.appendChild(document.createTextNode(run.text))
+        const element = document.createElement(TAG[node.type])
+        if (node.type === 'link') {
+          prepareLink(element, node.href)
+        }
+        renderInline(element, node.children)
+        parent.appendChild(element)
       }
     }
   }
 
-  const plainText = text => splitMath(text).map(run => run.text).join('')
+  // exported: other animations open in the same window, other sites in a new one; "geoanim serve": a new window;
+  // an editor's preview: the editor opens the script (Prop1.html → Prop1.geo) or the site
+  function prepareLink (element, href) {
+    element.href = href
+    const external = /^[a-z][a-z0-9+.-]*:/i.test(href)
+    if (window.GEO_EMBEDDED) {
+      element.addEventListener('click', event => {
+        event.preventDefault()
+        if (host) {
+          host.postMessage({ type: 'open', href })
+        }
+      })
+    } else if (external || !window.GEO_ANIMATION) {
+      element.target = '_blank'
+      element.rel = 'noopener'
+    }
+  }
+
+  const plainOf = nodes => nodes.map(n => n.text !== undefined ? n.text : n.math !== undefined ? n.math : plainOf(n.children)).join('')
+  const plainText = text => plainOf(parseMarkdown(text))
 
   function buildScene () {
     scene.textContent = ''
@@ -791,7 +961,8 @@
       window.addEventListener('message', event => receive(event.data))
       // VS Code: tell the extension that messages can come now
       if (typeof acquireVsCodeApi === 'function') {
-        acquireVsCodeApi().postMessage({ type: 'ready' })
+        host = acquireVsCodeApi()
+        host.postMessage({ type: 'ready' })
       }
     } else {
       poll()

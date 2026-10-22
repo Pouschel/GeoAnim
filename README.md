@@ -47,6 +47,15 @@ Weitere Beispiele in `Samples/`: Umkreis eines Dreiecks (mit bewegtem Eckpunkt) 
 
 Eine Anweisung pro Zeile; Einrückung ist egal. Alle Angaben werden nur durch Leerzeichen getrennt, ohne Kommas und Klammern (Koordinaten: `2 3`). `#` beginnt einen Kommentar (außer `#rgb` / `#rrggbb` als Farbe). Zahlen mit Punkt (`2.5`, `-0.5`). Hinter `title` und `step` ist der Rest der Zeile der Text, so wie er dasteht, ohne Anführungszeichen (auch `#` gehört dann dazu). Andere Texte (`text`, `label`) stehen in doppelten Anführungszeichen (`\"` für ein Anführungszeichen darin), weil danach noch Optionen folgen können. Namen bestehen aus Buchstaben, Ziffern und `_`, gefolgt von beliebig vielen `'` (`A'`, `P_1`); Groß-/Kleinschreibung zählt. Schlüsselwörter (`point`, `to`, `x`, …) sind als Namen nicht erlaubt.
 
+**Lange Texte und Auszeichnungen:** Eine Zeile, die mit `|` beginnt, setzt den Text der `title`- oder `step`-Zeile davor fort (mit einem Leerzeichen angehängt):
+
+```
+step Wir zeichnen um $A$ einen Kreis mit dem Radius $|AB|$
+| und erhalten so alle Punkte, die von $A$ so weit entfernt sind wie $B$.
+```
+
+Titel und Schrittbeschreibungen verstehen etwas Markdown: `**fett**`, `*kursiv*` oder `_kursiv_`, `` `Code` ``, Links `[Satz 1](Prop1.html)` und `<Prop1.html>`; Formeln dürfen darin stehen. `\*` usw. hält ein Zeichen fest. In einer exportierten Datei öffnet ein Link auf eine andere Animation diese im selben Fenster (die HTML-Dateien eines Ordners werden so zu einem verlinkten Buch), Links auf andere Seiten öffnen ein neues Fenster; bei `geoanim serve` öffnen alle Links ein neues Fenster, in der VS-Code-Vorschau öffnet `Prop1.html` die Datei `Prop1.geo` im Editor.
+
 **Formeln:** In allen Texten (`title`, `step`, `text`, `label`) steht zwischen zwei `$` eine Formel in [AsciiMath](https://asciimath.org): `step Kreis um $A$ mit Radius $|AB|$`, `text t = "$alpha + beta = 180^@$" at 2 3`, `$bar(AB)$`, `$vec(BD)$`, `$NN sub RR$`. `\$` ist ein Dollarzeichen. Ein `$` ohne Gegenstück ist ein Fehler mit Zeile und Spalte. Punkte sind standardmäßig mit ihrem Namen als Formel beschriftet: kursiv, `P_1` mit tiefgestellter 1, `A'` mit Strich.
 
 Koordinaten sind mathematisch: die y-Achse zeigt nach oben. Der Maßstab ist in beiden Richtungen gleich; das Bild hat die Form des Bereichs aus `view`.

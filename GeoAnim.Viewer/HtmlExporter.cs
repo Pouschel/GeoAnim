@@ -21,11 +21,19 @@ public static partial class HtmlExporter
     [GeneratedRegex("<title>[^<]*</title>")]
     private static partial Regex TitlePattern();
 
+    // Markdown marks and formula dollars, for the page title: [text](address) → text, <address> → address
+    [GeneratedRegex(@"\[([^\]]*)\]\([^)\s]*\)|<([^>\s]+)>|\\([*_`$])|\*\*|[*`$]|(?<![\p{L}\p{N}])_|_(?![\p{L}\p{N}])")]
+    private static partial Regex MarkdownPattern();
+
+    /// <summary>A title or description as plain text (for the page's title).</summary>
+    internal static string PlainText(string text) =>
+        MarkdownPattern().Replace(text, m => m.Groups[1].Success ? m.Groups[1].Value : m.Groups[2].Success ? m.Groups[2].Value : m.Groups[3].Value);
+
     /// <summary>The page for <paramref name="animation"/>.</summary>
     public static string Export(AnimationData animation)
     {
         string html = ViewerFiles.ReadText("player.html");
-        html = TitlePattern().Replace(html, "<title>" + WebUtility.HtmlEncode(animation.Title ?? "GeoAnim") + "</title>", 1);
+        html = TitlePattern().Replace(html, "<title>" + WebUtility.HtmlEncode(animation.Title == null ? "GeoAnim" : PlainText(animation.Title)) + "</title>", 1);
         html = StylesheetPattern().Replace(html, m => "<style>\n" + InlineCss(m.Groups[1].Value) + "</style>");
         html = ScriptPattern().Replace(html, m =>
             // the JSON escapes <, > and &, so it cannot end the script element

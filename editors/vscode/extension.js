@@ -344,6 +344,9 @@ function openPreview () {
     previewPageLoaded = false
   })
   preview.webview.onDidReceiveMessage(message => {
+    if (message && message.type === 'open') {
+      openLink(message.href)
+    }
     if (message && message.type === 'ready') {
       previewReady = true
       if (previewDocument) {
@@ -360,6 +363,26 @@ function openPreview () {
   preview.title = 'GeoAnim: ' + path.basename(editor.document.uri.fsPath)
   loadPreviewPage()
   compile(editor.document)
+}
+
+// a link in the preview: a site in the browser, another animation (Prop1.html) as its script (Prop1.geo)
+async function openLink (href) {
+  if (/^[a-z][a-z0-9+.-]*:/i.test(href)) {
+    vscode.env.openExternal(vscode.Uri.parse(href))
+    return
+  }
+  if (!previewDocument || previewDocument.uri.scheme !== 'file') {
+    return
+  }
+  const target = path.resolve(path.dirname(previewDocument.uri.fsPath), decodeURIComponent(href.split(/[?#]/)[0]))
+  const script = target.replace(/\.html?$/i, '.geo')
+  const file = fs.existsSync(script) ? script : target
+  if (!fs.existsSync(file)) {
+    vscode.window.showInformationMessage(`GeoAnim: ${href} gibt es nicht (gesucht: ${script}).`)
+    return
+  }
+  const document = await vscode.workspace.openTextDocument(file)
+  vscode.window.showTextDocument(document, { viewColumn: vscode.ViewColumn.One })
 }
 
 // the step the cursor is in: the number of "step" lines up to it, minus one (-1: the starting picture); undefined if the

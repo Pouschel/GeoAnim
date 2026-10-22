@@ -20,7 +20,23 @@
           "name": "string.unquoted.caption.geo",
           "patterns": [
             {
-              "include": "#math"
+              "include": "#inline"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "match": "^\\s*(\\|)(.*)$",
+      "captures": {
+        "1": {
+          "name": "keyword.operator.continuation.geo"
+        },
+        "2": {
+          "name": "string.unquoted.caption.geo",
+          "patterns": [
+            {
+              "include": "#inline"
             }
           ]
         }
@@ -501,6 +517,33 @@
         {
           "match": "(?<![\\w'])[A-Za-z_][A-Za-z0-9_]*'*",
           "name": "entity.name.function.var.geo"
+        }
+      ]
+    },
+    "inline": {
+      "patterns": [
+        {
+          "include": "#math"
+        },
+        {
+          "match": "\\\\[*_`\\[\\]<>\\\\]",
+          "name": "constant.character.escape.geo"
+        },
+        {
+          "match": "\\*\\*[^*]+\\*\\*",
+          "name": "markup.bold.geo"
+        },
+        {
+          "match": "(?<![\\w*])\\*[^*\\s][^*]*\\*|(?<![\\p{L}\\p{N}])_[^_\\s][^_]*_(?![\\p{L}\\p{N}])",
+          "name": "markup.italic.geo"
+        },
+        {
+          "match": "`[^`]*`",
+          "name": "markup.inline.raw.geo"
+        },
+        {
+          "match": "\\[[^\\]]*\\]\\([^)\\s]*\\)|<[^>\\s]+\\.[^>\\s]*>",
+          "name": "markup.underline.link.geo"
         }
       ]
     }

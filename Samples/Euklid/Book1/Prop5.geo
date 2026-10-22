@@ -31,7 +31,9 @@ point E = on AC at 2
 step Subtrahiere die Länge von $bar(BF)$ von $bar(CE)$ (<Prop3.geo>)
 point G = use Prop3.geo C E B F
 
-
-
+step Beweis Argumentation
+|
+| sff
+pause 400
 
 
