@@ -12,6 +12,20 @@
     ["$", "$"]
   ],
   "wordPattern": "[A-Za-z_][A-Za-z0-9_]*'*|-?\\d*\\.?\\d+",
+  "onEnterRules": [
+    {
+      "beforeText": "^\\s*(info|description)\\b.*$",
+      "action": { "indent": "none", "appendText": "| " }
+    },
+    {
+      "beforeText": "^\\s*set\\s+[A-Za-z_][A-Za-z0-9_]*'*\\s*=.*$",
+      "action": { "indent": "none", "appendText": "| " }
+    },
+    {
+      "beforeText": "^\\s*\\|.*$",
+      "action": { "indent": "none", "appendText": "| " }
+    }
+  ],
   "folding": {
     "markers": {
       "start": "^\\s*together\\b",

@@ -24,6 +24,12 @@ mklink /J "%USERPROFILE%\.vscode\extensions\geoanim-geo" "%CD%\editors\vscode"
   folgt der jeweils aktiven `.geo`-Datei.
 - **Schritt folgt Cursor:** Steht der Cursor in einem Schritt, zeigt die Vorschau dessen Ende (vor dem ersten `step`:
   das Startbild). Gezählt werden die `step`-Zeilen der Datei selbst.
+- **Cursor folgt Schritt:** Gehst du in der Vorschau selbst zu einem Schritt (Schaltflächen, Tasten, Schrittliste,
+  Schieberegler) oder hält die Wiedergabe an, springt der Cursor auf dessen `step`-Zeile (beim Startbild an den
+  Dateianfang) – nicht, wenn er schon in diesem Schritt steht, und nicht während die Animation läuft. Der Fokus bleibt
+  in der Vorschau.
+- **Fortsetzungszeilen:** Enter in einer Zeile mit `info`, `description`, `set name = …` oder in einer `|`-Zeile beginnt
+  die nächste Zeile mit `| ` (zweimal Rücktaste, wenn du nicht weiterschreiben willst). Nach `title` und `step` nicht.
 - **Fehler** werden rot unterstrichen und stehen unter „Probleme“, Fehler in eingebundenen Dateien dort. In der
   Vorschau erscheint der Fehler über der letzten guten Animation.
 - **Links** in Titel und Beschreibung: `[Satz 1](Prop1.html)` öffnet `Prop1.geo` im Editor, Links auf Webseiten den

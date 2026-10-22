@@ -347,6 +347,9 @@ function openPreview () {
     if (message && message.type === 'open') {
       openLink(message.href)
     }
+    if (message && message.type === 'step' && typeof message.index === 'number') {
+      revealStep(message.index)
+    }
     if (message && message.type === 'ready') {
       previewReady = true
       if (previewDocument) {
@@ -408,6 +411,34 @@ function cursorStep (document) {
     }
   }
   return index
+}
+
+// the viewer went to a step in the preview: the cursor goes to its "step" line (to the first line for the starting
+// picture), unless it is in that step already; the focus stays in the preview
+function revealStep (index) {
+  previewStep = index
+  const document = previewDocument
+  const editor = document && (vscode.window.visibleTextEditors || []).find(e => e.document === document)
+  if (!editor || cursorStep(document) === index) {
+    return
+  }
+  // a step from an included or used file has no line here: the cursor stays
+  let target = index < 0 ? 0 : null
+  for (let i = 0, count = -1; target === null && i < document.lineCount; i++) {
+    if (/^\s*step\b/.test(document.lineAt(i).text)) {
+      count++
+      if (count === index) {
+        target = i
+      }
+    }
+  }
+  if (target === null) {
+    return
+  }
+  const line = document.lineAt(target)
+  const position = new vscode.Position(target, line.firstNonWhitespaceCharacterIndex)
+  editor.selection = new vscode.Selection(position, position)
+  editor.revealRange(line.range, vscode.TextEditorRevealType.InCenterIfOutsideViewport)
 }
 
 function followCursor (editor) {

@@ -794,6 +794,7 @@
   function togglePlay () {
     if (playing) {
       pause()
+      reportStep()
     } else {
       play()
     }
@@ -803,12 +804,21 @@
     pause()
     const next = steps().find(step => step.end > time + EPSILON)
     setTime(next ? next.end : animation.duration)
+    reportStep()
   }
 
   function previousStep () {
     pause()
     const before = steps().filter(step => step.end < time - EPSILON)
     setTime(before.length ? before[before.length - 1].end : 0)
+    reportStep()
+  }
+
+  // to the start or the end, by button or key
+  function goTo (t) {
+    pause()
+    setTime(t)
+    reportStep()
   }
 
   function replayStep () {
@@ -831,16 +841,22 @@
     if (playing && animation) {
       const elapsed = previousTimestamp === null ? 0 : timestamp - previousTimestamp
       let t = time + elapsed * speed
+      let stopped = false
       if (stopTime !== null && t >= stopTime) {
         t = stopTime
         playing = false
         stopTime = null
+        stopped = true
       }
       if (t >= animation.duration) {
         t = animation.duration
         playing = false
+        stopped = true
       }
       setTime(t)
+      if (stopped) {
+        reportStep()
+      }
     }
     previousTimestamp = timestamp
     requestAnimationFrame(tick)
@@ -892,6 +908,7 @@
         pause()
         setTime(entry.time)
         openMenu(false)
+        reportStep()
       })
       list.appendChild(item)
     })
@@ -965,6 +982,7 @@
     }
     if (!keepPosition) {
       pause()
+      reportedStep = null
     }
     reserveCaptionSpace()
     layout()
@@ -1006,17 +1024,18 @@
 
   // buttons keep no focus, so that the keys always work
   document.querySelectorAll('#controls button').forEach(button => button.addEventListener('mousedown', event => event.preventDefault()))
-  $('first').addEventListener('click', () => { pause(); setTime(0) })
+  $('first').addEventListener('click', () => goTo(0))
   $('previous').addEventListener('click', previousStep)
   $('play').addEventListener('click', togglePlay)
   $('next').addEventListener('click', nextStep)
-  $('last').addEventListener('click', () => { pause(); setTime(animation.duration) })
+  $('last').addEventListener('click', () => goTo(animation.duration))
   $('replay').addEventListener('click', replayStep)
   $('timeline').addEventListener('input', event => {
     // read the position before pause() updates the slider
     const position = Number(event.target.value)
     pause()
     setTime(position)
+    reportStep()
   })
   $('stops').addEventListener('click', toggleStops)
   scene.addEventListener('click', event => {
@@ -1134,8 +1153,8 @@
       ' ': togglePlay,
       ArrowRight: nextStep,
       ArrowLeft: previousStep,
-      Home: () => { pause(); setTime(0) },
-      End: () => { pause(); setTime(animation.duration) },
+      Home: () => goTo(0),
+      End: () => goTo(animation.duration),
       r: replayStep,
       R: replayStep,
       s: toggleStops,
@@ -1186,6 +1205,27 @@
     const list = steps()
     const i = Math.min(index, list.length - 1)
     setTime(i >= 0 ? list[i].end : 0)
+    // the editor is there already
+    reportedStep = currentStepIndex()
+  }
+
+  // the other way round: when the viewer goes to a step himself (buttons, keys, list, slider) or the animation stops,
+  // the editor puts the cursor on its "step" line; while the slider is dragged only when it rests a moment
+  let reportedStep = null
+  let reportTimer = null
+
+  function reportStep () {
+    if (!window.GEO_EMBEDDED || !host) {
+      return
+    }
+    clearTimeout(reportTimer)
+    reportTimer = setTimeout(() => {
+      const index = currentStepIndex()
+      if (animation && !playing && index !== reportedStep) {
+        reportedStep = index
+        host.postMessage({ type: 'step', index })
+      }
+    }, 150)
   }
 
   async function start () {
