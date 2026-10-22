@@ -1,11 +1,11 @@
 
 grid 0.5
 
-default point size 4 labelsize 30
-default segment line ray circle polygon width 2 
-default segment line ray circle color grey
+default point size 5 labelsize 40
+default segment line ray circle polygon width 3 
+default segment line ray circle color grey labelsize 40
 default polygon color lightgrey 
-default text size 30 
+default text size 40 
 default move duration 1500
 default color grey
 default text color black

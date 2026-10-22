@@ -16,11 +16,18 @@ step Bezeichnung
 info Punkte werden in der Regel mit Großbuchstaben 
 |wie $A$, $P$ oder $Q$ bezeichnet.
 show label A B P Q M
-
+pause 1000
 step Lagebeziehung
 info Die Punkte $M$ und $Q$ liegen an verschiedenen Orten. 
 | Sie sind verschiedene Punkte. Schreibweise: $M != Q$.
 hide A B P
+pause 500
+together
+  move M to P
+  move Q to P
+end
+info Fallen $M$ und $Q$ zusammen, bezeichnen beide Buchstaben 
+|denselben Punkt. Man schreibt $M = Q$.
 
 
 
