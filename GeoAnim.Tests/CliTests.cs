@@ -99,11 +99,14 @@ public sealed class CliTests : IDisposable
         Directory.CreateDirectory(Path.Combine(folder, "Basics"));
         Directory.CreateDirectory(Path.Combine(folder, "Mehr"));
         Write(Path.Combine("Basics", "10_Punkte.geo"), "keyword Punkt/e\npoint A = 1 1\nstep Ein Punkt");
-        Write(Path.Combine("Mehr", "Strecken.geo"), "keyword Strecke/n\npoint A = 1 1\nstep Zwei Punkte und eine Strecke");
+        Write(Path.Combine("Mehr", "Strecken.geo"), "keyword Strecke/n\npoint A = 1 1\nstep Zwei Punkte und eine Strecke\nstep b\nkeyword Endpunkt/e");
+        Write("Dreieck.geo", "point A = 1 1\nstep Drei Strecken, ihre Endpunkte");
         Assert.Equal(0, Program.ExportDirectory(folder));
         string strecken = File.ReadAllText(Path.Combine(folder, "Mehr", "Strecken.html"));
         Assert.Contains("[Punkte](../Basics/10_Punkte.html)", strecken);
         Assert.DoesNotContain("[Strecke]", strecken);
+        string dreieck = File.ReadAllText(Path.Combine(folder, "Dreieck.html"));
+        Assert.Contains("[Strecken](Mehr/Strecken.html), ihre [Endpunkte](Mehr/Strecken.html#2)", dreieck);
         Assert.DoesNotContain("](", File.ReadAllText(Path.Combine(folder, "Basics", "10_Punkte.html")).Split("GEO_ANIMATION")[1].Split("</script>")[0]);
 
         // a keyword of two pages

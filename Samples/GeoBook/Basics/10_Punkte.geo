@@ -1,11 +1,9 @@
 include ../def.geo
-keyword Punkt/e/en
-
 title Punkte und ihre Lage
 
 step Definition 
 info Ein **Punkt** beschreibt eine genaue Lage. Er hat keine Ausdehnung. Damit wir ihn sehen können, stellen wir ihn durch einen kleinen Kreis dar.
-
+keyword Punkt/e/en
 var pdef  nolabel color blue size 5
 point P= 0 0 pdef color black
 point Q= 4 6 pdef

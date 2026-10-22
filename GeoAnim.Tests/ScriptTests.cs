@@ -485,8 +485,11 @@ public class ScriptTests
             | Gerade/n
             point A = 0 0
             """);
-        Assert.Equal(["Punkt", "Punkte", "Punkten", "rechter Winkel", "rechter Winkels", "Gerade", "Geraden"], page.Keywords);
-        ErrorAt("point A = 0 0\nstep s\nkeyword Punkt", 3, 1, "before the first step");
+        Assert.Equal(["Punkt", "Punkte", "Punkten", "rechter Winkel", "rechter Winkels", "Gerade", "Geraden"], page.Keywords.Select(k => k.Form));
+        Assert.All(page.Keywords, k => Assert.Equal(0, k.Step));
+        // inside a step: that step (counted from 1)
+        AnimationData steps = ScriptCompiler.Compile("keyword Punkt\npoint A = 0 0\nstep a\nstep b\nkeyword Endpunkt/e\n  pause");
+        Assert.Equal([new PageKeyword("Punkt", 0), new PageKeyword("Endpunkt", 2), new PageKeyword("Endpunkte", 2)], steps.Keywords);
         ErrorAt("keyword Punkt//e", 1, 1, "an ending after /");
         ErrorAt("keyword \"Punkt", 1, 1, "no closing");
 

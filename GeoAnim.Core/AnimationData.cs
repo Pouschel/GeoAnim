@@ -39,7 +39,7 @@ public sealed class AnimationData
     public string? Description { get; internal init; }
 
     /// <summary>The word forms that link to this page from the other pages of "geoanim exportdir" ("keyword").</summary>
-    public IReadOnlyList<string> Keywords { get; internal init; } = [];
+    public IReadOnlyList<PageKeyword> Keywords { get; internal init; } = [];
 
     public ViewWindow View { get; }
 

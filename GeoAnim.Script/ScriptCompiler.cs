@@ -107,7 +107,6 @@ public static class ScriptCompiler
                     c.Description = s.Description;
                     break;
                 case KeywordStatement s:
-                    RequireSetup(s, "keyword");
                     c.Keyword(s.Text);
                     break;
                 case ViewStatement s:

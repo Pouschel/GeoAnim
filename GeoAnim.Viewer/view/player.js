@@ -987,6 +987,10 @@
     }
     reserveCaptionSpace()
     layout()
+    // a page opened at a step (page.html#3)
+    if (!keepPosition && !window.GEO_EMBEDDED) {
+      applyHash()
+    }
   }
 
   function showError (error) {
@@ -1210,24 +1214,69 @@
     reportedStep = currentStepIndex()
   }
 
-  // the other way round: when the viewer goes to a step himself (buttons, keys, list, slider) or the animation stops,
-  // the editor puts the cursor on its "step" line; while the slider is dragged only when it rests a moment
+  // when the viewer goes to a step himself (buttons, keys, list, slider) or the animation stops: in an editor's preview
+  // the editor puts the cursor on its "step" line, on a page the step goes into the address (page.html#3), so that the
+  // page opens there again after "back"; while the slider is dragged only when it rests a moment
   let reportedStep = null
   let reportTimer = null
 
   function reportStep () {
-    if (!window.GEO_EMBEDDED || !host) {
-      return
-    }
     clearTimeout(reportTimer)
     reportTimer = setTimeout(() => {
+      if (!animation || playing) {
+        return
+      }
       const index = currentStepIndex()
-      if (animation && !playing && index !== reportedStep) {
+      if (!window.GEO_EMBEDDED) {
+        writeHash(index)
+      } else if (host && index !== reportedStep) {
         reportedStep = index
         host.postMessage({ type: 'step', index })
       }
     }, 150)
   }
+
+  // ------------------------------------------------------------------ the step in the address
+
+  // "#3": the end of step 3, "#0" or nothing: the starting picture
+  let writtenHash = null
+
+  function applyHash () {
+    const match = /^#(\d+)$/.exec(location.hash)
+    if (!match || !animation) {
+      return
+    }
+    pause()
+    const list = steps()
+    const i = Math.min(Number(match[1]), list.length) - 1
+    setTime(i >= 0 ? list[i].end : 0)
+    writtenHash = location.hash
+  }
+
+  // replaces the address without a new entry in the history ("back" still goes to the page before)
+  function writeHash (index) {
+    const hash = index >= 0 ? '#' + (index + 1) : ''
+    if (hash === (location.hash === '#0' ? '' : location.hash)) {
+      return
+    }
+    try {
+      history.replaceState(history.state, '', location.pathname + location.search + hash)
+    } catch (error) {
+      // some browsers do not allow that for local files: the same with a jump mark
+      writtenHash = hash || '#0'
+      try {
+        location.replace(writtenHash)
+      } catch (ignored) {
+      }
+    }
+  }
+
+  // a link to another step of this page
+  window.addEventListener('hashchange', () => {
+    if (location.hash !== writtenHash) {
+      applyHash()
+    }
+  })
 
   async function start () {
     // the fonts first: the labels are measured with them (bold and italic too, which load only when used)

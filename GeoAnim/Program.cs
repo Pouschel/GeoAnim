@@ -132,26 +132,28 @@ internal static class Program
         }
         // keyword → its page; a keyword of two pages is an error (the first one keeps it)
         int conflicts = 0;
-        var keywordPages = new Dictionary<string, (string Page, string Relative)>(StringComparer.Ordinal);
+        var keywordPages = new Dictionary<string, (string Page, string Relative, int Step)>(StringComparer.Ordinal);
         foreach (var page in compiled)
         {
-            foreach (string form in page.Animation.Keywords)
+            foreach (PageKeyword keyword in page.Animation.Keywords)
             {
-                if (keywordPages.TryGetValue(form, out var other))
+                if (keywordPages.TryGetValue(keyword.Form, out var other))
                 {
-                    Console.Error.WriteLine($"{page.Relative}: the keyword {form} is already the keyword of {other.Relative}.");
+                    Console.Error.WriteLine($"{page.Relative}: the keyword {keyword.Form} is already the keyword of {other.Relative}.");
                     conflicts++;
                 }
                 else
                 {
-                    keywordPages[form] = (page.Page, page.Relative);
+                    keywordPages[keyword.Form] = (page.Page, page.Relative, keyword.Step);
                 }
             }
         }
         foreach (var page in compiled)
         {
+            // inside a step: to its end ("page.html#3")
             var links = keywordPages.Where(k => k.Value.Page != page.Page)
-                .ToDictionary(k => k.Key, k => Keywords.RelativeAddress(page.Page, k.Value.Page), StringComparer.Ordinal);
+                .ToDictionary(k => k.Key, k => Keywords.RelativeAddress(page.Page, k.Value.Page) + (k.Value.Step > 0 ? "#" + k.Value.Step : ""),
+                    StringComparer.Ordinal);
             AnimationData animation = Keywords.Link(page.Animation, links);
             string output = Path.ChangeExtension(Path.Combine(target, page.Relative), ".html");
             Directory.CreateDirectory(Path.GetDirectoryName(output)!);

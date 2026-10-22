@@ -50,13 +50,24 @@ public sealed class Construction
     /// </summary>
     public string? Description { get; set; }
 
-    private readonly List<string> keywords = [];
+    private readonly List<PageKeyword> keywords = [];
 
     /// <summary>
     /// Adds keywords of the page ("Punkt/e/en/es Strecke/n", phrases in quotes): "geoanim exportdir" links their first
-    /// occurrence in each step of the other pages to this one.
+    /// occurrence in each step of the other pages to this one; before the first step to the page, inside a step to the
+    /// end of that step.
     /// </summary>
-    public void Keyword(string text) => keywords.AddRange(GeoAnim.Keywords.Parse(text));
+    public void Keyword(string text)
+    {
+        int step = currentStep == null ? 0 : steps.Count + 1;
+        foreach (string form in GeoAnim.Keywords.Parse(text))
+        {
+            if (!keywords.Any(k => k.Form == form))
+            {
+                keywords.Add(new PageKeyword(form, step));
+            }
+        }
+    }
 
     /// <summary>The title; like all texts it may contain formulas in AsciiMath between $…$ ("\$" for a dollar sign).</summary>
     public string? Title
@@ -586,7 +597,7 @@ public sealed class Construction
         return new AnimationData(Title, view, Background, GridStep, Axes, time * scale, scaledSteps, scene.Primitives, scale, RenderFormulas(scaledSteps))
         {
             Description = Description,
-            Keywords = keywords.Distinct(StringComparer.Ordinal).ToList(),
+            Keywords = keywords.ToList(),
         };
     }
 
@@ -617,6 +628,9 @@ public sealed class Construction
         return formulas;
     }
 }
+
+/// <summary>A word form that links to a page: to its start (step 0) or to the end of a step (1, 2, …).</summary>
+public sealed record PageKeyword(string Form, int Step);
 
 /// <summary>A step of the animation: its description and its time span in milliseconds.</summary>
 public sealed record AnimationStep(string Caption, double Start, double End)
