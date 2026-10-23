@@ -80,20 +80,52 @@ public static partial class HtmlExporter
         MarkdownPattern().Replace(text, m => m.Groups[1].Success ? m.Groups[1].Value : m.Groups[2].Success ? m.Groups[2].Value : m.Groups[3].Value)
             .Replace('\n', ' ');
 
-    /// <summary>The page for <paramref name="animation"/>; in an exported book with the way to the other pages.</summary>
-    public static string Export(AnimationData animation, PageNavigation? navigation = null)
+    /// <summary>
+    /// The page for <paramref name="animation"/>; in an exported book with the way to the other pages. Without
+    /// <paramref name="assets"/> the page has everything inside (it works alone); with it, the page links to the player's
+    /// files in that folder (relative address, e.g. "../assets/"; see <see cref="WriteAssets"/>), so that a book on a
+    /// web server loads them once for all its pages.
+    /// </summary>
+    public static string Export(AnimationData animation, PageNavigation? navigation = null, string? assets = null)
     {
         string html = ViewerFiles.ReadText("player.html");
         html = TitlePattern().Replace(html, "<title>" + WebUtility.HtmlEncode(animation.Title == null ? "GeoAnim" : PlainText(animation.Title)) + "</title>"
             + "\n    <meta name=\"description\" content=\"" + WebUtility.HtmlEncode(DescriptionOf(animation)) + "\">", 1);
-        html = StylesheetPattern().Replace(html, m => "<style>\n" + InlineCss(m.Groups[1].Value) + "</style>");
+        html = StylesheetPattern().Replace(html, m => assets == null
+            ? "<style>\n" + InlineCss(m.Groups[1].Value) + "</style>"
+            : $"<link rel=\"stylesheet\" href=\"{assets}{m.Groups[1].Value}?v={Version(m.Groups[1].Value)}\">");
         html = ScriptPattern().Replace(html, m =>
             // the JSON escapes <, > and &, so it cannot end the script element
             "<script>window.GEO_ANIMATION = " + animation.ToJson() + ";"
             + (navigation == null ? "" : "\n      window.GEO_BOOK = " + navigation.ToJson() + ";") + "</script>\n"
-            + "    <script>\n" + EscapeScript(ViewerFiles.ReadText(m.Groups[1].Value)) + "</script>");
+            + (assets == null
+                ? "    <script>\n" + EscapeScript(ViewerFiles.ReadText(m.Groups[1].Value)) + "</script>"
+                : $"    <script src=\"{assets}{m.Groups[1].Value}?v={Version(m.Groups[1].Value)}\"></script>"));
         return html;
     }
+
+    /// <summary>
+    /// Writes the player's files (script, stylesheets, fonts) into <paramref name="folder"/> for pages exported with
+    /// assets; files that are already up to date are left alone.
+    /// </summary>
+    public static void WriteAssets(string folder)
+    {
+        foreach (string path in ViewerFiles.Paths.Where(p => p != "player.html"))
+        {
+            string target = Path.Combine(folder, path.Replace('/', Path.DirectorySeparatorChar));
+            byte[] content = ViewerFiles.Read(path)!;
+            if (File.Exists(target) && File.ReadAllBytes(target).AsSpan().SequenceEqual(content))
+            {
+                continue;
+            }
+            Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+            File.WriteAllBytes(target, content);
+        }
+    }
+
+    // a short fingerprint of a player file: a new version gets a new address, so that browsers do not keep the old one
+    private static string Version(string path) =>
+        Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(ViewerFiles.Read(path)!))[..10].ToLowerInvariant();
 
     /// <summary>
     /// The player page without an animation, for an editor's preview: it gets its animations as messages

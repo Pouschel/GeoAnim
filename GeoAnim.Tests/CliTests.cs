@@ -111,6 +111,10 @@ public sealed class CliTests : IDisposable
         Assert.True(File.Exists(Path.Combine(folder, "Grundlagen", "Punkte.html")));
         string strecken = File.ReadAllText(Path.Combine(folder, "Grundlagen", "Strecken-und-Längen.html"));
         string kreis = File.ReadAllText(Path.Combine(folder, "Mehr", "Kreis.html"));
+        // by default every page has the player inside
+        Assert.Contains("function valueAt", kreis);
+        Assert.False(Directory.Exists(Path.Combine(folder, "assets")));
+
         // links with the scripts' names lead to the pages
         Assert.Contains("[Punkte](Punkte.html#1)", strecken);
         Assert.Contains("\\u003Chttps://mathepedia.de\\u003E", strecken);
@@ -127,6 +131,16 @@ public sealed class CliTests : IDisposable
         Assert.Equal("ä", Program.UnsafeCharacters("Grundlagen/Strecken-und-Längen.html"));
         Assert.Equal("ß (space) ö", Program.UnsafeCharacters("Mehr/Maße und Größen.html"));
         Assert.Equal("", Program.UnsafeCharacters("Grundlagen/Strahl-und-Gerade.html"));
+
+        // with assets: the player's files once in assets/, the pages link to them (with a fingerprint against old copies in caches)
+        Assert.Equal(0, Program.ExportDirectory(folder, assets: true));
+        kreis = File.ReadAllText(Path.Combine(folder, "Mehr", "Kreis.html"));
+        Assert.True(File.Exists(Path.Combine(folder, "assets", "player.js")));
+        Assert.True(File.Exists(Path.Combine(folder, "assets", "fonts", "stix-two-text-latin-400-normal.woff2")));
+        Assert.Matches("<script src=\"\\.\\./assets/player\\.js\\?v=[0-9a-f]{10}\"></script>", kreis);
+        Assert.Contains("<link rel=\"stylesheet\" href=\"../assets/fonts/fonts.css?v=", kreis);
+        Assert.DoesNotContain("function valueAt", kreis);
+        Assert.Contains("window.GEO_BOOK", kreis);
 
         // two scripts with the same page
         Write(Path.Combine("20_Mehr", "30_Kreis.geo"), "point A = 1 1");

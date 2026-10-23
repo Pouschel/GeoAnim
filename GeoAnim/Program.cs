@@ -19,10 +19,13 @@ internal static partial class Program
               Shows the animation in the browser and updates it whenever the file is saved.
           geoanim export <file.geo> [-o <file.html>]
               Writes the animation as one HTML file that plays without a server (default: next to the script).
-          geoanim exportdir <dir> [-o <output directory>]
+          geoanim exportdir <dir> [-o <output directory>] [-assets] [-serve [port]]
               Exports directory dir as a book: a page for every .geo file in it and all subdirectories (not for those
               starting with "_"), next to it or with -o in the same folder structure below the output directory, with
-              an index.html linking to all pages. "20_Strecken.geo" becomes "Strecken.html" (the number gives the order).
+              an index.html linking to all pages. "20_Strecken.geo" becomes "Strecken.html" (the number gives the
+              order). Each page has everything inside; with -assets the pages link to the player's files in assets/
+              instead (for a web server). With -serve it then serves the book on http://localhost:8080/ (or the port
+              given) and exports again whenever a script changes.
           geoanim daemon
               Compiles for an editor (the VS Code extension): JSON requests on standard input, answers on standard output.
         """;
@@ -43,11 +46,25 @@ internal static partial class Program
         if (args[0] == "exportdir")
         {
             string? outputFolder = null;
+            int? servePort = null;
+            bool assets = false;
             for (int i = 2; i < args.Length; i++)
             {
                 if (args[i] is "-o" or "--output" && i + 1 < args.Length)
                 {
                     outputFolder = args[++i];
+                }
+                else if (args[i] is "-assets" or "--assets")
+                {
+                    assets = true;
+                }
+                else if (args[i] is "-serve" or "--serve")
+                {
+                    servePort = i + 1 < args.Length && int.TryParse(args[i + 1], out int port) ? port : 8080;
+                    if (i + 1 < args.Length && int.TryParse(args[i + 1], out _))
+                    {
+                        i++;
+                    }
                 }
                 else if (args[i] is "-index" or "--index")
                 {
@@ -60,7 +77,8 @@ internal static partial class Program
                     return 1;
                 }
             }
-            return ExportDirectory(args[1], outputFolder);
+            int exported = ExportDirectory(args[1], outputFolder, assets);
+            return servePort == null || !Directory.Exists(args[1]) ? exported : ServeBook(args[1], outputFolder, servePort.Value, assets);
         }
         string file = args[1];
         if (!File.Exists(file))
@@ -103,9 +121,11 @@ internal static partial class Program
     /// pages. Files and folders starting with "_" are helpers (no page); a number in front ("20_Strecken.geo",
     /// "10_Grundlagen") gives the order and is left out of the page's name ("Grundlagen/Strecken.html"). Links between the
     /// pages may use the scripts' names; the keywords of every page link to it from the others. Each page gets the way to
-    /// the overview and the pages before and after it. A faulty script does not stop the others.
+    /// the overview and the pages before and after it. A faulty script does not stop the others. Each page has the player
+    /// inside; with <paramref name="assets"/> the pages link to the player's files in assets/ at the root of the book
+    /// instead (smaller pages for a web server: the files load once).
     /// </summary>
-    internal static int ExportDirectory(string folder, string? outputFolder = null)
+    internal static int ExportDirectory(string folder, string? outputFolder = null, bool assets = false)
     {
         if (!Directory.Exists(folder))
         {
@@ -188,16 +208,68 @@ internal static partial class Program
             var navigation = new PageNavigation(Keywords.RelativeAddress(page.Page, "index.html"), Neighbour(position - 1), Neighbour(position + 1));
             string output = Path.Combine(target, page.Page.Replace('/', Path.DirectorySeparatorChar));
             Directory.CreateDirectory(Path.GetDirectoryName(output)!);
-            Write(animation, output, navigation);
+            // with assets: the player's files once for the whole book, in assets/ at its root
+            string? assetsAddress = assets ? string.Concat(Enumerable.Repeat("../", page.Page.Count(c => c == '/'))) + AssetsFolder + "/" : null;
+            Write(animation, output, navigation, assetsAddress);
             pages.Add((page.Page, animation));
         }
         Directory.CreateDirectory(target);
+        if (assets)
+        {
+            HtmlExporter.WriteAssets(Path.Combine(target, AssetsFolder));
+        }
         string indexFile = Path.Combine(target, "index.html");
         File.WriteAllText(indexFile, IndexPage.Create(Path.GetFileName(root), pages), new UTF8Encoding(false));
         Console.WriteLine($"Written: {indexFile} ({book.Count} links)");
         Console.WriteLine($"{files.Count - failed} of {files.Count} files exported" + (failed > 0 ? $", {failed} with errors." : ".")
             + (conflicts > 0 ? $" {conflicts} keyword(s) given twice." : ""));
         return failed > 0 || conflicts > 0 ? 1 : 0;
+    }
+
+    /// <summary>The folder of an exported book with the player's files (script, stylesheets, fonts).</summary>
+    internal const string AssetsFolder = "assets";
+
+    /// <summary>
+    /// After the export: serves the book on http://localhost:port/ (no browser is opened) and exports again whenever a
+    /// script below <paramref name="folder"/> changes, so that a reload in the browser shows the latest state. Ctrl+C ends.
+    /// </summary>
+    private static int ServeBook(string folder, string? outputFolder, int port, bool assets)
+    {
+        string root = Path.GetFullPath(folder);
+        string target = outputFolder == null ? root : Path.GetFullPath(outputFolder);
+        using var server = new BookServer(target, LiveServer.FindFreePort(port));
+        Console.WriteLine($"GeoAnim: {server.Url}  (serving {target}, exporting again when a script in {root} changes; Ctrl+C ends)");
+        using var watcher = new FileSystemWatcher(root, "*.geo") { IncludeSubdirectories = true, EnableRaisingEvents = true };
+        // several changes at once (saving, renaming) give one export; one export at a time
+        var exporting = new object();
+        using var timer = new Timer(_ =>
+        {
+            lock (exporting)
+            {
+                Console.WriteLine();
+                Console.WriteLine($"{DateTime.Now:HH:mm:ss} exporting again …");
+                try
+                {
+                    ExportDirectory(folder, outputFolder, assets);
+                }
+                catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+                {
+                    Console.Error.WriteLine(e.Message);
+                }
+            }
+        });
+        void Changed(object sender, FileSystemEventArgs e) => timer.Change(500, Timeout.Infinite);
+        watcher.Changed += Changed;
+        watcher.Created += Changed;
+        watcher.Deleted += Changed;
+        watcher.Renamed += (sender, e) => Changed(sender, e);
+        Console.CancelKeyPress += (_, e) =>
+        {
+            e.Cancel = true;
+            server.Dispose();
+        };
+        server.Wait();
+        return 0;
     }
 
     // the characters of a page's path outside ASCII letters, digits, "-", "_", "." and "/" (each once, as they appear)
@@ -280,9 +352,9 @@ internal static partial class Program
         }
     }
 
-    private static void Write(AnimationData animation, string output, PageNavigation? navigation = null)
+    private static void Write(AnimationData animation, string output, PageNavigation? navigation = null, string? assets = null)
     {
-        File.WriteAllText(output, HtmlExporter.Export(animation, navigation), new UTF8Encoding(false));
+        File.WriteAllText(output, HtmlExporter.Export(animation, navigation, assets), new UTF8Encoding(false));
         Console.WriteLine($"Written: {output} ({animation.Steps.Count} steps, {animation.Duration / 1000:0.0} s)");
     }
 

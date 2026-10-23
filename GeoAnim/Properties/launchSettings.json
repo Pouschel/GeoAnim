@@ -12,7 +12,7 @@
     },
     "export dir": {
       "commandName": "Project",
-      "commandLineArgs": "exportdir C:/Code/GeoBook/src -o C:/Code/GeoBook/html",
+      "commandLineArgs": "exportdir C:/Code/GeoBook/src -o C:/Code/GeoBook/html -assets -serve",
       "workingDirectory": "$(ProjectDir).."
     }
   }
