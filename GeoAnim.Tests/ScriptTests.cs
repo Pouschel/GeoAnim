@@ -18,10 +18,11 @@ public class ScriptTests
     private static List<string> SamplePaths()
     {
         string folder = Repository.PathOf("Samples");
-        return Directory.EnumerateFiles(folder, "*.geo", SearchOption.AllDirectories)
-            .Select(path => Path.GetRelativePath(folder, path).Replace('\\', '/'))
+        var list = Directory.EnumerateFiles(folder, "*.geo", SearchOption.AllDirectories)
+            .Select(path => /* Path.GetRelativePath(folder, path).*/path.Replace('\\', '/'))
             .Order(StringComparer.Ordinal)
             .ToList();
+        return list;
     }
 
     public static TheoryData<string> Samples() => new(SamplePaths());
@@ -31,7 +32,8 @@ public class ScriptTests
     [MemberData(nameof(Samples))]
     public void SamplesCompile(string sample)
     {
-        AnimationData animation = ScriptCompiler.CompileFile(Repository.PathOf(["Samples", .. sample.Split('/')]));
+        AnimationData animation = ScriptCompiler.CompileFile(sample);
+        //AnimationData animation = ScriptCompiler.CompileFile(Repository.PathOf(["Samples", .. sample.Split('/')]));
         JsonDocument.Parse(animation.ToJson());
     }
 
@@ -505,8 +507,12 @@ public class ScriptTests
             """);
         var links = new Dictionary<string, string>
         {
-            ["Punkt"] = "p.html", ["Punkte"] = "p.html", ["Gerade"] = "g.html", ["Geraden"] = "g.html",
-            ["rechter Winkel"] = "w.html", ["Winkel"] = "x.html",
+            ["Punkt"] = "p.html",
+            ["Punkte"] = "p.html",
+            ["Gerade"] = "g.html",
+            ["Geraden"] = "g.html",
+            ["rechter Winkel"] = "w.html",
+            ["Winkel"] = "x.html",
         };
         AnimationData linked = Keywords.Link(animation, links);
         Assert.Equal("[Punkte](p.html) auf einer [Geraden](g.html), ein Punkt mehr", linked.Steps[0].Caption);
