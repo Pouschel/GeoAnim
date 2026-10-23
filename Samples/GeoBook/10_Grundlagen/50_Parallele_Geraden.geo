@@ -33,7 +33,7 @@ info Wir verändern die Richtung von $h$. Der Schnittpunkt wandert aus dem Bild.
 move D to 6 5
 
 step Parallele Geraden
-keyword parallel/e/en/er/es Parallelität "parallele Gerade/n"
+keyword parallel/e/en/er/es, Parallelität, parallele/n Gerade/n
 info Nun richten wir $h$ so aus, dass sie in derselben Richtung wie $g$ verläuft.
 | Die beiden verschiedenen Geraden haben keinen gemeinsamen Punkt, auch außerhalb des Bildes nicht.
 |

@@ -4,72 +4,71 @@ using System.Text.RegularExpressions;
 namespace GeoAnim;
 
 /// <summary>
-/// Keywords of a page ("keyword Punkt/e/en/es Strecke/n"): "geoanim exportdir" turns their first occurrence in each step
+/// Keywords of a page ("keyword Punkt/e/en/es, Satz/es des Pythagoras"): "geoanim exportdir" turns their first occurrence in each step
 /// of the other pages into a link to the page.
 /// </summary>
 public static class Keywords
 {
     /// <summary>
-    /// The word forms of a keyword line: words or phrases in quotes, separated by spaces; "Punkt/e/en" is the stem alone
-    /// or with one of the endings (Punkt, Punkte, Punkten); in a phrase the endings belong to its last word.
+    /// The word forms of a keyword line: terms separated by commas, each one word or several; a word may carry endings
+    /// after "/" ("Punkt/e/en": Punkt, Punkte, Punkten), and a term stands for all combinations of its words' forms
+    /// ("rechte/r/n Winkel/s": rechte Winkel, rechte Winkels, rechter Winkel, …, rechten Winkels).
     /// </summary>
     public static List<string> Parse(string text)
     {
-        var forms = new List<string>();
-        int i = 0;
-        while (true)
+        if (text.Contains('"'))
         {
-            while (i < text.Length && char.IsWhiteSpace(text[i]))
-            {
-                i++;
-            }
-            if (i >= text.Length)
-            {
-                break;
-            }
-            string entry;
-            if (text[i] == '"')
-            {
-                int close = text.IndexOf('"', i + 1);
-                if (close < 0)
-                {
-                    throw new GeoException("A keyword in quotes has no closing \".");
-                }
-                entry = text.Substring(i + 1, close - i - 1);
-                i = close + 1;
-                if (i < text.Length && !char.IsWhiteSpace(text[i]))
-                {
-                    throw new GeoException($"After the keyword \"{entry}\" comes a space (endings go inside the quotes: \"rechter Winkel/s\").");
-                }
-            }
-            else
-            {
-                int start = i;
-                while (i < text.Length && !char.IsWhiteSpace(text[i]))
-                {
-                    i++;
-                }
-                entry = text[start..i];
-            }
-            string[] parts = entry.Split('/');
-            string stem = Regex.Replace(parts[0].Trim(), @"\s+", " ");
-            if (stem.Length == 0 || !stem.All(c => char.IsLetterOrDigit(c) || c is ' ' or '-'))
-            {
-                throw new GeoException($"\"{entry}\" is not a keyword: words of letters, endings after / (like Punkt/e/en).");
-            }
-            forms.Add(stem);
-            foreach (string ending in parts.Skip(1))
-            {
-                if (ending.Length == 0 || !ending.All(char.IsLetter))
-                {
-                    throw new GeoException($"\"{entry}\": an ending after / consists of letters (like Punkt/e/en).");
-                }
-                forms.Add(stem + ending);
-            }
+            throw new GeoException("Keywords are separated by commas, without quotes: keyword Satz/es des Pythagoras, Punkt/e/en.");
         }
-        if (forms.Count == 0)
+        var forms = new List<string>();
+        List<string> terms = text.Split(',').ToList();
+        // a comma at the end (a list continued with "|") is allowed
+        if (terms.Count > 1 && terms[^1].Trim().Length == 0)
         {
-            throw new GeoException("\"keyword\" needs words, like keyword Punkt/e/en.");
+            terms.RemoveAt(terms.Count - 1);
+        }
+        foreach (string term in terms)
+        {
+            string[] words = term.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+            if (words.Length == 0)
+            {
+                throw new GeoException(text.Trim().Length == 0
+                    ? "\"keyword\" needs words, like keyword Punkt/e/en, Satz/es des Pythagoras."
+                    : "There is an empty keyword between two commas.");
+            }
+            // all combinations of the forms of the words
+            var combinations = new List<string> { "" };
+            foreach (string word in words)
+            {
+                List<string> wordForms = WordForms(word);
+                combinations = combinations.SelectMany(start => wordForms.Select(form => start.Length == 0 ? form : start + " " + form)).ToList();
+                if (combinations.Count > 1000)
+                {
+                    throw new GeoException($"\"{term.Trim()}\" has too many combinations of endings.");
+                }
+            }
+            forms.AddRange(combinations);
+        }
+        return forms;
+    }
+
+    // "Punkt/e/en" → Punkt, Punkte, Punkten
+    private static List<string> WordForms(string word)
+    {
+        string[] parts = word.Split('/');
+        string stem = parts[0];
+        if (stem.Length == 0 || !stem.All(c => char.IsLetterOrDigit(c) || c == '-'))
+        {
+            throw new GeoException($"\"{word}\" is not a word of a keyword: letters, endings after / (like Punkt/e/en); terms are separated by commas.");
+        }
+        var forms = new List<string> { stem };
+        foreach (string ending in parts.Skip(1))
+        {
+            if (ending.Length == 0 || !ending.All(char.IsLetter))
+            {
+                throw new GeoException($"\"{word}\": an ending after / consists of letters (like Punkt/e/en).");
+            }
+            forms.Add(stem + ending);
         }
         return forms;
     }

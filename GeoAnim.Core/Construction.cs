@@ -53,7 +53,7 @@ public sealed class Construction
     private readonly List<PageKeyword> keywords = [];
 
     /// <summary>
-    /// Adds keywords of the page ("Punkt/e/en/es Strecke/n", phrases in quotes): "geoanim exportdir" links their first
+    /// Adds keywords of the page ("Punkt/e/en/es, Satz/es des Pythagoras", separated by commas): "geoanim exportdir" links their first
     /// occurrence in each step of the other pages to this one; before the first step to the page, inside a step to the
     /// end of that step.
     /// </summary>
