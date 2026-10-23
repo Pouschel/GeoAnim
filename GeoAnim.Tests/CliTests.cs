@@ -123,7 +123,7 @@ public sealed class CliTests : IDisposable
         string index = File.ReadAllText(Path.Combine(folder, "index.html"));
         Assert.True(index.IndexOf("Grundlagen/Punkte.html") < index.IndexOf("Strecken-und-") && index.IndexOf("Strecken-und-") < index.IndexOf("Mehr/Kreis.html"), index);
         Assert.Contains("<h2>Grundlagen</h2>", index);
-        Assert.Contains("window.GEO_BOOK = {\"index\":\"../index.html\",\"previous\":{\"title\":\"Strecken\",\"href\":\"../Grundlagen/Strecken-und-L%C3%A4ngen.html\"},\"next\":null}", kreis);
+        Assert.Contains("window.GEO_BOOK = {\"index\":\"../index.html\",\"previous\":{\"title\":\"Strecken\",\"href\":\"../Grundlagen/Strecken-und-L%C3%A4ngen.html\"},\"next\":null", kreis);
         Assert.Contains("\"previous\":null,\"next\":{\"title\":\"Strecken\",\"href\":\"Strecken-und-L%C3%A4ngen.html\"}",
             File.ReadAllText(Path.Combine(folder, "Grundlagen", "Punkte.html")));
 
@@ -141,6 +141,45 @@ public sealed class CliTests : IDisposable
         Assert.Contains("<link rel=\"stylesheet\" href=\"../assets/fonts/fonts.css?v=", kreis);
         Assert.DoesNotContain("function valueAt", kreis);
         Assert.Contains("window.GEO_BOOK", kreis);
+
+        // index.yaml: title, description, language, icon, address on the web (canonical, preview, sitemap), home, footer
+        Directory.CreateDirectory(Path.Combine(folder, "icons"));
+        File.WriteAllText(Path.Combine(folder, "icons", "winkel.svg"), "<svg xmlns=\"http://www.w3.org/2000/svg\"/>");
+        Write("index.yaml", """
+            title: Ebene Geometrie
+            description: Von Punkten bis zu Winkeln.
+            icon: icons/winkel.svg   # relativ
+            language: de
+            url: https://mathepedia.de/geometrie
+            home:
+              title: mathepedia.de
+              url: https://mathepedia.de/
+            footer: © T. S. · [Impressum](https://mathepedia.de/impressum)
+            colour: blau
+            """);
+        Assert.Equal(0, Program.ExportDirectory(folder));
+        index = File.ReadAllText(Path.Combine(folder, "index.html"));
+        Assert.Contains("<html lang=\"de\">", index);
+        Assert.Contains("<title>Ebene Geometrie</title>", index);
+        Assert.Contains("<p class=\"intro\">Von Punkten bis zu Winkeln.</p>", index);
+        Assert.Contains("<link rel=\"canonical\" href=\"https://mathepedia.de/geometrie/\">", index);
+        Assert.Contains("<a class=\"home\" href=\"https://mathepedia.de/\">← mathepedia.de</a>", index);
+        Assert.Contains("<footer>© T. S. · <a href=\"https://mathepedia.de/impressum\">Impressum</a></footer>", index);
+        Assert.Contains("<link rel=\"icon\" href=\"data:image/svg+xml;base64,", index);
+        kreis = File.ReadAllText(Path.Combine(folder, "Mehr", "Kreis.html"));
+        Assert.Contains("<html lang=\"de\">", kreis);
+        Assert.Contains("<link rel=\"canonical\" href=\"https://mathepedia.de/geometrie/Mehr/Kreis.html\">", kreis);
+        Assert.Contains("<meta property=\"og:title\" content=\"Kreis\">", kreis);
+        Assert.Contains("<meta property=\"og:site_name\" content=\"Ebene Geometrie\">", kreis);
+        Assert.Contains("\"home\":{\"title\":\"mathepedia.de\",\"href\":\"https://mathepedia.de/\"},\"footer\":\"\\u00A9 T. S. \\u00B7 [Impressum](https://mathepedia.de/impressum)\"", kreis);
+        string sitemap = File.ReadAllText(Path.Combine(folder, "sitemap.xml"));
+        Assert.Contains("<loc>https://mathepedia.de/geometrie/</loc>", sitemap);
+        Assert.Contains("<loc>https://mathepedia.de/geometrie/Grundlagen/Strecken-und-L%C3%A4ngen.html</loc>", sitemap);
+        // with assets the icon goes there
+        Assert.Equal(0, Program.ExportDirectory(folder, assets: true));
+        Assert.True(File.Exists(Path.Combine(folder, "assets", "winkel.svg")));
+        Assert.Matches("<link rel=\"icon\" href=\"\\.\\./assets/winkel\\.svg\\?v=[0-9a-f]{10}\">", File.ReadAllText(Path.Combine(folder, "Mehr", "Kreis.html")));
+        File.Delete(Path.Combine(folder, "index.yaml"));
 
         // two scripts with the same page
         Write(Path.Combine("20_Mehr", "30_Kreis.geo"), "point A = 1 1");

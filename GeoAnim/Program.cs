@@ -144,6 +144,38 @@ internal static partial class Program
             .ToList();
         int failed = 0;
         int conflicts = 0;
+        // what the book says about itself (index.yaml): title, icon, address, …
+        BookSettings settings = BookFile.Read(root, warning => Console.Error.WriteLine("Warning: " + warning), out string? bookError);
+        if (bookError != null)
+        {
+            Console.Error.WriteLine(bookError);
+            conflicts++;
+        }
+        // the icon: inside every page, or once in assets/
+        string? iconData = null;
+        string? iconName = null;
+        if (settings.IconFile != null)
+        {
+            byte[] icon = File.ReadAllBytes(settings.IconFile);
+            iconName = Path.GetFileName(settings.IconFile);
+            string mime = Path.GetExtension(iconName).ToLowerInvariant() switch
+            {
+                ".svg" => "image/svg+xml",
+                ".ico" => "image/x-icon",
+                _ => "image/png",
+            };
+            iconData = "data:" + mime + ";base64," + Convert.ToBase64String(icon);
+            if (assets)
+            {
+                string iconTarget = Path.Combine(target, AssetsFolder, iconName);
+                Directory.CreateDirectory(Path.GetDirectoryName(iconTarget)!);
+                if (!File.Exists(iconTarget) || !File.ReadAllBytes(iconTarget).AsSpan().SequenceEqual(icon))
+                {
+                    File.WriteAllBytes(iconTarget, icon);
+                }
+                iconName += "?v=" + Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(icon))[..10].ToLowerInvariant();
+            }
+        }
         // first all scripts: the keywords and names of every page are needed for the links in the others
         var compiled = new List<(string Source, string Page, AnimationData Animation)>();
         var pageOfSource = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -205,12 +237,17 @@ internal static partial class Program
             PageLink? Neighbour(int i) => position >= 0 && i >= 0 && i < book.Count
                 ? new PageLink(titles[book[i]], Keywords.RelativeAddress(page.Page, book[i]))
                 : null;
-            var navigation = new PageNavigation(Keywords.RelativeAddress(page.Page, "index.html"), Neighbour(position - 1), Neighbour(position + 1));
+            var navigation = new PageNavigation(Keywords.RelativeAddress(page.Page, "index.html"), Neighbour(position - 1), Neighbour(position + 1))
+            {
+                Home = settings.Home,
+                Footer = settings.Footer,
+            };
             string output = Path.Combine(target, page.Page.Replace('/', Path.DirectorySeparatorChar));
             Directory.CreateDirectory(Path.GetDirectoryName(output)!);
             // with assets: the player's files once for the whole book, in assets/ at its root
             string? assetsAddress = assets ? string.Concat(Enumerable.Repeat("../", page.Page.Count(c => c == '/'))) + AssetsFolder + "/" : null;
-            Write(animation, output, navigation, assetsAddress);
+            var head = new PageHead(settings.Language, assets && iconName != null ? assetsAddress + iconName : iconData, settings.AddressOf(page.Page), settings.Title);
+            Write(animation, output, navigation, assetsAddress, head);
             pages.Add((page.Page, animation));
         }
         Directory.CreateDirectory(target);
@@ -219,8 +256,25 @@ internal static partial class Program
             HtmlExporter.WriteAssets(Path.Combine(target, AssetsFolder));
         }
         string indexFile = Path.Combine(target, "index.html");
-        File.WriteAllText(indexFile, IndexPage.Create(Path.GetFileName(root), pages), new UTF8Encoding(false));
+        var indexHead = new PageHead(settings.Language, assets && iconName != null ? AssetsFolder + "/" + iconName : iconData, settings.AddressOf("index.html"), settings.Title);
+        File.WriteAllText(indexFile, IndexPage.Create(Path.GetFileName(root), pages, settings, indexHead), new UTF8Encoding(false));
         Console.WriteLine($"Written: {indexFile} ({book.Count} links)");
+        // for search engines: all pages with their address on the web
+        if (settings.Url != null)
+        {
+            string sitemap = Path.Combine(target, "sitemap.xml");
+            var xml = new StringBuilder("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n");
+            void Entry(string page, DateTime changed) => xml.Append("  <url><loc>").Append(System.Security.SecurityElement.Escape(settings.AddressOf(page)))
+                .Append("</loc><lastmod>").Append(changed.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)).Append("</lastmod></url>\n");
+            var changes = compiled.Where(p => book.Contains(p.Page)).Select(p => (p.Page, Changed: File.GetLastWriteTime(Path.Combine(root, p.Source)))).ToList();
+            Entry("index.html", changes.Count > 0 ? changes.Max(c => c.Changed) : DateTime.Now);
+            foreach ((string page, DateTime changed) in changes)
+            {
+                Entry(page, changed);
+            }
+            File.WriteAllText(sitemap, xml.Append("</urlset>\n").ToString(), new UTF8Encoding(false));
+            Console.WriteLine($"Written: {sitemap} ({changes.Count + 1} addresses)");
+        }
         Console.WriteLine($"{files.Count - failed} of {files.Count} files exported" + (failed > 0 ? $", {failed} with errors." : ".")
             + (conflicts > 0 ? $" {conflicts} keyword(s) given twice." : ""));
         return failed > 0 || conflicts > 0 ? 1 : 0;
@@ -239,7 +293,11 @@ internal static partial class Program
         string target = outputFolder == null ? root : Path.GetFullPath(outputFolder);
         using var server = new BookServer(target, LiveServer.FindFreePort(port));
         Console.WriteLine($"GeoAnim: {server.Url}  (serving {target}, exporting again when a script in {root} changes; Ctrl+C ends)");
-        using var watcher = new FileSystemWatcher(root, "*.geo") { IncludeSubdirectories = true, EnableRaisingEvents = true };
+        // the scripts, index.yaml and pictures (an icon); not the export itself
+        using var watcher = new FileSystemWatcher(root) { IncludeSubdirectories = true, EnableRaisingEvents = true };
+        string exportedAssets = Path.Combine(target, AssetsFolder) + Path.DirectorySeparatorChar;
+        bool Matters(string file) => !file.StartsWith(exportedAssets, StringComparison.OrdinalIgnoreCase)
+            && Path.GetExtension(file).ToLowerInvariant() is ".geo" or ".yaml" or ".svg" or ".png" or ".ico";
         // several changes at once (saving, renaming) give one export; one export at a time
         var exporting = new object();
         using var timer = new Timer(_ =>
@@ -258,7 +316,13 @@ internal static partial class Program
                 }
             }
         });
-        void Changed(object sender, FileSystemEventArgs e) => timer.Change(500, Timeout.Infinite);
+        void Changed(object sender, FileSystemEventArgs e)
+        {
+            if (Matters(e.FullPath))
+            {
+                timer.Change(500, Timeout.Infinite);
+            }
+        }
         watcher.Changed += Changed;
         watcher.Created += Changed;
         watcher.Deleted += Changed;
@@ -352,9 +416,9 @@ internal static partial class Program
         }
     }
 
-    private static void Write(AnimationData animation, string output, PageNavigation? navigation = null, string? assets = null)
+    private static void Write(AnimationData animation, string output, PageNavigation? navigation = null, string? assets = null, PageHead? head = null)
     {
-        File.WriteAllText(output, HtmlExporter.Export(animation, navigation, assets), new UTF8Encoding(false));
+        File.WriteAllText(output, HtmlExporter.Export(animation, navigation, assets, head), new UTF8Encoding(false));
         Console.WriteLine($"Written: {output} ({animation.Steps.Count} steps, {animation.Duration / 1000:0.0} s)");
     }
 

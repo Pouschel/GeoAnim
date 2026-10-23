@@ -1052,7 +1052,11 @@
     if (!book) {
       return
     }
-    const entries = [['↑', 'Übersicht', book.index]]
+    const entries = []
+    if (book.home) {
+      entries.push(['⌂', book.home.title, book.home.href])
+    }
+    entries.push(['↑', 'Übersicht', book.index])
     if (book.previous) {
       entries.push(['←', book.previous.title, book.previous.href])
     }
@@ -1071,6 +1075,11 @@
       box.appendChild(link)
     }
     box.hidden = false
+    if (book.footer) {
+      const footer = $('menu-footer')
+      setRichText(footer, book.footer)
+      footer.hidden = false
+    }
   }
 
   // ------------------------------------------------------------------ the list of steps

@@ -86,11 +86,18 @@ public static partial class HtmlExporter
     /// files in that folder (relative address, e.g. "../assets/"; see <see cref="WriteAssets"/>), so that a book on a
     /// web server loads them once for all its pages.
     /// </summary>
-    public static string Export(AnimationData animation, PageNavigation? navigation = null, string? assets = null)
+    public static string Export(AnimationData animation, PageNavigation? navigation = null, string? assets = null, PageHead? head = null)
     {
         string html = ViewerFiles.ReadText("player.html");
-        html = TitlePattern().Replace(html, "<title>" + WebUtility.HtmlEncode(animation.Title == null ? "GeoAnim" : PlainText(animation.Title)) + "</title>"
-            + "\n    <meta name=\"description\" content=\"" + WebUtility.HtmlEncode(DescriptionOf(animation)) + "\">", 1);
+        string title = animation.Title == null ? "GeoAnim" : PlainText(animation.WithFinalNumbers(animation.Title));
+        string description = DescriptionOf(animation);
+        html = TitlePattern().Replace(html, "<title>" + WebUtility.HtmlEncode(title) + "</title>"
+            + "\n    <meta name=\"description\" content=\"" + WebUtility.HtmlEncode(description) + "\">"
+            + (head == null ? "" : HeadTags(head, title, description)), 1);
+        if (head?.Language != null)
+        {
+            html = html.Replace("<html lang=\"en\">", "<html lang=\"" + WebUtility.HtmlEncode(head.Language) + "\">", StringComparison.Ordinal);
+        }
         html = StylesheetPattern().Replace(html, m => assets == null
             ? "<style>\n" + InlineCss(m.Groups[1].Value) + "</style>"
             : $"<link rel=\"stylesheet\" href=\"{assets}{m.Groups[1].Value}?v={Version(m.Groups[1].Value)}\">");
@@ -102,6 +109,32 @@ public static partial class HtmlExporter
                 ? "    <script>\n" + EscapeScript(ViewerFiles.ReadText(m.Groups[1].Value)) + "</script>"
                 : $"    <script src=\"{assets}{m.Groups[1].Value}?v={Version(m.Groups[1].Value)}\"></script>"));
         return html;
+    }
+
+    /// <summary>
+    /// The tags of a page's head in a book: icon, canonical address and the preview when the page is shared (Open Graph).
+    /// </summary>
+    internal static string HeadTags(PageHead head, string title, string description)
+    {
+        var tags = new System.Text.StringBuilder();
+        string Attribute(string value) => WebUtility.HtmlEncode(value);
+        if (head.Icon != null)
+        {
+            tags.Append("\n    <link rel=\"icon\" href=\"").Append(Attribute(head.Icon)).Append("\">");
+        }
+        if (head.Address != null)
+        {
+            tags.Append("\n    <link rel=\"canonical\" href=\"").Append(Attribute(head.Address)).Append("\">");
+            tags.Append("\n    <meta property=\"og:type\" content=\"article\">");
+            tags.Append("\n    <meta property=\"og:url\" content=\"").Append(Attribute(head.Address)).Append("\">");
+            tags.Append("\n    <meta property=\"og:title\" content=\"").Append(Attribute(title)).Append("\">");
+            tags.Append("\n    <meta property=\"og:description\" content=\"").Append(Attribute(description)).Append("\">");
+            if (head.SiteName != null)
+            {
+                tags.Append("\n    <meta property=\"og:site_name\" content=\"").Append(Attribute(head.SiteName)).Append("\">");
+            }
+        }
+        return tags.ToString();
     }
 
     /// <summary>

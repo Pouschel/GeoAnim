@@ -10,7 +10,20 @@ Animierte geometrische Konstruktionen aus einer kleinen Skriptsprache (oder aus 
   - **Links:** Links zwischen den Seiten schreibt man mit den Namen der Skripte (`[Strahl](30_Strahl-und-Gerade.html#2)` – so öffnet sie auch die VS-Code-Vorschau); der Export setzt die Namen der Seiten ein. Die Schlüsselwörter der Seiten (`keyword`, siehe unten) werden in den anderen Seiten automatisch verlinkt.
   - **Blättern:** Im Menü jeder Seite stehen über den Schritten „Übersicht“, die vorige und die nächste Seite in Buchreihenfolge (über Ordnergrenzen hinweg); unter dem letzten Schritt steht zusätzlich „Weiter: …“ mit der nächsten Seite.
   - **Mit `-assets`:** Statt dass jede Seite Player, Stylesheets und Schriften enthält (etwa 140 KB je Seite), liegen diese einmal im Ordner `assets` an der Wurzel des Buchs, und die Seiten verweisen darauf (dann nur wenige KB je Seite) – gedacht für den Webserver, wo der Browser die Dateien nur einmal lädt. Die Verweise tragen einen Fingerabdruck (`player.js?v=…`), so dass nach einer neuen Version von GeoAnim kein Browser die alte aus seinem Zwischenspeicher nimmt. Ohne `-assets` bleibt jede Seite für sich allein lauffähig.
-  - **Mit `-serve`:** Nach dem Export läuft ein Webserver auf `http://localhost:8080/` (oder dem angegebenen Port; ist er belegt, der nächste freie) mit dem Ausgabeordner als Wurzel, ohne Zwischenspeicher. Ändert sich ein Skript im Quellordner, exportiert er neu – ein Neuladen im Browser zeigt dann den aktuellen Stand. Ein Browser wird nicht geöffnet; Strg+C beendet.
+  - **Mit `-serve`:** Nach dem Export läuft ein Webserver auf `http://localhost:8080/` (oder dem angegebenen Port; ist er belegt, der nächste freie) mit dem Ausgabeordner als Wurzel, ohne Zwischenspeicher. Ändert sich ein Skript, die `index.yaml` oder ein Bild im Quellordner, exportiert er neu – ein Neuladen im Browser zeigt dann den aktuellen Stand. Ein Browser wird nicht geöffnet; Strg+C beendet.
+  - **`index.yaml`** im Quellordner beschreibt das Buch (alle Einträge sind freiwillig; unbekannte und eine fehlende Bilddatei werden als Warnung gemeldet):
+    ```yaml
+    title: Ebene Geometrie in Animationen      # Titel der Übersicht (sonst der Ordnername)
+    description: Von Punkten und Strecken …    # Einleitung und Beschreibung der Übersicht
+    icon: icons/winkel.svg                     # Symbol im Browser-Tab (svg, png, ico; relativ zur index.yaml)
+    language: de                               # Sprache aller Seiten (<html lang="de">)
+    url: https://mathepedia.de/geometrie/      # Adresse des Buchs im Netz
+    home:                                      # Rückweg zur eigenen Website: im Menü und oben auf der Übersicht
+      title: mathepedia.de
+      url: https://mathepedia.de/
+    footer: © … · [Impressum](https://…) · [Datenschutz](https://…)   # unter der Übersicht und am Ende des Menüs
+    ```
+    Das Icon steckt ohne `-assets` in jeder Seite (als Daten-URL), mit `-assets` liegt es in `assets/`. Mit `url` bekommt jede Seite ihre Adresse als `canonical`-Link und eine Vorschau für das Teilen in Messengern und sozialen Netzen (Open Graph: Titel, Beschreibung, Name des Buchs), und es entsteht eine `sitemap.xml` mit allen Seiten (Datum: letzte Änderung des Skripts) für Suchmaschinen. Kapitelüberschriften der Übersicht kommen weiter aus den Ordnernamen.
   - Seiten mit alten Namen im Ausgabeordner (etwa nach dem Umbenennen) löscht der Export nicht.
                
 Gezeichnet wird mit SVG, also in jeder Größe scharf. Formeln stehen in AsciiMath zwischen `$…$` und werden beim Übersetzen mit MathJax zu SVG-Pfaden; der Export enthält nur die Zeichen, die vorkommen. Die Schrift ist STIX Two (Text und Formeln aus einer Familie). Abhängigkeiten: siehe [Lizenz](#lizenz).

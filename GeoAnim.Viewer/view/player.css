@@ -242,6 +242,24 @@ h1 a {
   text-align: right;
 }
 
+/* the footer of a book (imprint, privacy) at the end of the menu */
+#menu-footer {
+  margin: 12px 0 0;
+  padding: 10px 16px 0;
+  border-top: 1px solid #e3e6eb;
+  color: #6b7280;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+#menu-footer[hidden] {
+  display: none;
+}
+
+#menu-footer a {
+  color: #1565c0;
+}
+
 /* below the last step: the next page of the book */
 #next-page {
   box-sizing: border-box;

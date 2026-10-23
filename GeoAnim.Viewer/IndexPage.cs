@@ -10,18 +10,31 @@ namespace GeoAnim.Viewer;
 /// </summary>
 public static partial class IndexPage
 {
-    /// <summary>The index for the pages in book order (paths relative to the index, with "/").</summary>
-    public static string Create(string title, IEnumerable<(string Path, AnimationData Animation)> pages)
+    /// <summary>
+    /// The index for the pages in book order (paths relative to the index, with "/"); its title, description, way back
+    /// home and footer from <paramref name="settings"/> (else the folder's name), its icon and address from <paramref name="head"/>.
+    /// </summary>
+    public static string Create(string folderName, IEnumerable<(string Path, AnimationData Animation)> pages, BookSettings? settings = null, PageHead? head = null)
     {
+        settings ??= BookSettings.None;
+        string title = settings.Title ?? folderName;
         var html = new StringBuilder();
+        html.Append("<!doctype html>\n<html lang=\"").Append(Encode(settings.Language ?? "de")).Append("\">\n");
         html.Append("""
-            <!doctype html>
-            <html lang="de">
               <head>
                 <meta charset="utf-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1">
+
             """);
         html.Append("    <title>").Append(Encode(title)).Append("</title>\n");
+        if (settings.Description != null)
+        {
+            html.Append("    <meta name=\"description\" content=\"").Append(Encode(settings.Description)).Append("\">\n");
+        }
+        if (head != null)
+        {
+            html.Append(HtmlExporter.HeadTags(head, title, settings.Description ?? title).TrimStart('\n')).Append('\n');
+        }
         html.Append("""
                 <style>
                   body { max-width: 760px; margin: 0 auto; padding: 24px 16px 48px; background: #eceef2; color: #222;
@@ -33,11 +46,23 @@ public static partial class IndexPage
                   a { color: #1565c0; font-size: 19px; text-decoration: none; }
                   a:hover { text-decoration: underline; }
                   p { margin: 4px 0 0; color: #5c6370; font-size: 15px; }
+                  .home { display: inline-block; margin: 0 0 10px; font-size: 16px; }
+                  .intro { margin: 0 0 18px; color: #333; font-size: 18px; }
+                  footer { margin: 36px 0 0; color: #6b7280; font-size: 14px; text-align: center; }
+                  footer a { font-size: 14px; }
                 </style>
               </head>
               <body>
             """);
+        if (settings.Home != null)
+        {
+            html.Append("    <a class=\"home\" href=\"").Append(Encode(settings.Home.Href)).Append("\">← ").Append(Encode(settings.Home.Title)).Append("</a>\n");
+        }
         html.Append("    <h1>").Append(Encode(title)).Append("</h1>\n");
+        if (settings.Description != null)
+        {
+            html.Append("    <p class=\"intro\">").Append(Inline(settings.Description)).Append("</p>\n");
+        }
         foreach (var folder in pages
             .Where(page => !page.Animation.IsEmpty)
             .GroupBy(page => page.Path.Contains('/') ? page.Path.Substring(0, page.Path.LastIndexOf('/')) : string.Empty))
@@ -61,11 +86,26 @@ public static partial class IndexPage
             }
             html.Append("    </ol>\n");
         }
+        if (settings.Footer != null)
+        {
+            html.Append("    <footer>").Append(Inline(settings.Footer)).Append("</footer>\n");
+        }
         html.Append("  </body>\n</html>\n");
         return html.ToString();
     }
 
-    private static string Encode(string text) => WebUtility.HtmlEncode(text);
+    // only what HTML needs (umlauts and © stay as they are: the page is UTF-8)
+    private static string Encode(string text) =>
+        text.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;").Replace("\"", "&quot;");
+
+    // a line with Markdown links ([text](address), <address>) and **bold** as HTML; everything else as text
+    private static string Inline(string text)
+    {
+        string html = Encode(text);
+        html = Regex.Replace(html, @"\[([^\]]*)\]\(([^)\s]+)\)", m => $"<a href=\"{m.Groups[2].Value}\">{m.Groups[1].Value}</a>");
+        html = Regex.Replace(html, @"&lt;((?:https?://|mailto:)[^\s&]+)&gt;", m => $"<a href=\"{m.Groups[1].Value}\">{m.Groups[1].Value}</a>");
+        return Regex.Replace(html, @"\*\*([^*]+)\*\*", "<strong>$1</strong>");
+    }
 
     /// <summary>The name of a page in the overview and the navigation: its title as plain text, else its file name.</summary>
     public static string TitleOf(string path, AnimationData animation) =>
