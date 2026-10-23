@@ -62,7 +62,7 @@ text gleichlang = "$|MP| = |MA| = |MB| = |MC| = r$" at 0 -5.3
 
 step Näher am Mittelpunkt
 info Nicht jeder Punkt liegt auf der Kreislinie.
-| $Q$ ist näher an $M$ als die Kreispunkte: $|MQ| < r$.
+| $Q$ ist näher an $M$ als die Kreispunkte: $|MQ| < |MP| = r$.
 | Deshalb gehört $Q$ nicht zur Kreislinie.
 
 together
@@ -70,22 +70,26 @@ together
 end
 point Q = 0 1.8 opt_h3 punktname
 segment MQ = M Q opt_h3
-text naeher = "$|MQ| < r$" at 0 -5.3
+text naeher = "$|MQ| < |MP| = r$" at 0 -5.3
 
 step Weiter vom Mittelpunkt entfernt
-info Nun liegt $Q$ weiter von $M$ entfernt als die Kreispunkte: $|MQ| > r$.
+info Nun liegt $Q$ weiter von $M$ entfernt als die Kreispunkte: 
+| $|MQ| > |MP| = r$.
 | Auch hier gehört $Q$ nicht zur Kreislinie.
 |
 | Zur Kreislinie gehören **alle und nur die Punkte**, deren Abstand von $M$ genau $r$ beträgt.
 
 hide naeher
 move Q to 0 5.2
-text weiter = "$|MQ| > r$" at 0 -5.3
+text weiter = "$|MQ| > |MP| = r$" at 0 -5.3
 
+#todo Zirkelbild einfügen
 step Der Zirkel hält den Abstand fest
 keyword Zirkel/s/n
-info Beim Zirkel bleibt die Spitze im Mittelpunkt $M$.
-| Der Zeichenstift bewegt sich um $M$. Die eingestellte Zirkelöffnung hält seinen Abstand zu $M$ fest.
+info Mit einem **Zirkel** kann man einen Kreis konstruieren.
+| Die Spitze bleibt im Mittelpunkt $M$.
+| Der Zeichenstift bewegt sich um $M$. 
+| Die eingestellte Zirkelöffnung hält seinen Abstand zu $M$ fest.
 | So zeichnet der Stift einen Kreis mit dem Radius $r$.
 
 together
@@ -100,5 +104,5 @@ text stift = "Zeichenstift" at P offset 0.35 0.3
 circle zirkelspur = center M radius 3.5 opt_gg hidden
 together
   show zirkelspur umlauf
-  move P to 720 umlauf
+  move P to 360 umlauf
 end
