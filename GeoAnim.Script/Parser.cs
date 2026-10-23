@@ -38,12 +38,34 @@ internal sealed class Parser
     // names given to objects so far (a var cannot take one of them, and the other way round)
     private readonly HashSet<string> objectNames = new(StringComparer.Ordinal);
 
-    private Parser(List<Token> tokens) => this.tokens = tokens;
+    // for an editor: the names defined so far (lines of the source), and the source's lines for their text
+    private readonly List<ScriptDefinition>? definitions;
+    private readonly string[] lines;
 
-    public static List<Statement> Parse(string source)
+    private Parser(List<Token> tokens, string source, List<ScriptDefinition>? definitions)
     {
-        var parser = new Parser(Lexer.Tokenize(source));
+        this.tokens = tokens;
+        this.definitions = definitions;
+        lines = definitions == null ? [] : source.Split('\n');
+    }
+
+    public static List<Statement> Parse(string source) => Parse(source, null);
+
+    /// <summary>Parses; with <paramref name="definitions"/> also collects the names defined (as far as it gets).</summary>
+    public static List<Statement> Parse(string source, List<ScriptDefinition>? definitions)
+    {
+        var parser = new Parser(Lexer.Tokenize(source), source, definitions);
         return parser.ParseBlock(null, out _);
+    }
+
+    // a name defined: its line as the text, or the text given
+    private void Defined(string kind, NameRef name, string? text = null)
+    {
+        if (definitions != null)
+        {
+            text ??= name.Line >= 1 && name.Line <= lines.Length ? lines[name.Line - 1].Trim() : name.Name;
+            definitions.Add(new ScriptDefinition(name.Name, kind, text, null, name.Line, name.Column));
+        }
     }
 
     private Token Current => tokens[position];
@@ -141,6 +163,7 @@ internal sealed class Parser
                     }
                     ExpectSymbol("=");
                     texts[name.Name] = Next().Text;
+                    Defined("set", name, "set " + name.Name + " = " + texts[name.Name]);
                     ExpectLineEnd();
                     return null;
                 }
@@ -372,6 +395,7 @@ internal sealed class Parser
             throw Error(Current, $"The var {name.Name} needs options, like \"var {name.Name} color red width 3\".");
         }
         vars[name.Name] = values;
+        Defined("var", name);
     }
 
     private ViewStatement ParseView(Token word)
@@ -705,6 +729,7 @@ internal sealed class Parser
             throw Error(name, $"{name.Name} is already the name of a text (\"set\").");
         }
         objectNames.Add(name.Name);
+        Defined("object", name);
     }
 
 

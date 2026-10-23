@@ -108,3 +108,10 @@ internal sealed record OptionList(IReadOnlyList<OptionValue> Values)
 
 /// <summary>An option; <paramref name="Var"/> names the var it came from (such options are skipped where they do not fit).</summary>
 internal sealed record OptionValue(string Name, object? Value, int Line, int Column, string? Var = null);
+
+/// <summary>
+/// A name a script defines, for an editor (tooltip, go to definition): a var, a text ("set") or an object; its text (the
+/// line of the definition, for a text the text itself) and where it is (<see cref="File"/>: full path, null for a script
+/// given as text; line and column of the name).
+/// </summary>
+public sealed record ScriptDefinition(string Name, string Kind, string Text, string? File, int Line, int Column);

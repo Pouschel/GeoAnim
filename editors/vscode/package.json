@@ -1,7 +1,7 @@
 {
   "name": "geoanim-geo",
   "displayName": "GeoAnim (.geo)",
-  "description": "GeoAnim scripts (.geo): syntax highlighting, live preview, errors in the editor",
+  "description": "GeoAnim scripts (.geo): syntax highlighting, live preview, errors in the editor, tooltips and go to definition",
   "version": "0.2.0",
   "publisher": "mathepedia",
   "license": "MIT",
@@ -73,7 +73,7 @@
         "geoanim.path": {
           "type": "string",
           "default": "",
-          "markdownDescription": "Pfad zu `geoanim.exe` (oder `geoanim.dll`). Leer: ein Build `GeoAnim/bin/Debug/net10.0` im Arbeitsbereich oder über der geöffneten Datei, sonst `geoanim` aus dem Suchpfad. `${workspaceFolder}` ist erlaubt."
+          "markdownDescription": "Pfad zu `geoanim.exe` (oder `geoanim.dll`) oder zum Ordner des GeoAnim-Repositorys (dann gilt der neuere Build darin). Leer: der neuere Build `GeoAnim/bin/Debug|Release/net10.0` im Arbeitsbereich oder in einem Ordner darüber, auch in einem Ordner `GeoAnim` daneben, sonst `geoanim` aus dem Suchpfad. `${workspaceFolder}` ist erlaubt."
         }
       }
     }

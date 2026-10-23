@@ -23,6 +23,28 @@ public static class ScriptCompiler
         }
     }
 
+    /// <summary>
+    /// The names the script defines (vars, texts, objects; also in included files) with their text and place, for an
+    /// editor; as far as the script can be read (up to a mistake in it).
+    /// </summary>
+    public static List<ScriptDefinition> Definitions(ScriptSource source)
+    {
+        var definitions = new List<ScriptDefinition>();
+        try
+        {
+            Parser.Parse(source.Text, definitions);
+        }
+        catch (ScriptError)
+        {
+            // the names up to the mistake
+        }
+        return definitions.Select(d =>
+        {
+            (string? file, int line) = source.OriginOf(d.Line);
+            return d with { File = file, Line = line };
+        }).ToList();
+    }
+
     /// <summary>Compiles the script into a construction that is not yet built.</summary>
     public static Construction CompileConstruction(string source) => CompileConstruction(ScriptSource.FromText(source));
 

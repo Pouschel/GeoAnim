@@ -185,6 +185,18 @@ public sealed class CliTests : IDisposable
         Assert.Equal(JsonValueKind.Null, answer.GetProperty("animation").ValueKind);
         Assert.Equal((styles, 2), (answer.GetProperty("errors")[0].GetProperty("file").GetString(), answer.GetProperty("errors")[0].GetProperty("line").GetInt32()));
 
+        // the names defined, for tooltips and "go to definition": also in included files, and up to a mistake
+        File.WriteAllText(styles, "default point size 6\nvar dick width 5 color red");
+        answer = Ask(new { id = 12, type = "compile", file = main, text = "include styles.geo\nset t = Ein\n| Text\npoint A = 1 1\n  segment s = A A dick\npont" });
+        var definitions = answer.GetProperty("definitions").EnumerateArray()
+            .Select(d => (d.GetProperty("name").GetString(), d.GetProperty("kind").GetString(), d.GetProperty("text").GetString(),
+                d.GetProperty("file").GetString(), d.GetProperty("line").GetInt32(), d.GetProperty("column").GetInt32()))
+            .ToList();
+        Assert.Equal(
+            [("dick", "var", "var dick width 5 color red", styles, 2, 5), ("t", "set", "set t = Ein Text", main, 2, 5),
+             ("A", "object", "point A = 1 1", main, 4, 7), ("s", "object", "segment s = A A dick", main, 5, 11)],
+            definitions);
+
         // the player page for the preview: everything inside, no animation, waiting for messages
         string html = Ask(new { id = 10, type = "player" }).GetProperty("html").GetString()!;
         Assert.Contains("window.GEO_EMBEDDED = true;", html);

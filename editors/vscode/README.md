@@ -34,11 +34,15 @@ mklink /J "%USERPROFILE%\.vscode\extensions\geoanim-geo" "%CD%\editors\vscode"
   Vorschau erscheint der Fehler über der letzten guten Animation.
 - **Links** in Titel und Beschreibung: `[Satz 1](Prop1.html)` öffnet `Prop1.geo` im Editor, Links auf Webseiten den
   Browser.
+- **Tooltip und Definition:** Fährt die Maus über den Namen einer Var, eines Textes (`set`) oder eines Objekts, zeigt
+  ein Tooltip seine Definition (die Zeile, beim Text den Text) und woher sie stammt, auch aus eingebundenen Dateien.
+  F12 oder Strg+Klick springt zur Definition, Alt+F12 blendet sie zum Ändern an Ort und Stelle ein. Solange das Skript
+  einen Fehler hat, gelten die zuletzt vollständig gelesenen Definitionen.
 - Koordinaten unter der Maus und Umschalt+Klick zum Kopieren gibt es wie bei `geoanim serve`.
 
 Die Arbeit macht `geoanim daemon`, einmal im Hintergrund gestartet (MathJax startet daher nur einmal). Gefunden wird
 `geoanim` so: die Einstellung `geoanim.path`, sonst der neuere der Builds `GeoAnim\bin\Debug\net10.0\geoanim.exe` und
-`…\Release\…` im Arbeitsbereich oder in einem Ordner über der geöffneten Datei, sonst `geoanim` aus dem Suchpfad. Ein Build
+`…\Release\…` im Arbeitsbereich oder in einem Ordner über der geöffneten Datei – auch in einem Ordner `GeoAnim` daneben, so dass Skripte in einem eigenen Repository neben dem Code (`C:\Code\GeoBook` neben `C:\Code\GeoAnim`) ihn ebenfalls finden –, sonst `geoanim` aus dem Suchpfad. Liegt der Code woanders, zeigt `geoanim.path` auf den Ordner des GeoAnim-Repositorys (oder direkt auf `geoanim.exe`). Ein Build
 läuft als Kopie aus dem Temp-Ordner, damit Visual Studio weiter bauen kann; nach einem neuen Build (Debug oder Release)
 startet die Erweiterung den neuesten von selbst, und die Vorschau lädt nach. „GeoAnim: Neu starten“ startet `geoanim` von Hand neu; Meldungen stehen im Ausgabefenster „GeoAnim“.
 

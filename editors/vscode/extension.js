@@ -26,6 +26,7 @@ let previewStep = null
 const lastResults = new Map()
 const timers = new Map()
 const reported = new Map()
+const definitions = new Map()
 
 // ------------------------------------------------------------------ finding and starting geoanim
 
@@ -44,15 +45,31 @@ function buildsIn (folder) {
   return found.sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs)
 }
 
-// the geoanim to run: the setting geoanim.path, else the newest build in the workspace (or above the file), else
-// geoanim on PATH
+// the builds in the repository folder itself or in a folder GeoAnim beside it (scripts kept in a repository of their
+// own next to the code: C:\Code\GeoBook and C:\Code\GeoAnim)
+const buildsAt = folder => {
+  const own = buildsIn(folder)
+  return own.length > 0 ? own : buildsIn(path.join(folder, 'GeoAnim'))
+}
+
+// the geoanim to run: the setting geoanim.path (a program, or the folder of the GeoAnim repository), else the newest
+// build in the workspace or above it (or above the file), also in a GeoAnim repository beside them, else geoanim on PATH
 function findProgram () {
   watchedBuilds = []
   const folders = (vscode.workspace.workspaceFolders || []).map(f => f.uri.fsPath)
   let setting = vscode.workspace.getConfiguration('geoanim').get('path', '').trim()
   if (setting) {
     setting = setting.replace(/\$\{workspaceFolder\}/g, folders[0] || '')
-    return path.isAbsolute(setting) || !setting.includes(path.sep) ? setting : path.resolve(folders[0] || '', setting)
+    const resolved = path.isAbsolute(setting) || !setting.includes(path.sep) ? setting : path.resolve(folders[0] || '', setting)
+    if (fs.existsSync(resolved) && fs.statSync(resolved).isDirectory()) {
+      const builds = buildsAt(resolved)
+      if (builds.length > 0) {
+        watchedBuilds = builds
+        return builds[0]
+      }
+      output.appendLine(`Kein Build von geoanim in ${resolved} gefunden (gesucht: GeoAnim\\bin\\Debug|Release\\net10.0).`)
+    }
+    return resolved
   }
   const starts = [...folders]
   const active = vscode.window.activeTextEditor
@@ -61,7 +78,7 @@ function findProgram () {
   }
   for (const start of starts) {
     for (let folder = start; ; folder = path.dirname(folder)) {
-      const builds = buildsIn(folder)
+      const builds = buildsAt(folder)
       if (builds.length > 0) {
         // both builds are watched: a new build of either runs from then on
         watchedBuilds = builds
@@ -247,6 +264,7 @@ async function compile (document) {
     return
   }
   lastResults.set(document.uri.toString(), result)
+  rememberDefinitions(document, result)
   report(document, result.errors)
   if (document === previewDocument) {
     // while writing: the animation shows the end of the step the cursor is in (its end may have moved)
@@ -280,6 +298,61 @@ function report (document, errors) {
     diagnostics.set(uri, items)
   }
   reported.set(key, [...byFile.values()].map(entry => entry.uri))
+}
+
+// ------------------------------------------------------------------ tooltips and "go to definition"
+
+// the names the script defines (vars, texts, objects) from geoanim: [{ name, kind, text, file, line, column }]. While
+// the script has a mistake, the list may end before it: then the last complete one stays
+function rememberDefinitions (document, result) {
+  const key = document.uri.toString()
+  const fresh = result.definitions || []
+  const old = definitions.get(key) || []
+  if (result.errors.length === 0 || fresh.length >= old.length) {
+    definitions.set(key, fresh)
+  }
+}
+
+const NAME = /[A-Za-z_][A-Za-z0-9_]*'*/
+
+// the definition of the name at the position: the last one before it in this file, else the last one at all
+function definitionAt (document, position) {
+  const range = document.getWordRangeAtPosition(position, NAME)
+  if (!range) {
+    return null
+  }
+  const name = document.getText(range)
+  const all = (definitions.get(document.uri.toString()) || []).filter(d => d.name === name)
+  if (all.length === 0) {
+    return null
+  }
+  const here = all.filter(d => isThisFile(document, d.file) && d.line - 1 <= position.line)
+  return { definition: (here.length > 0 ? here : all)[(here.length > 0 ? here : all).length - 1], range }
+}
+
+const isThisFile = (document, file) => !file || path.resolve(file).toLowerCase() === document.uri.fsPath.toLowerCase()
+
+function hover (document, position) {
+  const found = definitionAt(document, position)
+  if (!found) {
+    return null
+  }
+  const { definition, range } = found
+  const text = new vscode.MarkdownString()
+  text.appendCodeblock(definition.text, 'geo')
+  const kind = { var: 'Var', set: 'Text', object: 'Objekt' }[definition.kind] || definition.kind
+  text.appendMarkdown(`${kind}, ${isThisFile(document, definition.file) ? '' : path.basename(definition.file) + ', '}Zeile ${definition.line}`)
+  return new vscode.Hover(text, range)
+}
+
+function definitionLocation (document, position) {
+  const found = definitionAt(document, position)
+  if (!found) {
+    return null
+  }
+  const { definition } = found
+  const uri = definition.file ? vscode.Uri.file(definition.file) : document.uri
+  return new vscode.Location(uri, new vscode.Position(definition.line - 1, Math.max(0, definition.column - 1)))
 }
 
 // ------------------------------------------------------------------ preview
@@ -460,6 +533,8 @@ function activate (context) {
   context.subscriptions.push(output, diagnostics,
     vscode.commands.registerCommand('geoanim.preview', openPreview),
     vscode.commands.registerCommand('geoanim.restart', restart),
+    vscode.languages.registerHoverProvider('geo', { provideHover: hover }),
+    vscode.languages.registerDefinitionProvider('geo', { provideDefinition: definitionLocation }),
     vscode.workspace.onDidOpenTextDocument(document => { if (isGeo(document)) compile(document) }),
     vscode.workspace.onDidChangeTextDocument(event => { if (isGeo(event.document)) schedule(event.document) }),
     // a saved file may be included or used by others
@@ -479,6 +554,7 @@ function activate (context) {
       }
       reported.delete(key)
       lastResults.delete(key)
+      definitions.delete(key)
     }),
     vscode.window.onDidChangeActiveTextEditor(editor => {
       if (editor && isGeo(editor.document) && preview && editor.document !== previewDocument) {

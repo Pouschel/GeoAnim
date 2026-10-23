@@ -116,6 +116,10 @@ public sealed partial class ScriptSource
     private ScriptError Error(string? file, int line, int column, string message) =>
         new(line, column, message, file == null ? null : Display(file));
 
+    /// <summary>The file (full path; <see cref="MainFile"/> for the script itself) and line a line of <see cref="Text"/> comes from.</summary>
+    public (string? File, int Line) OriginOf(int line) =>
+        line >= 1 && line <= origins.Count ? (origins[line - 1].File ?? MainFile, origins[line - 1].Line) : (MainFile, line);
+
     /// <summary>The folder of the file a line of <see cref="Text"/> comes from (for paths in it).</summary>
     internal string DirectoryOf(int line) =>
         line >= 1 && line <= origins.Count && origins[line - 1].File is { } file ? Path.GetDirectoryName(file)! : baseDirectory;
