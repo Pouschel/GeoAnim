@@ -93,5 +93,10 @@ public sealed class GeoAngle : GeoObject
         sector.Animate("fill", span, (Options.Fill ?? color).ToHex());
         sector.Animate("fillOpacity", span, Options.FillOpacity ?? Defaults.FillOpacity);
         sector.Animate("size", span, Options.LabelSize ?? Defaults.LabelSize);
+        if (Options.Arrow != Arrow.None)
+        {
+            // on the arc: at its end (counterclockwise), at its start (clockwise) or both
+            sector.Animate("arrow", span, Options.Arrow.ToString().ToLowerInvariant());
+        }
     }
 }

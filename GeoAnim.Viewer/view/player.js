@@ -317,6 +317,26 @@
       parts.fill.setAttribute('d', `M ${cx} ${cy} L ${x0} ${y0} ${arc} Z`)
       parts.arc.setAttribute('d', `M ${x0} ${y0} ${arc}`)
     }
+    // arrowheads on the arc: at its end (counterclockwise), at its start (clockwise) or both; the arc ends inside them
+    const atEnd = (v.arrow === 'end' || v.arrow === 'both') && sweep >= 0.01
+    const atStart = (v.arrow === 'start' || v.arrow === 'both') && sweep >= 0.01
+    const head = Math.min((4 * v.width + 6) * unit, radius * Math.min(sweep, 359.99) * Math.PI / 180 / (atEnd && atStart ? 2 : 1))
+    const cut = radius > 0 ? head / radius * 180 / Math.PI : 0
+    const arcHead = (name, wanted, tipAngle, fromAngle) => {
+      const [tx, ty] = polar(cx, cy, tipAngle, radius)
+      const [fx, fy] = polar(cx, cy, fromAngle, radius)
+      const length = Math.hypot(tx - fx, ty - fy) || 1
+      arrowHead(element, name, wanted, tx, ty, (tx - fx) / length, (ty - fy) / length, head, v.color)
+    }
+    arcHead('endHead', atEnd, v.start + sweep, v.start + sweep - cut)
+    arcHead('startHead', atStart, v.start, v.start + cut)
+    if ((atEnd || atStart) && sweep < 359.99) {
+      const a0 = v.start + (atStart ? 0.8 * cut : 0)
+      const a1 = v.start + sweep - (atEnd ? 0.8 * cut : 0)
+      const [x0, y0] = polar(cx, cy, a0, radius)
+      const [x1, y1] = polar(cx, cy, a1, radius)
+      parts.arc.setAttribute('d', a1 > a0 ? `M ${x0} ${y0} A ${radius} ${radius} 0 ${a1 - a0 > 180 ? 1 : 0} 0 ${x1} ${y1}` : '')
+    }
     parts.fill.setAttribute('fill', v.fill)
     parts.fill.setAttribute('fill-opacity', v.fillOpacity)
     parts.arc.setAttribute('stroke', v.color)

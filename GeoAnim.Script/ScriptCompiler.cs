@@ -354,7 +354,7 @@ public static class ScriptCompiler
             "text" => ["color", "size", "offset", "draw"],
             "segment" or "ray" => ["color", "width", "label", "labelsize", "labelpos", "offset", "arrow", "draw"],
             "line" => ["color", "width", "label", "labelsize", "labelpos", "offset", "draw"],
-            "angle" => ["color", "width", "fill", "opacity", "label", "labelsize", "radius", "draw"],
+            "angle" => ["color", "width", "fill", "opacity", "label", "labelsize", "radius", "arrow", "draw"],
             _ => ["color", "width", "draw"],
         };
 

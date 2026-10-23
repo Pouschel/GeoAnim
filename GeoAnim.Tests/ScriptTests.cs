@@ -509,6 +509,10 @@ public class ScriptTests
         string[] arrows = primitives.EnumerateArray().Where(p => p.GetProperty("type").GetString() == "line")
             .Select(p => p.GetProperty("tracks").TryGetProperty("arrow", out JsonElement arrow) ? arrow[0][1].GetString()! : "-").ToArray();
         Assert.Equal(["end", "start", "both", "end", "-"], arrows);
+        // on an angle's arc: at its end (counterclockwise) or start (clockwise)
+        JsonElement angle = JsonDocument.Parse(ScriptCompiler.Compile("point A = 1 0\npoint S = 0 0\npoint C = 0 1\nangle w = A S C arrow start").ToJson())
+            .RootElement.GetProperty("primitives").EnumerateArray().Single(p => p.GetProperty("type").GetString() == "angle");
+        Assert.Equal("start", angle.GetProperty("tracks").GetProperty("arrow")[0][1].GetString());
         ErrorAt("point A = 0 0\npoint B = 1 0\nline g = A B arrow", 3, 14, "not possible for line");
         ErrorAt("point A = 0 0\narrow start", 2, 1, "command");
     }
