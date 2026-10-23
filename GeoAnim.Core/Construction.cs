@@ -217,6 +217,24 @@ public sealed class Construction
     public GeoAngle Angle(string name, GeoPoint a, GeoPoint vertex, GeoPoint c, Options? options = null) =>
         Define(new GeoAngle(name, a, vertex, c, options ?? Options.None));
 
+    /// <summary>A number: the length of a segment (it follows the segment when it changes).</summary>
+    public GeoNumber Length(string name, GeoStraight segment) => Define(GeoNumber.Length(name, segment));
+
+    /// <summary>A number: the distance of two points.</summary>
+    public GeoNumber Distance(string name, GeoPoint a, GeoPoint b) => Define(GeoNumber.Distance(name, a, b));
+
+    /// <summary>A number: the size of an angle in degrees.</summary>
+    public GeoNumber Degrees(string name, GeoAngle angle) => Define(GeoNumber.Degrees(name, angle));
+
+    /// <summary>A number: the area of a polygon or circle.</summary>
+    public GeoNumber Area(string name, GeoObject item) => Define(GeoNumber.Area(name, item));
+
+    /// <summary>A number: the perimeter of a polygon or the circumference of a circle.</summary>
+    public GeoNumber Perimeter(string name, GeoObject item) => Define(GeoNumber.Perimeter(name, item));
+
+    /// <summary>A number: the radius of a circle.</summary>
+    public GeoNumber RadiusOf(string name, GeoCircle circle) => Define(GeoNumber.RadiusOf(name, circle));
+
     public GeoPolygon Polygon(string name, IReadOnlyList<GeoPoint> vertices, Options? options = null) =>
         Define(new GeoPolygon(name, vertices, options ?? Options.None));
 
@@ -232,7 +250,14 @@ public sealed class Construction
     {
         try
         {
-            MathText.Split(text);
+            // a number changes while points move; a formula is set once for the page
+            foreach (TextRun run in MathText.Split(text).Where(r => r.IsFormula))
+            {
+                foreach ((string name, _, _) in NumberText.Find(run.Text))
+                {
+                    throw new GeoException($"The number {{{name}}} stands inside a formula ${run.Text}$; numbers go between the pieces of a formula: \"$|AB| =$ {{l}} cm\".");
+                }
+            }
             return text;
         }
         catch (FormatException e)

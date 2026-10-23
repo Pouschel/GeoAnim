@@ -256,6 +256,40 @@ public static class ScriptCompiler
                         }
                         break;
                     }
+                case NumberStatement s:
+                    {
+                        if (c.Objects.ContainsKey(Global(s.Name.Name)) || (module != null && module.Inputs.ContainsKey(s.Name.Name)))
+                        {
+                            throw new ScriptError(s.Name.Line, s.Name.Column, $"The name {s.Name.Name} is already used.");
+                        }
+                        string name = Global(s.Name.Name);
+                        NameRef first = s.Arguments[0];
+                        GeoObject item = Resolve(first);
+                        T Expect<T>(string what) where T : GeoObject => item as T
+                            ?? throw new ScriptError(first.Line, first.Column, $"{s.Measure} measures {what}, not the {item.Kind} {first.Name}.");
+                        switch (s.Measure)
+                        {
+                            case "length" when s.Arguments.Count == 2:
+                                c.Distance(name, Expect<GeoPoint>("a segment or the distance of two points"), ResolvePoint(s.Arguments[1]));
+                                break;
+                            case "length":
+                                c.Length(name, Expect<GeoStraight>("a segment or the distance of two points"));
+                                break;
+                            case "degrees":
+                                c.Degrees(name, Expect<GeoAngle>("an angle"));
+                                break;
+                            case "radius":
+                                c.RadiusOf(name, Expect<GeoCircle>("a circle"));
+                                break;
+                            case "area":
+                                c.Area(name, item);
+                                break;
+                            default:
+                                c.Perimeter(name, item);
+                                break;
+                        }
+                        break;
+                    }
                 case TranslateStatement s:
                     {
                         if (OnlyResult)

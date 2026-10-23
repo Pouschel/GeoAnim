@@ -22,7 +22,7 @@ public static partial class HtmlExporter
     private static partial Regex TitlePattern();
 
     // Markdown marks and formula dollars, for the page title: [text](address) → text, <address> → address
-    [GeneratedRegex(@"\[([^\]]*)\]\([^)\s]*\)|<([^>\s]+)>|\\([*_`$])|\*\*|[*`$]|(?<![\p{L}\p{N}])_|_(?![\p{L}\p{N}])")]
+    [GeneratedRegex(@"\[([^\]]*)\]\([^)\s]*\)|<([^>\s]+)>|\\([*_`${}])|\*\*|[*`$]|(?<![\p{L}\p{N}])_|_(?![\p{L}\p{N}])")]
     private static partial Regex MarkdownPattern();
 
     /// <summary>The length a description is cut to (at a word).</summary>
@@ -34,8 +34,8 @@ public static partial class HtmlExporter
     /// </summary>
     internal static string DescriptionOf(AnimationData animation)
     {
-        string text = animation.Description ?? string.Join(" ", animation.Steps
-            .Select(step => ReadableFormulas(step.Caption).Trim())
+        string text = animation.Description != null ? animation.WithFinalNumbers(animation.Description) : string.Join(" ", animation.Steps
+            .Select(step => ReadableFormulas(animation.WithFinalNumbers(step.Caption)).Trim())
             .Where(caption => caption.Length > 0)
             .Select(caption => ".!?:…".Contains(caption[^1]) ? caption : caption + "."));
         text = WhiteSpace().Replace(PlainText(ReadableFormulas(text)), " ").Trim();

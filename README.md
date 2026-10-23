@@ -50,7 +50,7 @@ Weitere Beispiele in `Samples/`: Umkreis eines Dreiecks (mit bewegtem Eckpunkt) 
 
 ## Die Sprache
 
-Eine Anweisung pro Zeile; Einrückung ist egal. Alle Angaben werden nur durch Leerzeichen getrennt, ohne Kommas und Klammern (Koordinaten: `2 3`). `#` beginnt einen Kommentar (außer `#rgb` / `#rrggbb` als Farbe). Zahlen mit Punkt (`2.5`, `-0.5`). Hinter `title` und `step` ist der Rest der Zeile der Text, so wie er dasteht, ohne Anführungszeichen (auch `#` gehört dann dazu). Andere Texte (`text`, `label`) stehen in doppelten Anführungszeichen (`\"` für ein Anführungszeichen darin), weil danach noch Optionen folgen können. Namen bestehen aus Buchstaben, Ziffern und `_`, gefolgt von beliebig vielen `'` (`A'`, `P_1`); Groß-/Kleinschreibung zählt. Schlüsselwörter (`point`, `to`, `x`, `by`, …) sind als Namen nicht erlaubt.
+Eine Anweisung pro Zeile; Einrückung ist egal. Alle Angaben werden nur durch Leerzeichen getrennt, ohne Kommas und Klammern (Koordinaten: `2 3`). `#` beginnt einen Kommentar (außer `#rgb` / `#rrggbb` als Farbe). Zahlen mit Punkt (`2.5`, `-0.5`). Hinter `title` und `step` ist der Rest der Zeile der Text, so wie er dasteht, ohne Anführungszeichen (auch `#` gehört dann dazu). Andere Texte (`text`, `label`) stehen in doppelten Anführungszeichen (`\"` für ein Anführungszeichen darin), weil danach noch Optionen folgen können. Namen bestehen aus Buchstaben, Ziffern und `_`, gefolgt von beliebig vielen `'` (`A'`, `P_1`); Groß-/Kleinschreibung zählt. Schlüsselwörter (`point`, `to`, `x`, `by`, `length`, …) sind als Namen nicht erlaubt.
 
 **Lange Texte und Auszeichnungen:** Eine Zeile, die mit `|` beginnt, setzt den Text der `title`-, `step`- oder `set`-Zeile davor fort (mit einem Leerzeichen angehängt); eine Zeile mit nur `|` beginnt einen neuen Absatz:
 
@@ -114,6 +114,9 @@ Koordinaten sind mathematisch: die y-Achse zeigt nach oben. Der Maßstab ist in 
 | `polygon D = A B C` | gefülltes Vieleck (mindestens 3 Punkte) |
 | `text t = "Hallo" at 5 6` | Text an festen Koordinaten (zentriert) |
 | `text t = "90°" at P` | Text neben einem Punkt, wandert mit ihm |
+| `number l = length s` | Zahl: Länge einer Strecke (`length A B`: Abstand zweier Punkte); ebenso `degrees w` (Winkelgröße in Grad), `area D` (Flächeninhalt eines Vielecks oder Kreises), `perimeter D` (Umfang), `radius k` (siehe unten) |
+
+**Zahlen:** `number` misst etwas an anderen Objekten und folgt ihnen, wenn sie sich bewegen. Texte zeigen eine Zahl mit dem Platzhalter `{l}`, mit eigener Anzahl Nachkommastellen `{l:2}` – in `text`, Beschriftungen (`label`), `set`-Texten, `step`, `info` und `description`. Der Player setzt den Wert in jedem Bild neu ein, mit Dezimalkomma; Längen, Flächen, Umfänge und Radien zeigen standardmäßig eine Nachkommastelle, Winkel ganze Grad. Einheiten und das Gradzeichen schreibt man selbst dazu: `text t = "$|AB| =$ {l} cm" at 5 1`, `label "{w}°"`. Ein Platzhalter darf nicht in einer Formel stehen (Formeln werden beim Export einmal gesetzt), sondern zwischen ihren Stücken: `"$alpha =$ {w}°"`. Ein Platzhalter darf vor seiner Zahl stehen (`step Der Winkel ist {w}° groß`, darunter `number w = …`), muss aber eine Zahl der Datei nennen. `\{` ist eine geschweifte Klammer. Außerhalb des Players (Beschreibung der Seite, Übersicht) stehen die Werte vom Ende der Animation.
 
 **Startbild und Schritte:** Objekte vor dem ersten `step` gehören zum Startbild und sind sofort da. In einem Schritt definierte Objekte werden dort nacheinander gezeichnet: Punkte erscheinen, Strecken wachsen von A nach B, Geraden von der Mitte nach außen, Kreise werden ab dem Punkt `through` (sonst ab 0°) gezogen, Vielecke und Texte blenden ein. Mit der Option `hidden` wird ein Objekt nur definiert (z. B. Hilfskreise) und erst mit `show` gezeigt – oder nie.
 

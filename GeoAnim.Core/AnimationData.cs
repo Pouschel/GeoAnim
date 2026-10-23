@@ -59,6 +59,26 @@ public sealed class AnimationData
 
     internal IReadOnlyList<Primitive> Primitives => primitives;
 
+    /// <summary>
+    /// A text with its placeholders ("{l}", "{l:2}") filled in with the numbers' values at the end of the animation – for
+    /// texts outside the player (the page's description, the overview).
+    /// </summary>
+    public string WithFinalNumbers(string text)
+    {
+        if (!text.Contains('{'))
+        {
+            return text;
+        }
+        var values = new Dictionary<string, (double Value, int Digits)>(StringComparer.Ordinal);
+        foreach (Primitive number in primitives.Where(p => p.Type == "number" && p.Tracks.ContainsKey("value")))
+        {
+            values[(string)number.Tracks["name"][0].Value] = ((double)number.Tracks["value"][^1].Value, (int)(double)number.Tracks["digits"][0].Value);
+        }
+        return NumberText.Placeholder().Replace(text, m => values.TryGetValue(m.Groups[1].Value, out var number)
+            ? NumberText.Format(number.Value, m.Groups[2].Success ? int.Parse(m.Groups[2].Value) : number.Digits)
+            : m.Value);
+    }
+
     /// <summary>The same animation with other step texts (e.g. with links).</summary>
     public AnimationData WithSteps(IReadOnlyList<AnimationStep> steps) => WithTexts(Title, steps);
 

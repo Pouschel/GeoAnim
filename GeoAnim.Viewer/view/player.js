@@ -193,9 +193,10 @@
     text (element, v) {
       const size = textSize(v.size)
       const align = v.nx !== undefined ? 'middle' : v.anchor || 'start'
-      const key = v.text + '\n' + size + '\n' + align
+      const text = withNumbers(v.text)
+      const key = text + '\n' + size + '\n' + align
       if (element.layoutKey !== key) {
-        const layout = layoutText(element, v.text, size, align)
+        const layout = layoutText(element, text, size, align)
         element.layoutWidth = layout.width
         element.layoutLines = layout.lines
         element.layoutKey = key
@@ -268,9 +269,10 @@
     let width = 0
     let height = 0
     if (v.text) {
-      const key = v.text + '\n' + size
+      const text = withNumbers(v.text)
+      const key = text + '\n' + size
       if (parts.label.layoutKey !== key) {
-        const layout = layoutText(parts.label, v.text, size, 'middle')
+        const layout = layoutText(parts.label, text, size, 'middle')
         parts.label.layoutWidth = layout.width
         parts.label.layoutLines = layout.lines
         parts.label.layoutKey = key
@@ -529,7 +531,7 @@
         i++
         continue
       }
-      if (c === '\\' && typeof items[i + 1] === 'string' && '*_`[]<>\\'.includes(items[i + 1])) {
+      if (c === '\\' && typeof items[i + 1] === 'string' && '*_`[]<>{}\\'.includes(items[i + 1])) {
         text += items[i + 1]
         i += 2
         continue
@@ -673,11 +675,49 @@
   const plainOf = nodes => nodes.map(n => n.text !== undefined ? n.text.replace(/\n/g, ' ') : n.math !== undefined ? n.math : plainOf(n.children)).join('')
   const plainText = text => plainOf(parseMarkdown(text))
 
+  // ------------------------------------------------------------------ numbers in texts
+
+  // "{l}" or "{l:2}" (decimal places): the value of the number l at the current time, with a decimal comma
+  const PLACEHOLDER = /(?<!\\)\{([A-Za-z_][A-Za-z0-9_]*'*)(?::(\d))?\}/g
+  let numbers = []
+  let numberValues = {}
+
+  function updateNumbers () {
+    numberValues = {}
+    for (const primitive of numbers) {
+      const tracks = primitive.tracks
+      const name = valueAt(tracks.name, Infinity)
+      const valid = valueAt(tracks.valid, time)
+      const value = valueAt(tracks.value, time)
+      numberValues[name] = { value: valid > 0.5 && value !== undefined ? value : undefined, digits: valueAt(tracks.digits, Infinity) }
+    }
+  }
+
+  function withNumbers (text) {
+    if (!text || text.indexOf('{') < 0) {
+      return text
+    }
+    return text.replace(PLACEHOLDER, (match, name, digits) => {
+      const number = numberValues[name]
+      if (!number || number.value === undefined) {
+        return '–'
+      }
+      const places = digits !== undefined ? Number(digits) : number.digits
+      let shown = number.value.toFixed(places)
+      if (/^-?[0.]+$/.test(shown)) {
+        shown = shown.replace('-', '')
+      }
+      return shown.replace('.', ',').replace('-', '−')
+    })
+  }
+
   function buildScene () {
     scene.textContent = ''
     create('rect', { id: 'background', x: 0, y: 0, width: '100%', height: '100%', fill: animation.background }, scene)
     decor = create('g', { id: 'decor' }, scene)
-    const sorted = animation.primitives.slice().sort((a, b) => a.layer - b.layer || a.id - b.id)
+    // numbers are not drawn: the placeholders in the texts show them
+    numbers = animation.primitives.filter(primitive => primitive.type === 'number')
+    const sorted = animation.primitives.filter(primitive => primitive.type !== 'number').sort((a, b) => a.layer - b.layer || a.id - b.id)
     items = sorted.map(primitive => {
       const element = create(TAGS[primitive.type], {}, scene)
       if (primitive.type === 'arc') {
@@ -692,6 +732,7 @@
   }
 
   function render () {
+    updateNumbers()
     for (const item of items) {
       const tracks = item.primitive.tracks
       const values = {}
@@ -792,12 +833,12 @@
     let height = box.offsetHeight
     // the starting picture: the page's description
     setRichText(caption, '')
-    showInfo(animation.description)
+    showInfo(withNumbers(animation.description))
     showNextPage(-1)
     height = Math.max(height, box.offsetHeight)
     steps().forEach((step, index) => {
-      setRichText(caption, step.caption)
-      showInfo(step.info)
+      setRichText(caption, withNumbers(step.caption))
+      showInfo(withNumbers(step.info))
       showNextPage(index)
       height = Math.max(height, box.offsetHeight)
     })
@@ -969,9 +1010,9 @@
     }
     const list = steps()
     const index = currentStepIndex()
-    setRichText($('caption'), index >= 0 ? list[index].caption : '')
+    setRichText($('caption'), withNumbers(index >= 0 ? list[index].caption : ''))
     // the starting picture: what the page is about (the description from the script)
-    showInfo(index >= 0 ? list[index].info : animation.description)
+    showInfo(withNumbers(index >= 0 ? list[index].info : animation.description))
     showNextPage(index)
     $('counter').textContent = (index + 1) + ' / ' + list.length
     const timeline = $('timeline')

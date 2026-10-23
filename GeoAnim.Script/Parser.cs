@@ -8,7 +8,7 @@ internal sealed class Parser
     {
         "title", "description", "info", "keyword", "view", "background", "grid", "axes", "speed", "var", "default", "include", "input", "output", "use",
         "draw", "steps", "copy", "set", "step", "point", "segment", "line", "ray", "circle", "polygon", "angle",
-        "text", "show", "hide", "move", "rotate", "along", "around", "by", "pause", "together", "end", "midpoint", "intersect", "center", "through",
+        "text", "number", "length", "degrees", "area", "perimeter", "show", "hide", "move", "rotate", "along", "around", "by", "pause", "together", "end", "midpoint", "intersect", "center", "through",
         "radius", "at", "to", "on", "x", "y",
         "duration", "color", "width", "fill", "opacity", "size", "labelsize", "labelpos", "label", "nolabel", "hidden", "offset",
         "arrow", "start", "both", "linear", "ease", "easein", "easeout", "easeinout",
@@ -38,6 +38,10 @@ internal sealed class Parser
     // names given to objects so far (a var cannot take one of them, and the other way round)
     private readonly HashSet<string> objectNames = new(StringComparer.Ordinal);
 
+    // numbers ("number l = …") and the placeholders in texts ("{l}"): every placeholder must name a number of the script
+    private readonly HashSet<string> numberNames = new(StringComparer.Ordinal);
+    private readonly List<(string Name, int Line, int Column)> placeholders = new();
+
     // for an editor: the names defined so far (lines of the source), and the source's lines for their text
     private readonly List<ScriptDefinition>? definitions;
     private readonly string[] lines;
@@ -55,7 +59,16 @@ internal sealed class Parser
     public static List<Statement> Parse(string source, List<ScriptDefinition>? definitions)
     {
         var parser = new Parser(Lexer.Tokenize(source), source, definitions);
-        return parser.ParseBlock(null, out _);
+        List<Statement> statements = parser.ParseBlock(null, out _);
+        // a placeholder may come before its number (a step that names a number measured in it)
+        foreach ((string name, int line, int column) in parser.placeholders)
+        {
+            if (!parser.numberNames.Contains(name))
+            {
+                throw new ScriptError(line, column, $"{{{name}}} names no number (define it with \"number {name} = length …\"; \\{{ is a brace).");
+            }
+        }
+        return statements;
     }
 
     // a name defined: its line as the text, or the text given
@@ -123,13 +136,13 @@ internal sealed class Parser
         switch (word.Text)
         {
             case "title":
-                statement = new TitleStatement(l, c, Next().Text);
+                statement = new TitleStatement(l, c, TextOf(Next()));
                 break;
             case "description":
-                statement = new DescriptionStatement(l, c, Next().Text);
+                statement = new DescriptionStatement(l, c, TextOf(Next()));
                 break;
             case "info":
-                statement = new InfoStatement(l, c, Next().Text);
+                statement = new InfoStatement(l, c, TextOf(Next()));
                 break;
             case "keyword":
                 statement = new KeywordStatement(l, c, Next().Text);
@@ -162,7 +175,7 @@ internal sealed class Parser
                         throw Error(nameToken, $"{name.Name} is already the name of {(vars.ContainsKey(name.Name) ? "a var" : "an object")}.");
                     }
                     ExpectSymbol("=");
-                    texts[name.Name] = Next().Text;
+                    texts[name.Name] = TextOf(Next());
                     Defined("set", name, "set " + name.Name + " = " + texts[name.Name]);
                     ExpectLineEnd();
                     return null;
@@ -233,7 +246,7 @@ internal sealed class Parser
                 {
                     throw Error(word, "A step cannot begin inside a \"together\" block.");
                 }
-                statement = new StepStatement(l, c, Next().Text);
+                statement = new StepStatement(l, c, TextOf(Next()));
                 break;
             case "point":
                 statement = ParsePoint(word);
@@ -264,6 +277,9 @@ internal sealed class Parser
                 break;
             case "rotate":
                 statement = ParseRotate(word);
+                break;
+            case "number":
+                statement = ParseNumber(word);
                 break;
             case "pause":
                 statement = new PauseStatement(l, c, Current.Kind == TokenKind.Number ? ExpectNonNegative("the pause") : 500);
@@ -640,6 +656,26 @@ internal sealed class Parser
         return new MoveStatement(word.Line, word.Column, point, target, null, ParseOptions());
     }
 
+    // "number l = length s", "number d = length A B", "number w = degrees alpha", "area D", "radius k", "perimeter D"
+    private NumberStatement ParseNumber(Token word)
+    {
+        NameRef name = ExpectNewName();
+        numberNames.Add(name.Name);
+        ExpectSymbol("=");
+        Token measure = Current;
+        if (measure.Kind != TokenKind.Name || measure.Text is not ("length" or "degrees" or "area" or "radius" or "perimeter"))
+        {
+            throw Error(measure, $"Expected a measure (length, degrees, area, radius, perimeter), not {measure.Describe()}.");
+        }
+        position++;
+        var arguments = new List<NameRef> { ExpectName() };
+        if (measure.Text == "length" && Current.Kind == TokenKind.Name)
+        {
+            arguments.Add(ExpectName());
+        }
+        return new NumberStatement(word.Line, word.Column, name, measure.Text, arguments);
+    }
+
     // "rotate A B C around M by 60"
     private RotateStatement ParseRotate(Token word)
     {
@@ -791,6 +827,17 @@ internal sealed class Parser
             throw Error(token, $"Expected {what} in double quotes or the name of a text from \"set\", not {token.Describe()}.");
         }
         position++;
+        // the token starts at its opening quote
+        return TextOf(token, 1);
+    }
+
+    // the text of a token; its placeholders ("{l}") are checked at the end
+    private string TextOf(Token token, int offset = 0)
+    {
+        foreach ((string name, int index, _) in NumberText.Find(token.Text))
+        {
+            placeholders.Add((name, token.Line, token.Column + offset + index));
+        }
         return token.Text;
     }
 

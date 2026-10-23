@@ -494,6 +494,56 @@ public class ScriptTests
     }
 
     [Fact]
+    public void NumbersMeasureAndFollowTheObjects()
+    {
+        Construction c = ScriptCompiler.CompileConstruction("""
+            point A = 0 0
+            point B = 4 0
+            point C = 0 3
+            segment s = A B
+            polygon D = A B C
+            circle k = center A through C
+            angle w = B A C
+            number l = length s
+            number d = length B C
+            number g = degrees w
+            number f = area D
+            number u = perimeter D
+            number r = radius k
+            number q = area k
+            text t = "$|AB| =$ {l} cm, {g}°" at 1 1
+            step Die Strecke ist jetzt {l:2} lang
+              move B to 6 0
+            """);
+        double Value(string name) => ((GeoNumber)c.Objects[name]).Value;
+        Assert.Equal(6, Value("l"), 9);
+        Assert.Equal(Math.Sqrt(45), Value("d"), 9);
+        Assert.Equal(90, Value("g"), 9);
+        Assert.Equal(9, Value("f"), 9);
+        Assert.Equal(6 + 3 + Math.Sqrt(45), Value("u"), 9);
+        Assert.Equal(3, Value("r"), 9);
+        Assert.Equal(9 * Math.PI, Value("q"), 9);
+
+        // the values over time for the player; texts outside the player get the final ones
+        AnimationData animation = c.Build();
+        JsonElement number = JsonDocument.Parse(animation.ToJson()).RootElement.GetProperty("primitives").EnumerateArray()
+            .First(p => p.GetProperty("type").GetString() == "number");
+        Assert.Equal("l", number.GetProperty("tracks").GetProperty("name")[0][1].GetString());
+        JsonElement values = number.GetProperty("tracks").GetProperty("value");
+        Assert.Equal((4.0, 6.0), (values[0][1].GetDouble(), values[values.GetArrayLength() - 1][1].GetDouble()));
+        Assert.Equal("Die Strecke ist jetzt 6,00 lang", animation.WithFinalNumbers(animation.Steps[0].Caption));
+        Assert.Equal(("3,3", "0,0", "−3", "4"), (NumberText.Format(3.25, 1), NumberText.Format(-0.04, 1), NumberText.Format(-2.5, 0), NumberText.Format(3.6, 0)));
+
+        ErrorAt("point A = 0 0\ntext t = \"Länge {l}\" at A", 2, 17, "{l} names no number");
+        ErrorAt("point A = 0 0\npoint B = 1 0\nnumber l = length A B\ntext t = \"$l = {l}$\" at A", 4, 1, "inside a formula");
+        ErrorAt("point A = 0 0\npoint B = 1 0\nray r = A B\nnumber l = length r", 4, 1, "has no length");
+        ErrorAt("point A = 0 0\nnumber l = degrees A", 2, 20, "degrees measures an angle");
+        ErrorAt("point A = 0 0\nnumber l = size A", 2, 12, "Expected a measure");
+        // "\{" is a brace, not a placeholder
+        ScriptCompiler.Compile("point A = 0 0\ntext t = \"\\{l}\" at A");
+    }
+
+    [Fact]
     public void SegmentsAndRaysCanHaveArrows()
     {
         JsonElement primitives = JsonDocument.Parse(ScriptCompiler.Compile("""

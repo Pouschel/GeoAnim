@@ -422,6 +422,23 @@
       ]
     },
     {
+      "begin": "^\\s*(number)\\s+([A-Za-z_][A-Za-z0-9_]*'*)\\s*(=)\\s*(length|degrees|area|radius|perimeter)\\b",
+      "beginCaptures": {
+        "1": {
+          "name": "keyword.control.geo"
+        },
+        "4": {
+          "name": "keyword.other.geo"
+        }
+      },
+      "end": "$",
+      "patterns": [
+        {
+          "include": "#tail"
+        }
+      ]
+    },
+    {
       "begin": "^\\s*(move|rotate)\\b(?=.*\\b(?:along|around)\\b)",
       "beginCaptures": {
         "1": {
