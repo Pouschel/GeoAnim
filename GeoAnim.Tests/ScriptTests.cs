@@ -14,15 +14,30 @@ public class ScriptTests
         Assert.Contains(messagePart, error.Message);
     }
 
-    /// <summary>Every script in Samples, with subfolders (paths relative to Samples, with "/").</summary>
-    private static List<string> SamplePaths()
+    /// <summary>
+    /// The folders whose scripts are all compiled by the tests: the samples of the repository, and folders outside it
+    /// that are tested only where they exist (the geometry book in its own repository).
+    /// </summary>
+    private static readonly (string Name, string Folder)[] ScriptFolders =
+    [
+        ("Samples", Repository.PathOf("Samples")),
+        ("GeoBook", @"C:\Code\GeoBook\src"),
+    ];
+
+    /// <summary>Every script in these folders, with subfolders, named "Samples/Euklid/Book1/Prop1.geo".</summary>
+    private static List<string> SamplePaths() => ScriptFolders
+        .Where(entry => Directory.Exists(entry.Folder))
+        .SelectMany(entry => Directory.EnumerateFiles(entry.Folder, "*.geo", SearchOption.AllDirectories)
+            .Select(path => entry.Name + "/" + Path.GetRelativePath(entry.Folder, path).Replace('\\', '/')))
+        .Order(StringComparer.Ordinal)
+        .ToList();
+
+    // "GeoBook/10_Grundlagen/10_Punkte.geo" → the file
+    private static string FullPathOf(string sample)
     {
-        string folder = Repository.PathOf("Samples");
-        var list = Directory.EnumerateFiles(folder, "*.geo", SearchOption.AllDirectories)
-            .Select(path => /* Path.GetRelativePath(folder, path).*/path.Replace('\\', '/'))
-            .Order(StringComparer.Ordinal)
-            .ToList();
-        return list;
+        string[] parts = sample.Split('/');
+        string folder = ScriptFolders.Single(entry => entry.Name == parts[0]).Folder;
+        return Path.Combine([folder, .. parts[1..]]);
     }
 
     public static TheoryData<string> Samples() => new(SamplePaths());
@@ -32,15 +47,14 @@ public class ScriptTests
     [MemberData(nameof(Samples))]
     public void SamplesCompile(string sample)
     {
-        AnimationData animation = ScriptCompiler.CompileFile(sample);
-        //AnimationData animation = ScriptCompiler.CompileFile(Repository.PathOf(["Samples", .. sample.Split('/')]));
+        AnimationData animation = ScriptCompiler.CompileFile(FullPathOf(sample));
         JsonDocument.Parse(animation.ToJson());
     }
 
     [Fact]
     public void SamplesAreFound()
     {
-        Assert.Contains("circumcircle.geo", SamplePaths());
+        Assert.Contains("Samples/circumcircle.geo", SamplePaths());
     }
 
     [Fact]
