@@ -1,4 +1,4 @@
-include ../def.geo
+include ../_def.geo
 
 title Kreis, Mittelpunkt und Radius
 description Wie aus einem gleichbleibenden Abstand eine Kreislinie entsteht. Mittelpunkt, Radius und gleiche Abstände auf dem Kreis sowie die Arbeitsweise des Zirkels.

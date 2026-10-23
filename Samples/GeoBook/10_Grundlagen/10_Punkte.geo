@@ -1,4 +1,5 @@
-include ../def.geo
+include ../_def.geo
+
 title Punkte und ihre Lage
 description Was ein Punkt ist, wie wir ihn bezeichnen und wann zwei Punktnamen dieselbe Lage beschreiben.
 

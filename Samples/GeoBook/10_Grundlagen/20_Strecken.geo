@@ -1,4 +1,4 @@
-include ../def.geo
+include ../_def.geo
 
 title Strecken und ihre Länge
 description Von den Endpunkten einer Strecke über den Längenvergleich zum Messen mit einer Einheitsstrecke.

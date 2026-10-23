@@ -1,4 +1,4 @@
-include ../def.geo
+include ../_def.geo
 
 title Parallele Geraden
 description Sich schneidende, parallele und identische Geraden. Schreibweisen, Parallelverschiebung und das Zusammenfallen zweier Geraden.

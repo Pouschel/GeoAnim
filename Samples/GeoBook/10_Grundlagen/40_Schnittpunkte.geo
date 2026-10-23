@@ -1,4 +1,4 @@
-include ../def.geo
+include ../_def.geo
 
 title Punktlage, Halbebenen und Schnittpunkte
 description Die Lage eines Punktes zu einer Geraden, die beiden Halbebenen und der Schnittpunkt zweier Geraden.

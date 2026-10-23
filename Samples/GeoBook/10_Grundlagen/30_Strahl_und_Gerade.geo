@@ -1,4 +1,4 @@
-include ../def.geo
+include ../_def.geo
 
 title Strahl und Gerade
 description Aus einer Strecke entstehen durch einseitiges und beidseitiges Fortsetzen ein Strahl und eine Gerade. Ihre Bezeichnungen und Unterschiede.
