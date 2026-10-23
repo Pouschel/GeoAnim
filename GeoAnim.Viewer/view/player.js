@@ -725,6 +725,11 @@
     box.style.minHeight = ''
     const nextShown = !$('next-page').hidden
     let height = box.offsetHeight
+    // the starting picture: the page's description
+    setRichText(caption, '')
+    showInfo(animation.description)
+    showNextPage(-1)
+    height = Math.max(height, box.offsetHeight)
     steps().forEach((step, index) => {
       setRichText(caption, step.caption)
       showInfo(step.info)
@@ -900,7 +905,8 @@
     const list = steps()
     const index = currentStepIndex()
     setRichText($('caption'), index >= 0 ? list[index].caption : '')
-    showInfo(index >= 0 ? list[index].info : '')
+    // the starting picture: what the page is about (the description from the script)
+    showInfo(index >= 0 ? list[index].info : animation.description)
     showNextPage(index)
     $('counter').textContent = (index + 1) + ' / ' + list.length
     const timeline = $('timeline')

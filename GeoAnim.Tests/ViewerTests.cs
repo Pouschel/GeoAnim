@@ -65,6 +65,11 @@ public class ViewerTests
         // given in the script, over several lines; a long one is cut at a word
         AnimationData given = ScriptCompiler.Compile("description Euklid I.2: eine Strecke\n| antragen\npoint A = 0 0");
         Assert.Contains("content=\"Euklid I.2: eine Strecke antragen\"", HtmlExporter.Export(given));
+        // it is also shown on the starting picture (only one from the script), with its formulas
+        Assert.Equal("Euklid I.2: eine Strecke antragen", JsonDocument.Parse(given.ToJson()).RootElement.GetProperty("description").GetString());
+        Assert.False(JsonDocument.Parse(auto.ToJson()).RootElement.TryGetProperty("description", out _));
+        Assert.True(ScriptCompiler.Compile("description Um $M$\npoint A = 0 0").Formulas.ContainsKey("M"));
+        Assert.Contains("no closing $", Assert.Throws<ScriptError>(() => ScriptCompiler.Compile("description Um $M")).Message);
         string longOne = HtmlExporter.DescriptionOf(ScriptCompiler.Compile("description " + string.Join(" ", Enumerable.Repeat("Wort", 100))));
         Assert.True(longOne.Length <= HtmlExporter.DescriptionLength + 2 && longOne.EndsWith("Wort …"), longOne);
         Assert.Contains("only possible", Assert.Throws<ScriptError>(() => ScriptCompiler.Compile("point A = 0 0\nstep s\ndescription x")).Message.Replace("must come before the first step", "only possible"));

@@ -86,6 +86,11 @@ public sealed class AnimationData
             {
                 json.WriteString("title", Title);
             }
+            if (Description != null)
+            {
+                // shown on the starting picture
+                json.WriteString("description", Description);
+            }
             json.WriteStartObject("view");
             json.WriteNumber("xmin", View.XMin);
             json.WriteNumber("xmax", View.XMax);

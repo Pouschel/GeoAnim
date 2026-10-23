@@ -44,11 +44,17 @@ public sealed class Construction
     private double speed = 1;
     private string? title;
 
+    private string? description;
+
     /// <summary>
-    /// The description of an exported page for search engines (meta description); without it, the page describes itself
-    /// with the beginning of its step descriptions.
+    /// The description of an exported page for search engines (meta description), also shown below the starting picture;
+    /// without it, the page describes itself with the beginning of its step descriptions.
     /// </summary>
-    public string? Description { get; set; }
+    public string? Description
+    {
+        get => description;
+        set => description = value == null ? null : CheckText(value);
+    }
 
     private readonly List<PageKeyword> keywords = [];
 
@@ -612,6 +618,10 @@ public sealed class Construction
         if (Title != null)
         {
             texts = texts.Prepend(Title);
+        }
+        if (Description != null)
+        {
+            texts = texts.Prepend(Description);
         }
         var formulas = new Dictionary<string, Formula>(StringComparer.Ordinal);
         foreach (string formula in texts.SelectMany(MathText.Formulas).Distinct(StringComparer.Ordinal))
