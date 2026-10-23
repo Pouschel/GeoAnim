@@ -126,6 +126,75 @@ internal sealed class GlideAction(GeoPoint point, double target, double duration
     public override void Apply(double progress) => point.MoveAlong(from + (target - from) * progress);
 }
 
+/// <summary>Moves free points by the vector from one point to another (taken at the start); dependent objects follow.</summary>
+internal sealed class TranslateAction(IReadOnlyList<GeoPoint> points, GeoPoint from, GeoPoint to, double duration, Easing easing)
+    : TimelineAction(duration, easing)
+{
+    private Vec[] starts = [];
+    private Vec shift;
+
+    public override bool MovesPoints => true;
+
+    public override IEnumerable<GeoObject> Objects => points;
+
+    public override void Begin(RenderContext context, double time)
+    {
+        if (!from.IsDefined || !to.IsDefined)
+        {
+            throw new GeoException($"The vector {from.Name}{to.Name} does not exist for the current positions.");
+        }
+        starts = points.Select(p => p.Position).ToArray();
+        shift = to.Position - from.Position;
+    }
+
+    public override void End(RenderContext context, Span span) => throw new InvalidOperationException("A move is always sampled.");
+
+    public override void Apply(double progress)
+    {
+        for (int i = 0; i < points.Count; i++)
+        {
+            points[i].MoveTo(starts[i] + progress * shift);
+        }
+    }
+}
+
+/// <summary>Turns free points around a centre (taken at the start) by an angle in degrees; dependent objects follow.</summary>
+internal sealed class RotateAction(IReadOnlyList<GeoPoint> points, GeoPoint center, double degrees, double duration, Easing easing)
+    : TimelineAction(duration, easing)
+{
+    private Vec[] starts = [];
+    private Vec pivot;
+
+    public override bool MovesPoints => true;
+
+    public override IEnumerable<GeoObject> Objects => points;
+
+    public override void Begin(RenderContext context, double time)
+    {
+        if (!center.IsDefined)
+        {
+            throw new GeoException($"The centre {center.Name} does not exist for the current positions.");
+        }
+        starts = points.Select(p => p.Position).ToArray();
+        pivot = center.Position;
+    }
+
+    public override void End(RenderContext context, Span span) => throw new InvalidOperationException("A rotation is always sampled.");
+
+    // on arcs around the centre: in between always turned by a part of the angle, never deformed
+    public override void Apply(double progress)
+    {
+        double radians = progress * degrees * Math.PI / 180;
+        double cos = Math.Cos(radians);
+        double sin = Math.Sin(radians);
+        for (int i = 0; i < points.Count; i++)
+        {
+            Vec d = starts[i] - pivot;
+            points[i].MoveTo(pivot + new Vec(cos * d.X - sin * d.Y, sin * d.X + cos * d.Y));
+        }
+    }
+}
+
 /// <summary>Nothing happens for a while.</summary>
 internal sealed class PauseAction(double duration) : TimelineAction(duration, Easing.Linear)
 {

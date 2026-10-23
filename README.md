@@ -50,7 +50,7 @@ Weitere Beispiele in `Samples/`: Umkreis eines Dreiecks (mit bewegtem Eckpunkt) 
 
 ## Die Sprache
 
-Eine Anweisung pro Zeile; Einrückung ist egal. Alle Angaben werden nur durch Leerzeichen getrennt, ohne Kommas und Klammern (Koordinaten: `2 3`). `#` beginnt einen Kommentar (außer `#rgb` / `#rrggbb` als Farbe). Zahlen mit Punkt (`2.5`, `-0.5`). Hinter `title` und `step` ist der Rest der Zeile der Text, so wie er dasteht, ohne Anführungszeichen (auch `#` gehört dann dazu). Andere Texte (`text`, `label`) stehen in doppelten Anführungszeichen (`\"` für ein Anführungszeichen darin), weil danach noch Optionen folgen können. Namen bestehen aus Buchstaben, Ziffern und `_`, gefolgt von beliebig vielen `'` (`A'`, `P_1`); Groß-/Kleinschreibung zählt. Schlüsselwörter (`point`, `to`, `x`, …) sind als Namen nicht erlaubt.
+Eine Anweisung pro Zeile; Einrückung ist egal. Alle Angaben werden nur durch Leerzeichen getrennt, ohne Kommas und Klammern (Koordinaten: `2 3`). `#` beginnt einen Kommentar (außer `#rgb` / `#rrggbb` als Farbe). Zahlen mit Punkt (`2.5`, `-0.5`). Hinter `title` und `step` ist der Rest der Zeile der Text, so wie er dasteht, ohne Anführungszeichen (auch `#` gehört dann dazu). Andere Texte (`text`, `label`) stehen in doppelten Anführungszeichen (`\"` für ein Anführungszeichen darin), weil danach noch Optionen folgen können. Namen bestehen aus Buchstaben, Ziffern und `_`, gefolgt von beliebig vielen `'` (`A'`, `P_1`); Groß-/Kleinschreibung zählt. Schlüsselwörter (`point`, `to`, `x`, `by`, …) sind als Namen nicht erlaubt.
 
 **Lange Texte und Auszeichnungen:** Eine Zeile, die mit `|` beginnt, setzt den Text der `title`-, `step`- oder `set`-Zeile davor fort (mit einem Leerzeichen angehängt); eine Zeile mit nur `|` beginnt einen neuen Absatz:
 
@@ -131,6 +131,8 @@ Koordinaten sind mathematisch: die y-Achse zeigt nach oben. Der Maßstab ist in 
 | `move A to 4 5` | bewegt einen freien Punkt |
 | `move P to 150` | bewegt einen Punkt auf seinem Kreis (Winkel) bzw. seiner Strecke (Position) |
 | `move C1 to P` | bewegt einen freien Punkt dorthin, wo der Punkt P in diesem Moment ist (P kann konstruiert sein; bewegt sich P später, bleibt C1, wo er ist) |
+| `move A B C along P Q` | verschiebt Objekte um den Vektor von P nach Q (so wie er beim Start der Bewegung ist): bewegt werden die freien Punkte, aus denen sie gebaut sind (bei einem Vieleck seine Ecken, bei einem Mittelpunkt dessen Punkte), alles davon Abhängige folgt |
+| `rotate A B C around M by 60` | dreht Objekte um M um 60° gegen den Uhrzeigersinn (negativ: im Uhrzeigersinn, auch über 360°); die freien Punkte laufen auf Kreisbögen, die Figur bleibt unterwegs unverformt; Voreinstellungen mit `default rotate duration …` |
 | `pause 300` | wartet (Standard 500 ms) |
 | `together` … `end` | alles dazwischen beginnt gleichzeitig; der Block dauert so lange wie die längste Aktion |
 | `together duration 2500` … `end` | ebenso, aber der Block dauert genau 2,5 s: alle Aktionen darin werden im selben Verhältnis gestreckt oder gestaucht |

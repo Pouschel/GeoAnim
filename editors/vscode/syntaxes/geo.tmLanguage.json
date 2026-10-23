@@ -93,7 +93,7 @@
       ]
     },
     {
-      "begin": "^\\s*(default)\\b((?:\\s+(?:point|segment|line|ray|circle|polygon|angle|text|show|hide|move)\\b)*)",
+      "begin": "^\\s*(default)\\b((?:\\s+(?:point|segment|line|ray|circle|polygon|angle|text|show|hide|move|rotate)\\b)*)",
       "beginCaptures": {
         "1": {
           "name": "keyword.control.geo"
@@ -415,6 +415,24 @@
               "name": "constant.numeric.geo"
             }
           }
+        },
+        {
+          "include": "#tail"
+        }
+      ]
+    },
+    {
+      "begin": "^\\s*(move|rotate)\\b(?=.*\\b(?:along|around)\\b)",
+      "beginCaptures": {
+        "1": {
+          "name": "keyword.control.geo"
+        }
+      },
+      "end": "$",
+      "patterns": [
+        {
+          "match": "\\b(along|around|by)\\b",
+          "name": "keyword.other.geo"
         },
         {
           "include": "#tail"

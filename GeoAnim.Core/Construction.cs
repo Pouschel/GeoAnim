@@ -383,6 +383,60 @@ public sealed class Construction
     }
 
     /// <summary>
+    /// Moves objects by the vector from <paramref name="from"/> to <paramref name="to"/> (as it is when the movement
+    /// starts): the free points they are built from move, everything that depends on them follows.
+    /// </summary>
+    public void Translate(IEnumerable<GeoObject> items, GeoPoint from, GeoPoint to, double? duration = null, Easing? easing = null)
+    {
+        RequireStep("move");
+        RunOrQueue([new TranslateAction(FreePointsOf(items), from, to, duration ?? 1000, easing ?? Easing.EaseInOut)]);
+    }
+
+    /// <summary>
+    /// Turns objects around <paramref name="center"/> (where it is when the rotation starts) by <paramref name="degrees"/>
+    /// (counterclockwise, negative: clockwise; also more than 360): the free points they are built from move on arcs,
+    /// everything that depends on them follows.
+    /// </summary>
+    public void Rotate(IEnumerable<GeoObject> items, GeoPoint center, double degrees, double? duration = null, Easing? easing = null)
+    {
+        RequireStep("rotate");
+        RunOrQueue([new RotateAction(FreePointsOf(items), center, degrees, duration ?? 1000, easing ?? Easing.EaseInOut)]);
+    }
+
+    // the free points objects are built from (a free point itself; a segment: its free end points; a midpoint: the free
+    // points of its two points; …), each once
+    private static List<GeoPoint> FreePointsOf(IEnumerable<GeoObject> items)
+    {
+        var found = new List<GeoPoint>();
+        static void Collect(GeoObject item, List<GeoPoint> into)
+        {
+            if (item is GeoPoint { IsFree: true } point)
+            {
+                if (!into.Contains(point))
+                {
+                    into.Add(point);
+                }
+                return;
+            }
+            foreach (GeoObject parent in item.Parents)
+            {
+                Collect(parent, into);
+            }
+        }
+        foreach (GeoObject item in items)
+        {
+            var own = new List<GeoPoint>();
+            Collect(item, own);
+            if (own.Count == 0)
+            {
+                throw new GeoException($"{item} is not built from free points, so it cannot move.");
+            }
+            found.AddRange(own.Where(point => !found.Contains(point)));
+        }
+        return found;
+    }
+
+    /// <summary>
     /// Moves a point on a circle to the angle <paramref name="target"/> (degrees; going beyond 360 runs round further) or a
     /// point on a straight to the parameter <paramref name="target"/>; dependent objects follow.
     /// </summary>

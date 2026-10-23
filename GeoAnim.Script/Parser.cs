@@ -8,7 +8,7 @@ internal sealed class Parser
     {
         "title", "description", "info", "keyword", "view", "background", "grid", "axes", "speed", "var", "default", "include", "input", "output", "use",
         "draw", "steps", "copy", "set", "step", "point", "segment", "line", "ray", "circle", "polygon", "angle",
-        "text", "show", "hide", "move", "pause", "together", "end", "midpoint", "intersect", "center", "through",
+        "text", "show", "hide", "move", "rotate", "along", "around", "by", "pause", "together", "end", "midpoint", "intersect", "center", "through",
         "radius", "at", "to", "on", "x", "y",
         "duration", "color", "width", "fill", "opacity", "size", "labelsize", "labelpos", "label", "nolabel", "hidden", "offset",
         "linear", "ease", "easein", "easeout", "easeinout",
@@ -23,7 +23,7 @@ internal sealed class Parser
     /// <summary>The kinds a "default" can name.</summary>
     private static readonly HashSet<string> DefaultKinds = new(StringComparer.Ordinal)
     {
-        "point", "segment", "line", "ray", "circle", "polygon", "angle", "text", "show", "hide", "move",
+        "point", "segment", "line", "ray", "circle", "polygon", "angle", "text", "show", "hide", "move", "rotate",
     };
 
     private readonly List<Token> tokens;
@@ -261,6 +261,9 @@ internal sealed class Parser
                 break;
             case "move":
                 statement = ParseMove(word);
+                break;
+            case "rotate":
+                statement = ParseRotate(word);
                 break;
             case "pause":
                 statement = new PauseStatement(l, c, Current.Kind == TokenKind.Number ? ExpectNonNegative("the pause") : 500);
@@ -601,9 +604,22 @@ internal sealed class Parser
         return new ShowStatement(word.Line, word.Column, word.Text == "show", targets, ParseOptions(), label);
     }
 
-    private MoveStatement ParseMove(Token word)
+    // "move A B C along P Q", or one point: "move A to …"
+    private Statement ParseMove(Token word)
     {
-        NameRef point = ExpectName();
+        List<NameRef> targets = ParseTargets(word, "along");
+        if (Current.Is("along") && Current.Kind == TokenKind.Name)
+        {
+            position++;
+            NameRef from = ExpectName();
+            NameRef to = ExpectName();
+            return new TranslateStatement(word.Line, word.Column, targets, from, to, ParseOptions());
+        }
+        if (targets.Count > 1)
+        {
+            throw Error(Current, $"Expected \"along\" after the objects (\"move A B C along P Q\"; \"to\" moves one point), not {Current.Describe()}.");
+        }
+        NameRef point = targets[0];
         ExpectWord("to");
         // one number: angle or position on the path; two numbers: coordinates
         if (Current.Kind == TokenKind.Number && tokens[position + 1].Kind != TokenKind.Number)
@@ -622,6 +638,32 @@ internal sealed class Parser
         }
         Vec target = ParseCoordinates();
         return new MoveStatement(word.Line, word.Column, point, target, null, ParseOptions());
+    }
+
+    // "rotate A B C around M by 60"
+    private RotateStatement ParseRotate(Token word)
+    {
+        List<NameRef> targets = ParseTargets(word, "around");
+        ExpectWord("around");
+        NameRef center = ExpectName();
+        ExpectWord("by");
+        double degrees = ExpectNumber("the angle in degrees");
+        return new RotateStatement(word.Line, word.Column, targets, center, degrees, ParseOptions());
+    }
+
+    // the names of the objects a movement moves, up to "to", "along" or "around"
+    private List<NameRef> ParseTargets(Token word, string next)
+    {
+        var targets = new List<NameRef>();
+        while (Current.Kind == TokenKind.Name && !(Current.Text is "to" or "along" or "around"))
+        {
+            targets.Add(ExpectName());
+        }
+        if (targets.Count == 0)
+        {
+            throw Error(Current, $"\"{word.Text}\" needs the names of objects before \"{next}\".");
+        }
+        return targets;
     }
 
     private Vec ParseCoordinates()

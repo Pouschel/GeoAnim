@@ -494,6 +494,46 @@ public class ScriptTests
     }
 
     [Fact]
+    public void TranslateAndRotateMoveTheFreePoints()
+    {
+        Construction c = ScriptCompiler.CompileConstruction("""
+            point A = 0 0
+            point B = 4 0
+            point C = 0 3
+            polygon D = A B C
+            point M = midpoint A B
+            point P = 1 1
+            point Q = 3 2
+            point Z = 10 10
+            step verschieben
+              move D along P Q
+            step drehen
+              rotate A B C around Z by 90 duration 500
+            step zurück
+              together
+                rotate A around Z by -90
+              end
+            """);
+        Vec At(string name) => ((GeoPoint)c.Objects[name]).Position;
+        void Near(Vec expected, Vec actual)
+        {
+            Assert.Equal(expected.X, actual.X, 9);
+            Assert.Equal(expected.Y, actual.Y, 9);
+        }
+        // moved by (2, 1), then turned around Z = (10, 10) by 90°; A turned back; M follows A and B
+        Near(new Vec(2, 1), At("A"));
+        Near(new Vec(19, 6), At("B"));
+        Near(new Vec(16, 2), At("C"));
+        Near(new Vec(10.5, 3.5), At("M"));
+        Near(new Vec(1, 1), At("P"));
+        ErrorAt("point A = 0 0\nstep s\n  move A B to 1 1", 3, 12, "Expected \"along\"");
+        ErrorAt("point A = 0 0\nstep s\n  rotate A around A 90", 3, 21, "\"by\"");
+        ErrorAt("point A = 0 0\nstep s\n  rotate around A by 90", 3, 10, "names of objects");
+        ErrorAt("point A = 0 0\ntext t = \"x\" at 1 1\nstep s\n  move t along A A", 4, 3, "not built from free points");
+        ErrorAt("point A = 0 0\nmove A along A A", 2, 1, "only possible inside a step");
+    }
+
+    [Fact]
     public void KeywordsLinkTheFirstOccurrenceInEachStep()
     {
         AnimationData page = ScriptCompiler.Compile("""

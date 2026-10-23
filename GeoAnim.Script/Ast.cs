@@ -49,6 +49,14 @@ internal sealed record ShowStatement(int Line, int Column, bool Show, IReadOnlyL
 /// "move P to x y" (Target), "move P to 90" (Parameter: angle or position on a path) or "move P to Q" (TargetPoint: where
 /// Q is at that moment).
 /// </summary>
+/// <summary>"move A B C along P Q": the objects moved by the vector PQ.</summary>
+internal sealed record TranslateStatement(int Line, int Column, IReadOnlyList<NameRef> Targets, NameRef From, NameRef To, OptionList Options)
+    : Statement(Line, Column);
+
+/// <summary>"rotate A B C around M by 60": the objects turned around M (degrees, counterclockwise).</summary>
+internal sealed record RotateStatement(int Line, int Column, IReadOnlyList<NameRef> Targets, NameRef Center, double Degrees, OptionList Options)
+    : Statement(Line, Column);
+
 internal sealed record MoveStatement(int Line, int Column, NameRef Point, Vec? Target, double? Parameter, OptionList Options, NameRef? TargetPoint = null)
     : Statement(Line, Column);
 

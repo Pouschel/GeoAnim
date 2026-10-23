@@ -256,6 +256,28 @@ public static class ScriptCompiler
                         }
                         break;
                     }
+                case TranslateStatement s:
+                    {
+                        if (OnlyResult)
+                        {
+                            break;
+                        }
+                        List<GeoObject> targets = s.Targets.Select(t => NotInput(t, "move")).ToList();
+                        Options options = ToOptions(s.Options, "move", ["duration", "easing"]);
+                        c.Translate(targets, ResolvePoint(s.From), ResolvePoint(s.To), options.Duration, options.Easing);
+                        break;
+                    }
+                case RotateStatement s:
+                    {
+                        if (OnlyResult)
+                        {
+                            break;
+                        }
+                        List<GeoObject> targets = s.Targets.Select(t => NotInput(t, "rotate")).ToList();
+                        Options options = ToOptions(s.Options, "rotate", ["duration", "easing"]);
+                        c.Rotate(targets, ResolvePoint(s.Center), s.Degrees, options.Duration, options.Easing);
+                        break;
+                    }
                 case PauseStatement s:
                     // a used file drawn in one step goes without its pauses
                     if (module == null || module.Mode is UseMode.Steps or UseMode.Play)
