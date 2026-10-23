@@ -8,10 +8,10 @@ namespace GeoAnim.Cli;
 /// <summary>
 /// geoanim serve &lt;file.geo&gt; [--port N] [--no-browser]: live preview in the browser, updated on every save.<br/>
 /// geoanim export &lt;file.geo&gt; [-o file.html]: one self-contained HTML file.<br/>
-/// geoanim exportdir &lt;dir&gt;: an HTML file next to every .geo file in the folder and its subfolders.<br/>
+/// geoanim exportdir &lt;dir&gt; [-o dir]: the folder as a book of pages with an overview and navigation.<br/>
 /// geoanim daemon: compiles for an editor over standard input and output (see <see cref="Daemon"/>).
 /// </summary>
-internal static class Program
+internal static partial class Program
 {
     private const string Usage = """
         Usage:
@@ -19,10 +19,10 @@ internal static class Program
               Shows the animation in the browser and updates it whenever the file is saved.
           geoanim export <file.geo> [-o <file.html>]
               Writes the animation as one HTML file that plays without a server (default: next to the script).
-          geoanim exportdir <dir> [-o <output directory>] [-index]
-              Writes the animation HTML for every .geo file in directory dir and all subdirectories: next to it, or
-              with -o in the same folder structure below the output directory. With -index also an index.html with
-              links to all pages.
+          geoanim exportdir <dir> [-o <output directory>]
+              Exports directory dir as a book: a page for every .geo file in it and all subdirectories (not for those
+              starting with "_"), next to it or with -o in the same folder structure below the output directory, with
+              an index.html linking to all pages. "20_Strecken.geo" becomes "Strecken.html" (the number gives the order).
           geoanim daemon
               Compiles for an editor (the VS Code extension): JSON requests on standard input, answers on standard output.
         """;
@@ -43,7 +43,6 @@ internal static class Program
         if (args[0] == "exportdir")
         {
             string? outputFolder = null;
-            bool index = false;
             for (int i = 2; i < args.Length; i++)
             {
                 if (args[i] is "-o" or "--output" && i + 1 < args.Length)
@@ -52,7 +51,7 @@ internal static class Program
                 }
                 else if (args[i] is "-index" or "--index")
                 {
-                    index = true;
+                    // the overview is always written now
                 }
                 else
                 {
@@ -61,7 +60,7 @@ internal static class Program
                     return 1;
                 }
             }
-            return ExportDirectory(args[1], outputFolder, index);
+            return ExportDirectory(args[1], outputFolder);
         }
         string file = args[1];
         if (!File.Exists(file))
@@ -99,11 +98,14 @@ internal static class Program
     }
 
     /// <summary>
-    /// Exports every .geo file below <paramref name="folder"/>: next to it, or with <paramref name="outputFolder"/> in
-    /// the same folder structure below that folder (so relative links between the pages still work); with
-    /// <paramref name="index"/> also an index.html there with links to all pages. A faulty script does not stop the others.
+    /// Exports a folder as a book: every .geo file below <paramref name="folder"/> becomes a page, next to it or, with
+    /// <paramref name="outputFolder"/>, in the same folder structure below that folder; an index.html there links to all
+    /// pages. Files and folders starting with "_" are helpers (no page); a number in front ("20_Strecken.geo",
+    /// "10_Grundlagen") gives the order and is left out of the page's name ("Grundlagen/Strecken.html"). Links between the
+    /// pages may use the scripts' names; the keywords of every page link to it from the others. Each page gets the way to
+    /// the overview and the pages before and after it. A faulty script does not stop the others.
     /// </summary>
-    internal static int ExportDirectory(string folder, string? outputFolder = null, bool index = false)
+    internal static int ExportDirectory(string folder, string? outputFolder = null)
     {
         if (!Directory.Exists(folder))
         {
@@ -112,64 +114,134 @@ internal static class Program
         }
         string root = Path.GetFullPath(folder);
         string target = outputFolder == null ? root : Path.GetFullPath(outputFolder);
-        List<string> files = Directory.EnumerateFiles(root, "*.geo", SearchOption.AllDirectories).Order(StringComparer.Ordinal).ToList();
-        var pages = new List<(string Path, AnimationData Animation)>();
+        // the scripts in book order: the files of a folder before its subfolders, numbers by value
+        var order = IndexPage.NaturalOrder.Instance;
+        List<string> files = Directory.EnumerateFiles(root, "*.geo", SearchOption.AllDirectories)
+            .Select(file => Path.GetRelativePath(root, file).Replace('\\', '/'))
+            .Where(relative => !relative.Split('/').Any(part => part.StartsWith('_')))
+            .OrderBy(relative => relative.Contains('/') ? relative[..relative.LastIndexOf('/')] : "", order)
+            .ThenBy(relative => relative[(relative.LastIndexOf('/') + 1)..], order)
+            .ToList();
         int failed = 0;
-        // first all scripts: the keywords of every page are needed for the links in the others
-        var compiled = new List<(string File, string Relative, string Page, AnimationData Animation)>();
-        foreach (string file in files)
+        int conflicts = 0;
+        // first all scripts: the keywords and names of every page are needed for the links in the others
+        var compiled = new List<(string Source, string Page, AnimationData Animation)>();
+        var pageOfSource = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (string relative in files)
         {
-            string relative = Path.GetRelativePath(root, file);
-            AnimationData? animation = CompileFile(file, relative);
+            string page = PageName(relative);
+            if (compiled.Any(other => string.Equals(other.Page, page, StringComparison.OrdinalIgnoreCase)))
+            {
+                Console.Error.WriteLine($"{relative}: its page {page} is also the page of {compiled.First(o => string.Equals(o.Page, page, StringComparison.OrdinalIgnoreCase)).Source} (without the numbers in front).");
+                failed++;
+                continue;
+            }
+            AnimationData? animation = CompileFile(Path.Combine(root, relative), relative);
             if (animation == null)
             {
                 failed++;
+                continue;
             }
-            else
-            {
-                compiled.Add((file, relative, Path.ChangeExtension(relative, ".html").Replace('\\', '/'), animation));
-            }
+            compiled.Add((relative, page, animation));
+            pageOfSource[Path.ChangeExtension(relative, ".html")] = page;
         }
         // keyword → its page; a keyword of two pages is an error (the first one keeps it)
-        int conflicts = 0;
-        var keywordPages = new Dictionary<string, (string Page, string Relative, int Step)>(StringComparer.Ordinal);
+        var keywordPages = new Dictionary<string, (string Page, string Source, int Step)>(StringComparer.Ordinal);
         foreach (var page in compiled)
         {
             foreach (PageKeyword keyword in page.Animation.Keywords)
             {
                 if (keywordPages.TryGetValue(keyword.Form, out var other))
                 {
-                    Console.Error.WriteLine($"{page.Relative}: the keyword {keyword.Form} is already the keyword of {other.Relative}.");
+                    Console.Error.WriteLine($"{page.Source}: the keyword {keyword.Form} is already the keyword of {other.Source}.");
                     conflicts++;
                 }
                 else
                 {
-                    keywordPages[keyword.Form] = (page.Page, page.Relative, keyword.Step);
+                    keywordPages[keyword.Form] = (page.Page, page.Source, keyword.Step);
                 }
             }
         }
+        // the pages in the overview and the navigation: those with something drawn (not e.g. a file of defaults)
+        List<string> book = compiled.Where(p => !p.Animation.IsEmpty).Select(p => p.Page).ToList();
+        var titles = compiled.ToDictionary(p => p.Page, p => IndexPage.TitleOf(p.Page, p.Animation));
+        var pages = new List<(string Path, AnimationData Animation)>();
         foreach (var page in compiled)
         {
+            // links written with the scripts' names ("20_Strecken.html#2") → the pages' names
+            AnimationData animation = Keywords.RewriteLinks(page.Animation, href => PageAddress(page.Source, page.Page, href, pageOfSource));
             // inside a step: to its end ("page.html#3")
             var links = keywordPages.Where(k => k.Value.Page != page.Page)
                 .ToDictionary(k => k.Key, k => Keywords.RelativeAddress(page.Page, k.Value.Page) + (k.Value.Step > 0 ? "#" + k.Value.Step : ""),
                     StringComparer.Ordinal);
-            AnimationData animation = Keywords.Link(page.Animation, links);
-            string output = Path.ChangeExtension(Path.Combine(target, page.Relative), ".html");
+            animation = Keywords.Link(animation, links);
+            int position = book.IndexOf(page.Page);
+            PageLink? Neighbour(int i) => position >= 0 && i >= 0 && i < book.Count
+                ? new PageLink(titles[book[i]], Keywords.RelativeAddress(page.Page, book[i]))
+                : null;
+            var navigation = new PageNavigation(Keywords.RelativeAddress(page.Page, "index.html"), Neighbour(position - 1), Neighbour(position + 1));
+            string output = Path.Combine(target, page.Page.Replace('/', Path.DirectorySeparatorChar));
             Directory.CreateDirectory(Path.GetDirectoryName(output)!);
-            Write(animation, output);
+            Write(animation, output, navigation);
             pages.Add((page.Page, animation));
         }
-        if (index)
-        {
-            Directory.CreateDirectory(target);
-            string indexFile = Path.Combine(target, "index.html");
-            File.WriteAllText(indexFile, IndexPage.Create(Path.GetFileName(root), pages), new UTF8Encoding(false));
-            Console.WriteLine($"Written: {indexFile} ({pages.Count(p => !p.Animation.IsEmpty)} links)");
-        }
+        Directory.CreateDirectory(target);
+        string indexFile = Path.Combine(target, "index.html");
+        File.WriteAllText(indexFile, IndexPage.Create(Path.GetFileName(root), pages), new UTF8Encoding(false));
+        Console.WriteLine($"Written: {indexFile} ({book.Count} links)");
         Console.WriteLine($"{files.Count - failed} of {files.Count} files exported" + (failed > 0 ? $", {failed} with errors." : ".")
             + (conflicts > 0 ? $" {conflicts} keyword(s) given twice." : ""));
         return failed > 0 || conflicts > 0 ? 1 : 0;
+    }
+
+    // "10_Grundlagen/20_Strecken.geo" → "Grundlagen/Strecken.html": the numbers in front only give the order
+    internal static string PageName(string relative) =>
+        string.Join("/", Path.ChangeExtension(relative, ".html").Split('/').Select(part => SortNumber().Replace(part, "")));
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"^\d+_(?=.)")]
+    private static partial System.Text.RegularExpressions.Regex SortNumber();
+
+    // a link of a page to another one by its script's name ("../10_Grundlagen/20_Strecken.html#2") → by its page's name;
+    // null: not a link to a page of the book (a site, a file, a page written with its new name)
+    private static string? PageAddress(string source, string page, string href, Dictionary<string, string> pageOfSource)
+    {
+        if (System.Text.RegularExpressions.Regex.IsMatch(href, "^[a-z][a-z0-9+.-]*:", System.Text.RegularExpressions.RegexOptions.IgnoreCase)
+            || href.StartsWith('/') || href.StartsWith('#'))
+        {
+            return null;
+        }
+        int cut = href.IndexOfAny(['#', '?']);
+        string path = Uri.UnescapeDataString(cut < 0 ? href : href[..cut]);
+        string rest = cut < 0 ? "" : href[cut..];
+        string folder = source.Contains('/') ? source[..source.LastIndexOf('/')] : "";
+        // resolved against the script's folder, relative to the book's root
+        string combined = NormalizePath(folder.Length == 0 ? path : folder + "/" + path);
+        return pageOfSource.TryGetValue(combined, out string? targetPage) ? Keywords.RelativeAddress(page, targetPage) + rest : null;
+    }
+
+    // "a/b/../c.html" → "a/c.html"
+    private static string NormalizePath(string path)
+    {
+        var parts = new List<string>();
+        foreach (string part in path.Split('/'))
+        {
+            if (part == "..")
+            {
+                if (parts.Count > 0)
+                {
+                    parts.RemoveAt(parts.Count - 1);
+                }
+                else
+                {
+                    parts.Add(part);
+                }
+            }
+            else if (part.Length > 0 && part != ".")
+            {
+                parts.Add(part);
+            }
+        }
+        return string.Join("/", parts);
     }
 
     // the animation written, or null after an error (reported)
@@ -197,9 +269,9 @@ internal static class Program
         }
     }
 
-    private static void Write(AnimationData animation, string output)
+    private static void Write(AnimationData animation, string output, PageNavigation? navigation = null)
     {
-        File.WriteAllText(output, HtmlExporter.Export(animation), new UTF8Encoding(false));
+        File.WriteAllText(output, HtmlExporter.Export(animation, navigation), new UTF8Encoding(false));
         Console.WriteLine($"Written: {output} ({animation.Steps.Count} steps, {animation.Duration / 1000:0.0} s)");
     }
 

@@ -1,5 +1,5 @@
 
-include def.geo
+include _def.geo
 
 title Animation gleiche Länge
 

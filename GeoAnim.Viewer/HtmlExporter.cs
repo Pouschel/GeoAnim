@@ -80,8 +80,8 @@ public static partial class HtmlExporter
         MarkdownPattern().Replace(text, m => m.Groups[1].Success ? m.Groups[1].Value : m.Groups[2].Success ? m.Groups[2].Value : m.Groups[3].Value)
             .Replace('\n', ' ');
 
-    /// <summary>The page for <paramref name="animation"/>.</summary>
-    public static string Export(AnimationData animation)
+    /// <summary>The page for <paramref name="animation"/>; in an exported book with the way to the other pages.</summary>
+    public static string Export(AnimationData animation, PageNavigation? navigation = null)
     {
         string html = ViewerFiles.ReadText("player.html");
         html = TitlePattern().Replace(html, "<title>" + WebUtility.HtmlEncode(animation.Title == null ? "GeoAnim" : PlainText(animation.Title)) + "</title>"
@@ -89,7 +89,8 @@ public static partial class HtmlExporter
         html = StylesheetPattern().Replace(html, m => "<style>\n" + InlineCss(m.Groups[1].Value) + "</style>");
         html = ScriptPattern().Replace(html, m =>
             // the JSON escapes <, > and &, so it cannot end the script element
-            "<script>window.GEO_ANIMATION = " + animation.ToJson() + ";</script>\n"
+            "<script>window.GEO_ANIMATION = " + animation.ToJson() + ";"
+            + (navigation == null ? "" : "\n      window.GEO_BOOK = " + navigation.ToJson() + ";") + "</script>\n"
             + "    <script>\n" + EscapeScript(ViewerFiles.ReadText(m.Groups[1].Value)) + "</script>");
         return html;
     }

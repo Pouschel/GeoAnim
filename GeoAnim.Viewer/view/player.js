@@ -723,14 +723,17 @@
     const caption = $('caption')
     const current = [caption.richText || '', $('info').richText || '']
     box.style.minHeight = ''
+    const nextShown = !$('next-page').hidden
     let height = box.offsetHeight
-    for (const step of steps()) {
+    steps().forEach((step, index) => {
       setRichText(caption, step.caption)
       showInfo(step.info)
+      showNextPage(index)
       height = Math.max(height, box.offsetHeight)
-    }
+    })
     setRichText(caption, current[0])
     showInfo(current[1])
+    $('next-page').hidden = !nextShown
     box.style.minHeight = height + 'px'
   }
 
@@ -898,6 +901,7 @@
     const index = currentStepIndex()
     setRichText($('caption'), index >= 0 ? list[index].caption : '')
     showInfo(index >= 0 ? list[index].info : '')
+    showNextPage(index)
     $('counter').textContent = (index + 1) + ' / ' + list.length
     const timeline = $('timeline')
     if (Number(timeline.value) !== Math.round(time)) {
@@ -912,6 +916,49 @@
     const info = $('info')
     setRichText(info, text || '')
     info.hidden = !text
+  }
+
+  // ------------------------------------------------------------------ the way through an exported book
+
+  // window.GEO_BOOK (geoanim exportdir): { index, previous: { title, href } | null, next: … }
+  const book = window.GEO_BOOK || null
+
+  // below the last step: "Weiter: title →"
+  function showNextPage (stepIndex) {
+    const box = $('next-page')
+    const show = !!(book && book.next && animation && stepIndex === steps().length - 1)
+    box.hidden = !show
+    if (show && box.firstChild.textContent === '') {
+      box.firstChild.href = book.next.href
+      box.firstChild.textContent = 'Weiter: ' + book.next.title + ' →'
+    }
+  }
+
+  // in the menu above the steps: overview, previous and next page
+  function buildBook () {
+    const box = $('book')
+    if (!book) {
+      return
+    }
+    const entries = [['↑', 'Übersicht', book.index]]
+    if (book.previous) {
+      entries.push(['←', book.previous.title, book.previous.href])
+    }
+    if (book.next) {
+      entries.push(['→', book.next.title, book.next.href])
+    }
+    for (const [arrow, title, href] of entries) {
+      const link = document.createElement('a')
+      link.href = href
+      const mark = document.createElement('span')
+      mark.className = 'arrow'
+      mark.textContent = arrow
+      const text = document.createElement('span')
+      text.textContent = title
+      link.append(mark, text)
+      box.appendChild(link)
+    }
+    box.hidden = false
   }
 
   // ------------------------------------------------------------------ the list of steps
@@ -1327,6 +1374,7 @@
       })
     }
     if (window.GEO_ANIMATION) {
+      buildBook()
       setAnimation(window.GEO_ANIMATION, false)
     } else if (window.GEO_EMBEDDED) {
       window.addEventListener('message', event => receive(event.data))

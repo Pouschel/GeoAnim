@@ -26,9 +26,13 @@
       <div id="texts">
         <div id="caption" aria-live="polite"></div>
         <div id="info" hidden></div>
+        <!-- in an exported book: the next page, below the last step -->
+        <div id="next-page" hidden><a></a></div>
       </div>
     </div>
     <nav id="menu" aria-label="Steps" hidden>
+      <!-- in an exported book: overview, previous and next page -->
+      <div id="book" hidden></div>
       <ol id="menu-list"></ol>
     </nav>
     <nav id="controls" aria-label="Animation controls">

@@ -5,12 +5,12 @@ using System.Text.RegularExpressions;
 namespace GeoAnim.Viewer;
 
 /// <summary>
-/// A page with links to exported animations ("geoanim exportdir … -index"): the pages of the folder itself first, then
-/// a section per subfolder; each with its title and its short description, in natural order (Prop2 before Prop10).
+/// The overview of an exported book ("geoanim exportdir"): links to the pages in the order given (the pages of the folder
+/// itself first, then a section per subfolder), each with its title and its short description.
 /// </summary>
 public static partial class IndexPage
 {
-    /// <summary>The index for the pages (paths relative to the index, with "/").</summary>
+    /// <summary>The index for the pages in book order (paths relative to the index, with "/").</summary>
     public static string Create(string title, IEnumerable<(string Path, AnimationData Animation)> pages)
     {
         var html = new StringBuilder();
@@ -40,17 +40,16 @@ public static partial class IndexPage
         html.Append("    <h1>").Append(Encode(title)).Append("</h1>\n");
         foreach (var folder in pages
             .Where(page => !page.Animation.IsEmpty)
-            .GroupBy(page => page.Path.Contains('/') ? page.Path.Substring(0, page.Path.LastIndexOf('/')) : string.Empty)
-            .OrderBy(group => group.Key, NaturalOrder.Instance))
+            .GroupBy(page => page.Path.Contains('/') ? page.Path.Substring(0, page.Path.LastIndexOf('/')) : string.Empty))
         {
             if (folder.Key.Length > 0)
             {
                 html.Append("    <h2>").Append(Encode(folder.Key.Replace("/", " / "))).Append("</h2>\n");
             }
             html.Append("    <ol>\n");
-            foreach ((string path, AnimationData animation) in folder.OrderBy(page => page.Path, NaturalOrder.Instance))
+            foreach ((string path, AnimationData animation) in folder)
             {
-                string name = animation.Title == null ? Path.GetFileNameWithoutExtension(path) : HtmlExporter.PlainText(animation.Title);
+                string name = TitleOf(path, animation);
                 string link = string.Join("/", path.Split('/').Select(Uri.EscapeDataString));
                 html.Append("      <li><a href=\"").Append(link).Append("\">").Append(Encode(name)).Append("</a>");
                 string description = HtmlExporter.DescriptionOf(animation);
@@ -68,8 +67,12 @@ public static partial class IndexPage
 
     private static string Encode(string text) => WebUtility.HtmlEncode(text);
 
+    /// <summary>The name of a page in the overview and the navigation: its title as plain text, else its file name.</summary>
+    public static string TitleOf(string path, AnimationData animation) =>
+        animation.Title == null ? Path.GetFileNameWithoutExtension(path) : HtmlExporter.PlainText(animation.Title);
+
     /// <summary>Text with numbers compared by their value: "Prop2" before "Prop10".</summary>
-    private sealed partial class NaturalOrder : IComparer<string>
+    public sealed partial class NaturalOrder : IComparer<string>
     {
         public static NaturalOrder Instance { get; } = new();
 

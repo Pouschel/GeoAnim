@@ -1,4 +1,4 @@
-include ../def.geo
+include ../_def.geo
 
 title Streckensubtraktion
 
@@ -35,16 +35,16 @@ output P # Punkt auf AB, sodass AP die kürzere Strecke ist
 step Beweis
 set t1=Nach <Prop2.html> ist $|c|=|bar(AD)|$ 
 text t1t=t1 at 1.5 4.5
-use ../SameLenAni.geo A D C1 C2
+use ../_SameLenAni.geo A D C1 C2
 
 set t2=$|bar(AD)|=|bar(AP)|$, da Radien 
 |
 |des selben Kreises
 text t2t=t2 at -1.5 -2.18
-use ../SameLenAni.geo A D A P
+use ../_SameLenAni.geo A D A P
 
 text t35="also: $|c|=|bar(AD)|=|bar(AP)|$" at 4.35 1.93
-use ../SameLenAni.geo A P C1 C2
+use ../_SameLenAni.geo A P C1 C2
 
 
 

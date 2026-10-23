@@ -211,6 +211,60 @@ h1 a {
   display: none;
 }
 
+/* the way through an exported book, above the steps */
+#book {
+  margin: 0 0 8px;
+  padding: 0 0 8px;
+  border-bottom: 1px solid #e3e6eb;
+}
+
+#book[hidden] {
+  display: none;
+}
+
+#book a {
+  display: flex;
+  gap: 10px;
+  padding: 7px 16px;
+  color: #1565c0;
+  font-size: 17px;
+  line-height: 1.35;
+  text-decoration: none;
+}
+
+#book a:hover {
+  background: #eceef2;
+}
+
+#book .arrow {
+  min-width: 1.6em;
+  color: #6b7280;
+  text-align: right;
+}
+
+/* below the last step: the next page of the book */
+#next-page {
+  box-sizing: border-box;
+  max-width: 44em;
+  margin: 0 auto;
+  padding: 0 16px 10px;
+  font-size: var(--info-size, 17px);
+  text-align: right;
+}
+
+#next-page[hidden] {
+  display: none;
+}
+
+#next-page a {
+  color: #1565c0;
+  text-decoration: none;
+}
+
+#next-page a:hover {
+  text-decoration: underline;
+}
+
 #menu-list {
   margin: 0;
   padding: 0;

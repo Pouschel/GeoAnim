@@ -1,4 +1,4 @@
-include ../def.geo
+include ../_def.geo
 
 view x -10 .. 10 y -1 .. 8
 

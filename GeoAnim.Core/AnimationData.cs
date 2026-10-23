@@ -60,8 +60,11 @@ public sealed class AnimationData
     internal IReadOnlyList<Primitive> Primitives => primitives;
 
     /// <summary>The same animation with other step texts (e.g. with links).</summary>
-    public AnimationData WithSteps(IReadOnlyList<AnimationStep> steps) =>
-        new(Title, View, Background, GridStep, Axes, Duration, steps, primitives, timeScale, Formulas)
+    public AnimationData WithSteps(IReadOnlyList<AnimationStep> steps) => WithTexts(Title, steps);
+
+    /// <summary>The same animation with another title and other step texts (their formulas must stay the same).</summary>
+    public AnimationData WithTexts(string? title, IReadOnlyList<AnimationStep> steps) =>
+        new(title, View, Background, GridStep, Axes, Duration, steps, primitives, timeScale, Formulas)
         {
             Description = Description,
             Keywords = Keywords,

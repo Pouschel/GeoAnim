@@ -1,5 +1,5 @@
 
-include ../def.geo
+include ../_def.geo
 
 title Auf einer gegebenen Strecke ein gleichseitiges Dreieck errichten.
 
@@ -34,13 +34,13 @@ set t1c=Nach Konstruktion ist
 |
 | $bar(AC) = bar (AB)$
 text t1= t1c at -5.5 3
-use ../SameLenAni.geo A C A B
+use ../_SameLenAni.geo A C A B
 
 set t1c=Nach Konstruktion ist
 |
 | $bar(BC) = bar (AB)$
 text t2= t1c at 4.7 3
-use ../SameLenAni.geo B C B A
+use ../_SameLenAni.geo B C B A
 
 
 

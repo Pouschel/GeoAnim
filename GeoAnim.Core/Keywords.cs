@@ -101,6 +101,24 @@ public static class Keywords
         return animation.WithSteps(steps);
     }
 
+    /// <summary>
+    /// The animation with other addresses in the links of its title and steps ([text](address), &lt;address&gt;):
+    /// <paramref name="address"/> gives the new address, or null to keep it (e.g. a script's page name → its exported name).
+    /// </summary>
+    public static AnimationData RewriteLinks(AnimationData animation, Func<string, string?> address)
+    {
+        string? Rewrite(string? text) => text == null ? null : HandLinkPattern.Replace(text, m =>
+        {
+            Group target = m.Groups[2].Success ? m.Groups[2] : m.Groups[3];
+            string? changed = address(target.Value);
+            return changed == null ? m.Value : m.Value[..(target.Index - m.Index)] + changed + m.Value[(target.Index - m.Index + target.Length)..];
+        });
+        return animation.WithTexts(Rewrite(animation.Title),
+            animation.Steps.Select(step => step with { Caption = Rewrite(step.Caption)!, Info = Rewrite(step.Info) }).ToList());
+    }
+
+    private static readonly Regex HandLinkPattern = new(@"\[([^\]]*)\]\(([^)\s]+)\)|<([^\s<>]+)>");
+
     // a text with links: what is not plain text (\x, $formula$, `code`, [link](address), <address>) is copied
     private static string LinkText(string text, Regex pattern, Func<string, string> address, HashSet<string> linked)
     {

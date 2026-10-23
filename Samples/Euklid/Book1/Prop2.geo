@@ -1,4 +1,4 @@
-include ../def.geo
+include ../_def.geo
 
 title An einem Punkt eine Strecke vorgegebener Länge konstruieren
 
@@ -51,16 +51,16 @@ set b0=$bar(DL)=bar(DG)$, da $L$ und $G$
 |
 |auf einem Kreis um $D$ liegen
 text tb0=b0 at -7 5 
-use ../SameLenAni.geo D L D G
+use ../_SameLenAni.geo D L D G
 
 set b1=Da $Delta ABD$  gleichseitig ist,
 |
 | gilt $bar(DA)=bar(DB)$
 text tb1=b1 at -1 4 
-use ../SameLenAni.geo D A D B
+use ../_SameLenAni.geo D A D B
 
 set b2=Da $bar(DL)=bar(DG)$ war,  
 |
 |gilt auch $bar(AL)=bar(BC)$
 text tb2=b2 at -6.5 -1
-use ../SameLenAni.geo A L B C
+use ../_SameLenAni.geo A L B C

@@ -70,14 +70,14 @@ public sealed class CliTests : IDisposable
             Assert.True(File.Exists(Path.Combine(output, "one.html")));
             Assert.True(File.Exists(Path.Combine(output, "sub", "deeper", "two.html")));
             Assert.False(File.Exists(Path.Combine(output, "one.geo")));
-            Assert.False(File.Exists(Path.Combine(output, "index.html")));
+            Assert.True(File.Exists(Path.Combine(output, "index.html")));
 
             // with an index: links to the pages with something drawn, in natural order, by folder
             Write("Prop10.geo", "title Satz **10**\npoint A = 1 1\nstep Zehn");
             Write("Prop2.geo", "title Satz 2\npoint A = 1 1\nstep Zwei mit $bar(AB)$");
             Write(Path.Combine("sub", "deeper", "three.geo"), "point A = 1 1");
             Write("styles.geo", "default point size 3");
-            Assert.Equal(0, Program.ExportDirectory(folder, output, index: true));
+            Assert.Equal(0, Program.ExportDirectory(folder, output));
             string index = File.ReadAllText(Path.Combine(output, "index.html"));
             Assert.Contains("<a href=\"one.html\">one</a>", index);
             Assert.Contains("<a href=\"Prop2.html\">Satz 2</a><p>Zwei mit AB.</p>", index);
@@ -94,6 +94,41 @@ public sealed class CliTests : IDisposable
     }
 
     [Fact]
+    public void ExportDirectoryMakesABook()
+    {
+        Directory.CreateDirectory(Path.Combine(folder, "10_Grundlagen"));
+        Directory.CreateDirectory(Path.Combine(folder, "20_Mehr"));
+        Directory.CreateDirectory(Path.Combine(folder, "_Stile"));
+        Write("_def.geo", "default point size 3");
+        Write(Path.Combine("_Stile", "farben.geo"), "point A = 1 1");
+        Write(Path.Combine("10_Grundlagen", "10_Punkte.geo"), "include ../_def.geo\ntitle Punkte\npoint A = 1 1\nstep Ein Punkt");
+        Write(Path.Combine("10_Grundlagen", "20_Strecken-und-Längen.geo"), "title Strecken\npoint A = 1 1\nstep Siehe [Punkte](10_Punkte.html#1) und <https://mathepedia.de>");
+        Write(Path.Combine("20_Mehr", "10_Kreis.geo"), "title Kreis\npoint A = 1 1\nstep Wie bei [Strecken](../10_Grundlagen/20_Strecken-und-Längen.html)");
+        Assert.Equal(0, Program.ExportDirectory(folder));
+        // no pages for helpers, no numbers in the names
+        Assert.False(File.Exists(Path.Combine(folder, "_def.html")));
+        Assert.False(Directory.Exists(Path.Combine(folder, "Stile")) || File.Exists(Path.Combine(folder, "_Stile", "farben.html")));
+        Assert.True(File.Exists(Path.Combine(folder, "Grundlagen", "Punkte.html")));
+        string strecken = File.ReadAllText(Path.Combine(folder, "Grundlagen", "Strecken-und-Längen.html"));
+        string kreis = File.ReadAllText(Path.Combine(folder, "Mehr", "Kreis.html"));
+        // links with the scripts' names lead to the pages
+        Assert.Contains("[Punkte](Punkte.html#1)", strecken);
+        Assert.Contains("\\u003Chttps://mathepedia.de\\u003E", strecken);
+        Assert.Contains("[Strecken](../Grundlagen/Strecken-und-L%C3%A4ngen.html)", kreis);
+        // the book: overview, previous and next page across folders
+        string index = File.ReadAllText(Path.Combine(folder, "index.html"));
+        Assert.True(index.IndexOf("Grundlagen/Punkte.html") < index.IndexOf("Strecken-und-") && index.IndexOf("Strecken-und-") < index.IndexOf("Mehr/Kreis.html"), index);
+        Assert.Contains("<h2>Grundlagen</h2>", index);
+        Assert.Contains("window.GEO_BOOK = {\"index\":\"../index.html\",\"previous\":{\"title\":\"Strecken\",\"href\":\"../Grundlagen/Strecken-und-L%C3%A4ngen.html\"},\"next\":null}", kreis);
+        Assert.Contains("\"previous\":null,\"next\":{\"title\":\"Strecken\",\"href\":\"Strecken-und-L%C3%A4ngen.html\"}",
+            File.ReadAllText(Path.Combine(folder, "Grundlagen", "Punkte.html")));
+
+        // two scripts with the same page
+        Write(Path.Combine("20_Mehr", "30_Kreis.geo"), "point A = 1 1");
+        Assert.Equal(1, Program.ExportDirectory(folder));
+    }
+
+    [Fact]
     public void ExportDirectoryLinksKeywordsToTheirPages()
     {
         Directory.CreateDirectory(Path.Combine(folder, "Basics"));
@@ -103,11 +138,11 @@ public sealed class CliTests : IDisposable
         Write("Dreieck.geo", "point A = 1 1\nstep Drei Strecken, ihre Endpunkte");
         Assert.Equal(0, Program.ExportDirectory(folder));
         string strecken = File.ReadAllText(Path.Combine(folder, "Mehr", "Strecken.html"));
-        Assert.Contains("[Punkte](../Basics/10_Punkte.html)", strecken);
+        Assert.Contains("[Punkte](../Basics/Punkte.html)", strecken);
         Assert.DoesNotContain("[Strecke]", strecken);
         string dreieck = File.ReadAllText(Path.Combine(folder, "Dreieck.html"));
         Assert.Contains("[Strecken](Mehr/Strecken.html), ihre [Endpunkte](Mehr/Strecken.html#2)", dreieck);
-        Assert.DoesNotContain("](", File.ReadAllText(Path.Combine(folder, "Basics", "10_Punkte.html")).Split("GEO_ANIMATION")[1].Split("</script>")[0]);
+        Assert.DoesNotContain("](", File.ReadAllText(Path.Combine(folder, "Basics", "Punkte.html")).Split("GEO_ANIMATION")[1].Split("</script>")[0]);
 
         // a keyword of two pages
         Write("Doppelt.geo", "keyword Punkt\npoint A = 1 1");

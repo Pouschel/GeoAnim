@@ -1,4 +1,4 @@
-include ../def.geo
+include ../_def.geo
 
 title Gleiche Basiswinkel im gleichschenkligen Dreieck
 
