@@ -130,6 +130,12 @@ internal static partial class Program
         foreach (string relative in files)
         {
             string page = PageName(relative);
+            string unsafeCharacters = UnsafeCharacters(page);
+            if (unsafeCharacters.Length > 0)
+            {
+                // works, but is fragile on a web server (upload, Unicode forms, copied addresses)
+                Console.Error.WriteLine($"Warning: {relative}: the page name {page} has characters that are better avoided in web addresses: {unsafeCharacters} (e.g. ä → ae, ß → ss, space → -).");
+            }
             if (compiled.Any(other => string.Equals(other.Page, page, StringComparison.OrdinalIgnoreCase)))
             {
                 Console.Error.WriteLine($"{relative}: its page {page} is also the page of {compiled.First(o => string.Equals(o.Page, page, StringComparison.OrdinalIgnoreCase)).Source} (without the numbers in front).");
@@ -193,6 +199,11 @@ internal static partial class Program
             + (conflicts > 0 ? $" {conflicts} keyword(s) given twice." : ""));
         return failed > 0 || conflicts > 0 ? 1 : 0;
     }
+
+    // the characters of a page's path outside ASCII letters, digits, "-", "_", "." and "/" (each once, as they appear)
+    internal static string UnsafeCharacters(string page) =>
+        string.Join(" ", page.Where(c => !(char.IsAsciiLetterOrDigit(c) || c is '-' or '_' or '.' or '/')).Distinct()
+            .Select(c => c == ' ' ? "(space)" : c.ToString()));
 
     // "10_Grundlagen/20_Strecken.geo" → "Grundlagen/Strecken.html": the numbers in front only give the order
     internal static string PageName(string relative) =>

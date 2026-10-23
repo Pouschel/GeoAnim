@@ -123,6 +123,11 @@ public sealed class CliTests : IDisposable
         Assert.Contains("\"previous\":null,\"next\":{\"title\":\"Strecken\",\"href\":\"Strecken-und-L%C3%A4ngen.html\"}",
             File.ReadAllText(Path.Combine(folder, "Grundlagen", "Punkte.html")));
 
+        // names that are better avoided in web addresses give a warning
+        Assert.Equal("ä", Program.UnsafeCharacters("Grundlagen/Strecken-und-Längen.html"));
+        Assert.Equal("ß (space) ö", Program.UnsafeCharacters("Mehr/Maße und Größen.html"));
+        Assert.Equal("", Program.UnsafeCharacters("Grundlagen/Strahl-und-Gerade.html"));
+
         // two scripts with the same page
         Write(Path.Combine("20_Mehr", "30_Kreis.geo"), "point A = 1 1");
         Assert.Equal(1, Program.ExportDirectory(folder));
