@@ -27,23 +27,37 @@ public static class ScriptCompiler
     /// The names the script defines (vars, texts, objects; also in included files) with their text and place, for an
     /// editor; as far as the script can be read (up to a mistake in it).
     /// </summary>
-    public static List<ScriptDefinition> Definitions(ScriptSource source)
+    public static List<ScriptDefinition> Definitions(ScriptSource source) => Symbols(source).Definitions;
+
+    /// <summary>
+    /// The names the script defines (see <see cref="Definitions"/>) and every place a name stands, for an editor; as far
+    /// as the script can be read (up to a mistake in it).
+    /// </summary>
+    public static (List<ScriptDefinition> Definitions, List<ScriptReference> References) Symbols(ScriptSource source)
     {
         var definitions = new List<ScriptDefinition>();
+        var references = new List<ScriptReference>();
         try
         {
-            Parser.Parse(source.Text, definitions);
+            Parser.Parse(source.Text, definitions, references);
         }
         catch (ScriptError)
         {
             // the names up to the mistake
         }
-        return definitions.Select(d =>
+        return (definitions.Select(d =>
         {
             (string? file, int line) = source.OriginOf(d.Line);
             return d with { File = file, Line = line };
-        }).ToList();
+        }).ToList(), references.Select(r =>
+        {
+            (string? file, int line) = source.OriginOf(r.Line);
+            return r with { File = file, Line = line };
+        }).ToList());
     }
+
+    /// <summary>The words that cannot be names (for an editor: a new name must not be one).</summary>
+    public static IReadOnlyCollection<string> Keywords => Parser.Keywords;
 
     /// <summary>Compiles the script into a construction that is not yet built.</summary>
     public static Construction CompileConstruction(string source) => CompileConstruction(ScriptSource.FromText(source));

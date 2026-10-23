@@ -202,6 +202,17 @@ public sealed class CliTests : IDisposable
              ("A", "object", "point A = 1 1", main, 4, 7), ("s", "object", "segment s = A A dick", main, 5, 11)],
             definitions);
 
+        // every place a name stands, for renaming: definitions, objects, a var among the options, a text, a placeholder
+        answer = Ask(new { id = 13, type = "compile", file = main, text = "var dick width 5\nset t = Ein Text\npoint A = 1 1\npoint B = 3 1\nsegment s = A B dick\nnumber l = length s\ntext u = t at A\nstep Länge {l} von A" });
+        var references = answer.GetProperty("references").EnumerateArray()
+            .Select(r => (r.GetProperty("name").GetString(), r.GetProperty("line").GetInt32(), r.GetProperty("column").GetInt32()))
+            .ToList();
+        Assert.Equal(
+            [("dick", 1, 5), ("t", 2, 5), ("A", 3, 7), ("B", 4, 7), ("s", 5, 9), ("A", 5, 13), ("B", 5, 15), ("dick", 5, 17), ("l", 6, 8), ("s", 6, 19),
+             ("u", 7, 6), ("t", 7, 10), ("A", 7, 15), ("l", 8, 13)],
+            references);
+        Assert.Contains("degrees", Ask(new { id = 14, type = "keywords" }).GetProperty("keywords").EnumerateArray().Select(k => k.GetString()));
+
         // the player page for the preview: everything inside, no animation, waiting for messages
         string html = Ask(new { id = 10, type = "player" }).GetProperty("html").GetString()!;
         Assert.Contains("window.GEO_EMBEDDED = true;", html);

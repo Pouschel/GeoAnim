@@ -38,6 +38,12 @@ mklink /J "%USERPROFILE%\.vscode\extensions\geoanim-geo" "%CD%\editors\vscode"
   ein Tooltip seine Definition (die Zeile, beim Text den Text) und woher sie stammt, auch aus eingebundenen Dateien.
   F12 oder Strg+Klick springt zur Definition, Alt+F12 blendet sie zum Ändern an Ort und Stelle ein. Solange das Skript
   einen Fehler hat, gelten die zuletzt vollständig gelesenen Definitionen.
+- **Umbenennen** (F2): benennt ein Objekt, eine Var, einen Text (`set`) oder eine Zahl in der ganzen Datei um – überall,
+  wo der Name als Name steht (in Anweisungen, als Var unter den Optionen, als Text bei `text`/`label`, im Platzhalter
+  `{l}`), nicht aber Wörter in Beschreibungen und Formeln (`$bar(AB)$` bleibt). Der neue Name wird geprüft (kein
+  Schlüsselwort, nicht vergeben). Namen aus eingebundenen Dateien lassen sich noch nicht umbenennen.
+- **Alle Verweise** (Umschalt+F12) listet die Stellen eines Namens; steht der Cursor auf einem Namen, sind seine
+  Vorkommen in der Datei hervorgehoben.
 - Koordinaten unter der Maus und Umschalt+Klick zum Kopieren gibt es wie bei `geoanim serve`.
 
 Die Arbeit macht `geoanim daemon`, einmal im Hintergrund gestartet (MathJax startet daher nur einmal). Gefunden wird

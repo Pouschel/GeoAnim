@@ -11,9 +11,11 @@ namespace GeoAnim.Cli;
 /// <list type="bullet">
 /// <item>{"id": 1, "type": "compile", "file": "C:\\…\\a.geo", "text": "…"} → {"id": 1, "animation": {…} or null,
 /// "errors": [{"file": "C:\\…", "line": 3, "column": 7, "message": "…"}], "files": ["C:\\…", …], "definitions":
-/// [{"name": "k", "kind": "var" | "set" | "object", "text": "…", "file": "C:\\…", "line": 4, "column": 5}, …]} – the
+/// [{"name": "k", "kind": "var" | "set" | "object", "text": "…", "file": "C:\\…", "line": 4, "column": 5}, …],
+/// "references": [{"name": "k", "file": "C:\\…", "line": 4, "column": 5}, …] (every place a name stands)} – the
 /// text as if it were the file (unsaved changes; includes and uses relative to its folder).</item>
 /// <item>{"id": 2, "type": "player"} → {"id": 2, "html": "…"} – the player page for the preview.</item>
+/// <item>{"id": 3, "type": "keywords"} → {"id": 3, "keywords": ["angle", …]} – the words that cannot be names.</item>
 /// </list>
 /// A request that fails completely gets {"id": …, "fatal": "…"}.
 /// </summary>
@@ -46,6 +48,15 @@ internal static class Daemon
             {
                 "compile" => Compile(id, root.GetProperty("file").GetString() ?? "", root.GetProperty("text").GetString() ?? ""),
                 "player" => Answer(id, json => json.WriteString("html", HtmlExporter.ExportPlayer())),
+                "keywords" => Answer(id, json =>
+                {
+                    json.WriteStartArray("keywords");
+                    foreach (string keyword in ScriptCompiler.Keywords.Order(StringComparer.Ordinal))
+                    {
+                        json.WriteStringValue(keyword);
+                    }
+                    json.WriteEndArray();
+                }),
                 _ => Answer(id, json => json.WriteString("fatal", "Unknown request type \"" + type + "\".")),
             };
         }
@@ -103,9 +114,10 @@ internal static class Daemon
                 json.WriteStringValue(read);
             }
             json.WriteEndArray();
-            // for tooltips and "go to definition"
+            // for tooltips, "go to definition", renaming and references
+            (List<ScriptDefinition> definitions, List<ScriptReference> references) = source == null ? ([], []) : ScriptCompiler.Symbols(source);
             json.WriteStartArray("definitions");
-            foreach (ScriptDefinition definition in source == null ? [] : ScriptCompiler.Definitions(source))
+            foreach (ScriptDefinition definition in definitions)
             {
                 json.WriteStartObject();
                 json.WriteString("name", definition.Name);
@@ -114,6 +126,17 @@ internal static class Daemon
                 json.WriteString("file", definition.File);
                 json.WriteNumber("line", definition.Line);
                 json.WriteNumber("column", definition.Column);
+                json.WriteEndObject();
+            }
+            json.WriteEndArray();
+            json.WriteStartArray("references");
+            foreach (ScriptReference reference in references)
+            {
+                json.WriteStartObject();
+                json.WriteString("name", reference.Name);
+                json.WriteString("file", reference.File);
+                json.WriteNumber("line", reference.Line);
+                json.WriteNumber("column", reference.Column);
                 json.WriteEndObject();
             }
             json.WriteEndArray();

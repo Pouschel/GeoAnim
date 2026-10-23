@@ -127,3 +127,9 @@ internal sealed record OptionValue(string Name, object? Value, int Line, int Col
 /// given as text; line and column of the name).
 /// </summary>
 public sealed record ScriptDefinition(string Name, string Kind, string Text, string? File, int Line, int Column);
+
+/// <summary>
+/// A place where a name stands in a script (where it is defined and where it is used: in statements, as a var among the
+/// options, as a text from "set", in a placeholder "{l}"), for an editor (renaming, references).
+/// </summary>
+public sealed record ScriptReference(string Name, string? File, int Line, int Column);

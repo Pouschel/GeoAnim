@@ -42,23 +42,26 @@ internal sealed class Parser
     private readonly HashSet<string> numberNames = new(StringComparer.Ordinal);
     private readonly List<(string Name, int Line, int Column)> placeholders = new();
 
-    // for an editor: the names defined so far (lines of the source), and the source's lines for their text
+    // for an editor: the names defined so far (lines of the source), every place a name stands (also where it is
+    // defined; for renaming), and the source's lines for their text
     private readonly List<ScriptDefinition>? definitions;
+    private readonly List<ScriptReference>? references;
     private readonly string[] lines;
 
-    private Parser(List<Token> tokens, string source, List<ScriptDefinition>? definitions)
+    private Parser(List<Token> tokens, string source, List<ScriptDefinition>? definitions, List<ScriptReference>? references)
     {
         this.tokens = tokens;
         this.definitions = definitions;
+        this.references = references;
         lines = definitions == null ? [] : source.Split('\n');
     }
 
     public static List<Statement> Parse(string source) => Parse(source, null);
 
     /// <summary>Parses; with <paramref name="definitions"/> also collects the names defined (as far as it gets).</summary>
-    public static List<Statement> Parse(string source, List<ScriptDefinition>? definitions)
+    public static List<Statement> Parse(string source, List<ScriptDefinition>? definitions, List<ScriptReference>? references = null)
     {
-        var parser = new Parser(Lexer.Tokenize(source), source, definitions);
+        var parser = new Parser(Lexer.Tokenize(source), source, definitions, references);
         List<Statement> statements = parser.ParseBlock(null, out _);
         // a placeholder may come before its number (a step that names a number measured in it)
         foreach ((string name, int line, int column) in parser.placeholders)
@@ -717,6 +720,7 @@ internal sealed class Parser
             Token option = Next();
             if (vars.TryGetValue(option.Text, out List<OptionValue>? group))
             {
+                Referenced(option.Text, option.Line, option.Column);
                 values.AddRange(group);
                 continue;
             }
@@ -786,7 +790,17 @@ internal sealed class Parser
             throw Error(token, $"Expected the name of an object, not the keyword \"{token.Text}\".");
         }
         position++;
+        Referenced(token.Text, token.Line, token.Column);
         return new NameRef(token.Text, token.Line, token.Column);
+    }
+
+    // a place where a name stands (an object, var, text or number)
+    private void Referenced(string name, int line, int column)
+    {
+        if (references != null && name != "_")
+        {
+            references.Add(new ScriptReference(name, null, line, column));
+        }
     }
 
     private bool IsOption(string word) => OptionNames.Contains(word) || vars.ContainsKey(word);
@@ -820,6 +834,7 @@ internal sealed class Parser
         if (token.Kind == TokenKind.Name && texts.TryGetValue(token.Text, out string? text))
         {
             position++;
+            Referenced(token.Text, token.Line, token.Column);
             return text;
         }
         if (token.Kind != TokenKind.String)
@@ -837,6 +852,8 @@ internal sealed class Parser
         foreach ((string name, int index, _) in NumberText.Find(token.Text))
         {
             placeholders.Add((name, token.Line, token.Column + offset + index));
+            // the name after the brace
+            Referenced(name, token.Line, token.Column + offset + index + 1);
         }
         return token.Text;
     }

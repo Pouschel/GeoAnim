@@ -27,6 +27,8 @@ const lastResults = new Map()
 const timers = new Map()
 const reported = new Map()
 const definitions = new Map()
+const references = new Map()
+let keywords = null
 
 // ------------------------------------------------------------------ finding and starting geoanim
 
@@ -224,6 +226,8 @@ function request (message) {
 }
 
 function restart () {
+  // a new build may know other keywords
+  keywords = null
   stopDaemon()
   startDaemon()
   if (preview) {
@@ -310,6 +314,7 @@ function rememberDefinitions (document, result) {
   const old = definitions.get(key) || []
   if (result.errors.length === 0 || fresh.length >= old.length) {
     definitions.set(key, fresh)
+    references.set(key, result.references || [])
   }
 }
 
@@ -353,6 +358,85 @@ function definitionLocation (document, position) {
   const { definition } = found
   const uri = definition.file ? vscode.Uri.file(definition.file) : document.uri
   return new vscode.Location(uri, new vscode.Position(definition.line - 1, Math.max(0, definition.column - 1)))
+}
+
+// ------------------------------------------------------------------ renaming, references, highlights (in the file itself)
+
+const rangeOf = (reference) => new vscode.Range(reference.line - 1, reference.column - 1, reference.line - 1, reference.column - 1 + reference.name.length)
+
+// the place of a name at the position (not a word in a description: only where geoanim found a name)
+function referenceAt (document, position, list) {
+  return (list || references.get(document.uri.toString()) || [])
+    .find(r => isThisFile(document, r.file) && rangeOf(r).contains(position)) || null
+}
+
+const referencesInFile = (document, name, list) =>
+  (list || references.get(document.uri.toString()) || []).filter(r => r.name === name && isThisFile(document, r.file))
+
+// a name defined in an included file is used in other files too: renaming across files is not there yet
+function checkRenamable (document, reference) {
+  const definition = (definitions.get(document.uri.toString()) || []).find(d => d.name === reference.name)
+  if (definition && !isThisFile(document, definition.file)) {
+    throw new Error(`${reference.name} ist in ${path.basename(definition.file)} definiert; Umbenennen über Dateien hinweg gibt es noch nicht.`)
+  }
+}
+
+function prepareRename (document, position) {
+  const reference = referenceAt(document, position)
+  if (!reference) {
+    throw new Error('Hier steht kein Name eines Objekts, einer Var, eines Textes oder einer Zahl.')
+  }
+  checkRenamable(document, reference)
+  return rangeOf(reference)
+}
+
+async function provideRenameEdits (document, position, newName) {
+  // the places as they are now (the text may have changed since the last compile)
+  const result = await request({ type: 'compile', file: document.uri.scheme === 'file' ? document.uri.fsPath : '', text: document.getText() })
+  rememberDefinitions(document, result)
+  const reference = referenceAt(document, position, result.references)
+  if (!reference) {
+    throw new Error('Hier steht kein Name eines Objekts, einer Var, eines Textes oder einer Zahl.')
+  }
+  checkRenamable(document, reference)
+  if (!/^[A-Za-z_][A-Za-z0-9_]*'*$/.test(newName)) {
+    throw new Error(`„${newName}“ ist kein Name: Buchstaben, Ziffern und _, dahinter beliebig viele ' (A', P_1).`)
+  }
+  if (keywords === null) {
+    try {
+      keywords = new Set((await request({ type: 'keywords' })).keywords || [])
+    } catch (error) {
+      keywords = new Set()
+    }
+  }
+  if (keywords.has(newName)) {
+    throw new Error(`„${newName}“ ist ein Schlüsselwort und kann kein Name sein.`)
+  }
+  if (newName !== reference.name && (result.definitions || []).some(d => d.name === newName)) {
+    throw new Error(`Der Name ${newName} ist schon vergeben.`)
+  }
+  const edit = new vscode.WorkspaceEdit()
+  for (const place of referencesInFile(document, reference.name, result.references)) {
+    edit.replace(document.uri, rangeOf(place), newName)
+  }
+  return edit
+}
+
+function provideReferences (document, position, context) {
+  const reference = referenceAt(document, position)
+  if (!reference) {
+    return []
+  }
+  const definition = (definitions.get(document.uri.toString()) || []).find(d => d.name === reference.name)
+  return (references.get(document.uri.toString()) || [])
+    .filter(r => r.name === reference.name)
+    .filter(r => context.includeDeclaration || !definition || r.file !== definition.file || r.line !== definition.line || r.column !== definition.column)
+    .map(r => new vscode.Location(r.file ? vscode.Uri.file(r.file) : document.uri, rangeOf(r)))
+}
+
+function provideDocumentHighlights (document, position) {
+  const reference = referenceAt(document, position)
+  return reference ? referencesInFile(document, reference.name).map(r => new vscode.DocumentHighlight(rangeOf(r))) : []
 }
 
 // ------------------------------------------------------------------ preview
@@ -535,6 +619,9 @@ function activate (context) {
     vscode.commands.registerCommand('geoanim.restart', restart),
     vscode.languages.registerHoverProvider('geo', { provideHover: hover }),
     vscode.languages.registerDefinitionProvider('geo', { provideDefinition: definitionLocation }),
+    vscode.languages.registerRenameProvider('geo', { prepareRename, provideRenameEdits }),
+    vscode.languages.registerReferenceProvider('geo', { provideReferences }),
+    vscode.languages.registerDocumentHighlightProvider('geo', { provideDocumentHighlights }),
     vscode.workspace.onDidOpenTextDocument(document => { if (isGeo(document)) compile(document) }),
     vscode.workspace.onDidChangeTextDocument(event => { if (isGeo(event.document)) schedule(event.document) }),
     // a saved file may be included or used by others
@@ -555,6 +642,7 @@ function activate (context) {
       reported.delete(key)
       lastResults.delete(key)
       definitions.delete(key)
+      references.delete(key)
     }),
     vscode.window.onDidChangeActiveTextEditor(editor => {
       if (editor && isGeo(editor.document) && preview && editor.document !== previewDocument) {
