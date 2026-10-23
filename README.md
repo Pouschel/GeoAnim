@@ -151,6 +151,7 @@ Hinter einer Anweisung, in beliebiger Reihenfolge:
 | `labelsize 20` | Punkt, Strecke, Strahl, Gerade | Schriftgröße der Beschriftung in Punkt (Standard 24) |
 | `label "$A'$"` / `nolabel` | Punkt | Beschriftung (Standard: der Name als Formel) bzw. zunächst keine (mit `show label` später einblendbar; bei Linien und Winkeln ebenso, wenn sie ein `label` haben) |
 | `label "$a$"` | Strecke, Strahl, Gerade, Winkel | Beschriftung, die mit dem Objekt wandert; bei Linien standardmäßig in der Mitte, knapp rechts von der Richtung A → B (beim gegen den Uhrzeigersinn benannten Dreieck also außen), beim Winkel auf der Winkelhalbierenden im Sektor |
+| `arrow` / `arrow start` / `arrow both` | Strecke, Strahl | Pfeilspitze am Ende (bei B; `arrow end` ist dasselbe), am Anfang (bei A) oder an beiden Enden (Maßpfeile); beim Strahl sitzt die Spitze am Bildrand. Die Spitze wächst mit der Linienbreite, hat deren Farbe und wandert beim Zeichnen mit. Für Winkelschenkel als Pfeile: `segment SP = S P arrow` mit ausgeblendetem Punkt P |
 | `labelpos 0.3` | Strecke, Strahl, Gerade | Lage der Beschriftung bei A + 0.3·(B − A) (Standard 0.5); beim Strahl auch über 1, bei der Geraden beliebig |
 | `offset 0.3 -0.5` | Punkt (Beschriftung), Text, Strecke/Strahl/Gerade (Beschriftung) | Lage in Koordinateneinheiten relativ zum Punkt bzw. zur Stelle `labelpos`: dort beginnt die Grundlinie des Textes (bei Text an festen Koordinaten und bei Linien: ihre Mitte); ohne `offset` steht die Beschriftung knapp daneben |
 | `fill lightblue` | Vieleck | Füllfarbe (Standard: die Linienfarbe) |

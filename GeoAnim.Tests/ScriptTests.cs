@@ -494,6 +494,26 @@ public class ScriptTests
     }
 
     [Fact]
+    public void SegmentsAndRaysCanHaveArrows()
+    {
+        JsonElement primitives = JsonDocument.Parse(ScriptCompiler.Compile("""
+            point A = 0 0
+            point B = 3 0
+            var pfeil arrow color red
+            segment a = A B arrow
+            segment b = A B arrow start
+            segment c = A B arrow both
+            ray r = A B pfeil
+            segment d = A B
+            """).ToJson()).RootElement.GetProperty("primitives");
+        string[] arrows = primitives.EnumerateArray().Where(p => p.GetProperty("type").GetString() == "line")
+            .Select(p => p.GetProperty("tracks").TryGetProperty("arrow", out JsonElement arrow) ? arrow[0][1].GetString()! : "-").ToArray();
+        Assert.Equal(["end", "start", "both", "end", "-"], arrows);
+        ErrorAt("point A = 0 0\npoint B = 1 0\nline g = A B arrow", 3, 14, "not possible for line");
+        ErrorAt("point A = 0 0\narrow start", 2, 1, "command");
+    }
+
+    [Fact]
     public void TranslateAndRotateMoveTheFreePoints()
     {
         Construction c = ScriptCompiler.CompileConstruction("""

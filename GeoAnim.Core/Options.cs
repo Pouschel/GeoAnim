@@ -34,6 +34,9 @@ public sealed record Options
     /// <summary>The label of a point (default: its name) or of a segment, ray or line (default: none).</summary>
     public string? Label { get; init; }
 
+    /// <summary>Arrowheads of a segment or ray: at its end (B), its start (A) or both ends (dimension arrows).</summary>
+    public Arrow Arrow { get; init; }
+
     /// <summary>A point without label.</summary>
     public bool NoLabel { get; init; }
 
@@ -54,4 +57,13 @@ public sealed record Options
     public Easing? Easing { get; init; }
 
     public static Options None { get; } = new();
+}
+
+/// <summary>Where a segment or ray has an arrowhead.</summary>
+public enum Arrow
+{
+    None,
+    End,
+    Start,
+    Both,
 }

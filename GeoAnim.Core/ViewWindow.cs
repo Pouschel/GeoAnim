@@ -29,13 +29,15 @@ public sealed record ViewWindow(double XMin, double XMax, double YMin, double YM
 
     /// <summary>
     /// The part of the line through <paramref name="point"/> in direction <paramref name="direction"/> inside the window,
-    /// as parameters of point + t·direction (Liang–Barsky); null if the line misses the window.
+    /// as parameters of point + t·direction (Liang–Barsky); null if the line misses the window. By default the window is
+    /// taken a little larger (<paramref name="margin"/>: part of its size), so that the ends of a line are never visible;
+    /// a negative margin keeps them a little inside (for an arrowhead at the edge).
     /// </summary>
-    internal (double TMin, double TMax)? Clip(Vec point, Vec direction, double tMin = double.NegativeInfinity, double tMax = double.PositiveInfinity)
+    internal (double TMin, double TMax)? Clip(Vec point, Vec direction, double tMin = double.NegativeInfinity, double tMax = double.PositiveInfinity,
+        double margin = 0.05)
     {
-        // a little larger than the window, so that the ends of a line are never visible
-        double marginX = Width * 0.05;
-        double marginY = Height * 0.05;
+        double marginX = Width * margin;
+        double marginY = Height * margin;
         double[] p = [-direction.X, direction.X, -direction.Y, direction.Y];
         double[] q =
         [

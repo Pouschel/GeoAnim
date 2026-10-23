@@ -352,7 +352,8 @@ public static class ScriptCompiler
             "point" => ["color", "size", "labelsize", "label", "offset", "draw"],
             "polygon" => ["color", "width", "fill", "opacity", "draw"],
             "text" => ["color", "size", "offset", "draw"],
-            "segment" or "line" or "ray" => ["color", "width", "label", "labelsize", "labelpos", "offset", "draw"],
+            "segment" or "ray" => ["color", "width", "label", "labelsize", "labelpos", "offset", "arrow", "draw"],
+            "line" => ["color", "width", "label", "labelsize", "labelpos", "offset", "draw"],
             "angle" => ["color", "width", "fill", "opacity", "label", "labelsize", "radius", "draw"],
             _ => ["color", "width", "draw"],
         };
@@ -732,6 +733,7 @@ public static class ScriptCompiler
                     "labelpos" => options with { LabelPosition = (double)option.Value! },
                     "label" => options with { Label = (string)option.Value! },
                     "nolabel" => options with { NoLabel = true },
+                    "arrow" => options with { Arrow = (string)option.Value! switch { "start" => Arrow.Start, "both" => Arrow.Both, _ => Arrow.End } },
                     "offset" => options with { Offset = (Vec)option.Value! },
                     "hidden" => options with { Hidden = true },
                     "linear" => options with { Easing = Easing.Linear },

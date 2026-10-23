@@ -54,7 +54,9 @@ public sealed class GeoStraight : GeoObject
             return (a, B.Position);
         }
         (double min, double max) = ParameterRange;
-        var clip = view.Clip(a, d, min, max);
+        // a ray with its arrowhead at the edge ends a little inside the picture, so that the head is seen
+        double margin = Options.Arrow is Arrow.End or Arrow.Both ? -0.012 : 0.05;
+        var clip = view.Clip(a, d, min, max, margin);
         if (clip == null)
         {
             return null;
@@ -85,6 +87,11 @@ public sealed class GeoStraight : GeoObject
         }
         line.Animate("color", span, ColorOr(Defaults.LineColor).ToHex());
         line.Animate("width", span, WidthOr(Defaults.LineWidth));
+        if (Options.Arrow != Arrow.None)
+        {
+            // the player draws the heads at the ends of the visible line (of a ray: at the edge of the picture)
+            line.Animate("arrow", span, Options.Arrow.ToString().ToLowerInvariant());
+        }
         if (HasLabel && LabelUsed)
         {
             RenderLabel(context, span, part != null);

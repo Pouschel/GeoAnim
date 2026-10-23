@@ -133,15 +133,42 @@
       element.setAttribute('r', Math.max(0, v.r) * unit)
       element.setAttribute('fill', v.color)
     },
+    // a group: the line and its arrowheads ("arrow": "end", "start" or "both")
     line (element, v) {
+      if (!element.line) {
+        element.line = create('line', { fill: 'none', 'stroke-linecap': 'round' }, element)
+      }
+      let x1 = toX(v.x1)
+      let y1 = toY(v.y1)
+      let x2 = toX(v.x2)
+      let y2 = toY(v.y2)
+      const length = Math.hypot(x2 - x1, y2 - y1)
       // a line of length 0 would show as a dot (round ends)
-      element.style.visibility = Math.abs(v.x2 - v.x1) + Math.abs(v.y2 - v.y1) < 1e-9 ? 'hidden' : ''
-      element.setAttribute('x1', toX(v.x1))
-      element.setAttribute('y1', toY(v.y1))
-      element.setAttribute('x2', toX(v.x2))
-      element.setAttribute('y2', toY(v.y2))
-      element.setAttribute('stroke', v.color)
-      element.setAttribute('stroke-width', v.width * unit)
+      element.style.visibility = length < 1e-6 ? 'hidden' : ''
+      const atEnd = v.arrow === 'end' || v.arrow === 'both'
+      const atStart = v.arrow === 'start' || v.arrow === 'both'
+      // the head grows with the line width; on a short line (while it is drawn) it shrinks with it
+      const head = Math.min((4 * v.width + 6) * unit, length / (atEnd && atStart ? 2 : 1))
+      const dx = length > 0 ? (x2 - x1) / length : 0
+      const dy = length > 0 ? (y2 - y1) / length : 0
+      // the line ends inside the head, so that its round end does not stick out of the tip
+      arrowHead(element, 'endHead', atEnd, x2, y2, dx, dy, head, v.color)
+      arrowHead(element, 'startHead', atStart, x1, y1, -dx, -dy, head, v.color)
+      if (atEnd) {
+        x2 -= dx * head * 0.8
+        y2 -= dy * head * 0.8
+      }
+      if (atStart) {
+        x1 += dx * head * 0.8
+        y1 += dy * head * 0.8
+      }
+      const line = element.line
+      line.setAttribute('x1', x1)
+      line.setAttribute('y1', y1)
+      line.setAttribute('x2', x2)
+      line.setAttribute('y2', y2)
+      line.setAttribute('stroke', v.color)
+      line.setAttribute('stroke-width', v.width * unit)
     },
     arc (element, v) {
       element.setAttribute('d', arcPath(v.cx, v.cy, v.r, v.start, v.sweep))
@@ -197,7 +224,25 @@
   const MIN_TEXT_SIZE = 12
   const textSize = points => Math.max(Math.min(points, MIN_TEXT_SIZE), points * unit)
 
-  const TAGS = { dot: 'circle', line: 'line', arc: 'path', polygon: 'polygon', text: 'g', angle: 'g' }
+  // an arrowhead with its tip at (x, y), pointing in the direction (dx, dy); hidden when not wanted
+  function arrowHead (element, name, wanted, x, y, dx, dy, length, color) {
+    if (!wanted) {
+      if (element[name]) {
+        element[name].setAttribute('points', '')
+      }
+      return
+    }
+    if (!element[name]) {
+      element[name] = create('polygon', { stroke: 'none' }, element)
+    }
+    const half = 0.42 * length
+    const bx = x - dx * length
+    const by = y - dy * length
+    element[name].setAttribute('points', `${x},${y} ${bx - dy * half},${by + dx * half} ${bx + dy * half},${by - dx * half}`)
+    element[name].setAttribute('fill', color)
+  }
+
+  const TAGS = { dot: 'circle', line: 'g', arc: 'path', polygon: 'polygon', text: 'g', angle: 'g' }
 
   // ------------------------------------------------------------------ angles
 
@@ -615,7 +660,7 @@
     const sorted = animation.primitives.slice().sort((a, b) => a.layer - b.layer || a.id - b.id)
     items = sorted.map(primitive => {
       const element = create(TAGS[primitive.type], {}, scene)
-      if (primitive.type === 'line' || primitive.type === 'arc') {
+      if (primitive.type === 'arc') {
         element.setAttribute('fill', 'none')
         element.setAttribute('stroke-linecap', 'round')
       }

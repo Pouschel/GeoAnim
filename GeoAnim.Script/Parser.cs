@@ -11,13 +11,13 @@ internal sealed class Parser
         "text", "show", "hide", "move", "rotate", "along", "around", "by", "pause", "together", "end", "midpoint", "intersect", "center", "through",
         "radius", "at", "to", "on", "x", "y",
         "duration", "color", "width", "fill", "opacity", "size", "labelsize", "labelpos", "label", "nolabel", "hidden", "offset",
-        "linear", "ease", "easein", "easeout", "easeinout",
+        "arrow", "start", "both", "linear", "ease", "easein", "easeout", "easeinout",
     };
 
     private static readonly HashSet<string> OptionNames = new(StringComparer.Ordinal)
     {
         "duration", "color", "width", "fill", "opacity", "size", "radius", "labelsize", "labelpos", "label", "nolabel", "hidden", "offset",
-        "linear", "ease", "easein", "easeout", "easeinout",
+        "arrow", "linear", "ease", "easein", "easeout", "easeinout",
     };
 
     /// <summary>The kinds a "default" can name.</summary>
@@ -696,6 +696,8 @@ internal sealed class Parser
                 "color" or "fill" => ExpectColor(),
                 "label" => ExpectText("the label"),
                 "offset" => ParseCoordinates(),
+                // "arrow" alone: at the end; "arrow start", "arrow end", "arrow both"
+                "arrow" => Current.Kind == TokenKind.Name && Current.Text is "start" or "end" or "both" ? Next().Text : "end",
                 "nolabel" or "hidden" or "linear" or "ease" or "easein" or "easeout" or "easeinout" => null,
                 _ => throw Error(option, $"Unknown option or var \"{option.Text}\" (possible options: {string.Join(", ", OptionNames.Order())})."),
             };
