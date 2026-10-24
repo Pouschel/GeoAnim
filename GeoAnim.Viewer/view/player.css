@@ -105,8 +105,11 @@ h1 a {
   color: #1565c0;
 }
 
+/* the step number: grey and set apart by a gap, like in the list of steps */
 #caption .step-number {
-  color: #8a909c;
+  margin-right: 0.5em;
+  color: #6b7280;
+  font-variant-numeric: tabular-nums;
 }
 
 #caption code {

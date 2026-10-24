@@ -880,7 +880,8 @@
 
   // the description below the picture keeps the height of the tallest one (formulas, several lines), so that the
   // picture does not change its size while the animation plays
-  // the description of a step above the picture, with its number in front ("2 · …"; empty at the starting picture)
+  // the description of a step above the picture, with its number in front like in the list of steps (empty at the
+  // starting picture)
   function setCaption (index) {
     const caption = $('caption')
     const text = index >= 0 ? withNumbers(steps()[index].caption) : ''
@@ -894,7 +895,7 @@
     if (index >= 0) {
       const number = document.createElement('span')
       number.className = 'step-number'
-      number.textContent = (index + 1) + ' · '
+      number.textContent = String(index + 1)
       caption.appendChild(number)
     }
     renderInline(caption, parseMarkdown(text))
