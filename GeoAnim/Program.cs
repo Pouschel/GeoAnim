@@ -134,21 +134,20 @@ internal static partial class Program
         }
         string root = Path.GetFullPath(folder);
         string target = outputFolder == null ? root : Path.GetFullPath(outputFolder);
-        // the scripts in book order: the files of a folder before its subfolders, numbers by value
-        var order = IndexPage.NaturalOrder.Instance;
+        // the scripts in book order: files and subfolders of a folder together by their numbers (by value)
         List<string> files = Directory.EnumerateFiles(root, "*.geo", SearchOption.AllDirectories)
             .Select(file => Path.GetRelativePath(root, file).Replace('\\', '/'))
             .Where(relative => !relative.Split('/').Any(part => part.StartsWith('_')))
-            .OrderBy(relative => relative.Contains('/') ? relative[..relative.LastIndexOf('/')] : "", order)
-            .ThenBy(relative => relative[(relative.LastIndexOf('/') + 1)..], order)
+            .Order(BookOrder.Instance)
             .ToList();
         int failed = 0;
         int conflicts = 0;
+        var progress = new Progress(files.Count);
         // what the book says about itself (index.yaml): title, icon, address, …
-        BookSettings settings = BookFile.Read(root, warning => Console.Error.WriteLine("Warning: " + warning), out string? bookError);
+        BookSettings settings = BookFile.Read(root, progress.Warning, out string? bookError);
         if (bookError != null)
         {
-            Console.Error.WriteLine(bookError);
+            progress.Error(bookError);
             conflicts++;
         }
         // the icon: inside every page, or once in assets/
@@ -181,20 +180,20 @@ internal static partial class Program
         var pageOfSource = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (string relative in files)
         {
+            progress.Step(relative);
             string page = PageName(relative);
-            string unsafeCharacters = UnsafeCharacters(page);
-            if (unsafeCharacters.Length > 0)
+            string dropped = DroppedCharacters(relative);
+            if (dropped.Length > 0)
             {
-                // works, but is fragile on a web server (upload, Unicode forms, copied addresses)
-                Console.Error.WriteLine($"Warning: {relative}: the page name {page} has characters that are better avoided in web addresses: {unsafeCharacters} (e.g. ä → ae, ß → ss, space → -).");
+                progress.Warning($"{relative}: these characters are left out of its address {page}: {dropped}.");
             }
             if (compiled.Any(other => string.Equals(other.Page, page, StringComparison.OrdinalIgnoreCase)))
             {
-                Console.Error.WriteLine($"{relative}: its page {page} is also the page of {compiled.First(o => string.Equals(o.Page, page, StringComparison.OrdinalIgnoreCase)).Source} (without the numbers in front).");
+                progress.Error($"{relative}: its page {page} is also the page of {compiled.First(o => string.Equals(o.Page, page, StringComparison.OrdinalIgnoreCase)).Source}.");
                 failed++;
                 continue;
             }
-            AnimationData? animation = CompileFile(Path.Combine(root, relative), relative);
+            AnimationData? animation = CompileFile(Path.Combine(root, relative), relative, progress.Error);
             if (animation == null)
             {
                 failed++;
@@ -211,7 +210,7 @@ internal static partial class Program
             {
                 if (keywordPages.TryGetValue(keyword.Form, out var other))
                 {
-                    Console.Error.WriteLine($"{page.Source}: the keyword {keyword.Form} is already the keyword of {other.Source}.");
+                    progress.Error($"{page.Source}: the keyword {keyword.Form} is already the keyword of {other.Source}.");
                     conflicts++;
                 }
                 else
@@ -247,7 +246,7 @@ internal static partial class Program
             // with assets: the player's files once for the whole book, in assets/ at its root
             string? assetsAddress = assets ? string.Concat(Enumerable.Repeat("../", page.Page.Count(c => c == '/'))) + AssetsFolder + "/" : null;
             var head = new PageHead(settings.Language, assets && iconName != null ? assetsAddress + iconName : iconData, settings.AddressOf(page.Page), settings.Title);
-            Write(animation, output, navigation, assetsAddress, head);
+            File.WriteAllText(output, HtmlExporter.Export(animation, navigation, assetsAddress, head), new UTF8Encoding(false));
             pages.Add((page.Page, animation));
         }
         Directory.CreateDirectory(target);
@@ -257,8 +256,17 @@ internal static partial class Program
         }
         string indexFile = Path.Combine(target, "index.html");
         var indexHead = new PageHead(settings.Language, assets && iconName != null ? AssetsFolder + "/" + iconName : iconData, settings.AddressOf("index.html"), settings.Title);
-        File.WriteAllText(indexFile, IndexPage.Create(Path.GetFileName(root), pages, settings, indexHead), new UTF8Encoding(false));
-        Console.WriteLine($"Written: {indexFile} ({book.Count} links)");
+        // the chapters' headings: the folders' names as written ("40_Winkelsätze" → "Winkelsätze")
+        var chapters = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (string source in compiled.Select(p => p.Source))
+        {
+            string[] parts = source.Split('/');
+            for (int i = 1; i < parts.Length; i++)
+            {
+                chapters[PageName(string.Join("/", parts[..i]), folder: true)] = DisplayName(parts[i - 1]);
+            }
+        }
+        File.WriteAllText(indexFile, IndexPage.Create(Path.GetFileName(root), pages, settings, indexHead, chapters), new UTF8Encoding(false));
         // for search engines: all pages with their address on the web
         if (settings.Url != null)
         {
@@ -273,10 +281,9 @@ internal static partial class Program
                 Entry(page, changed);
             }
             File.WriteAllText(sitemap, xml.Append("</urlset>\n").ToString(), new UTF8Encoding(false));
-            Console.WriteLine($"Written: {sitemap} ({changes.Count + 1} addresses)");
         }
-        Console.WriteLine($"{files.Count - failed} of {files.Count} files exported" + (failed > 0 ? $", {failed} with errors." : ".")
-            + (conflicts > 0 ? $" {conflicts} keyword(s) given twice." : ""));
+        progress.Finish($"{files.Count - failed} of {files.Count} pages exported to {target} (index.html"
+            + (settings.Url != null ? ", sitemap.xml" : "") + (assets ? ", assets/" : "") + ")");
         return failed > 0 || conflicts > 0 ? 1 : 0;
     }
 
@@ -336,14 +343,40 @@ internal static partial class Program
         return 0;
     }
 
-    // the characters of a page's path outside ASCII letters, digits, "-", "_", "." and "/" (each once, as they appear)
-    internal static string UnsafeCharacters(string page) =>
-        string.Join(" ", page.Where(c => !(char.IsAsciiLetterOrDigit(c) || c is '-' or '_' or '.' or '/')).Distinct()
-            .Select(c => c == ' ' ? "(space)" : c.ToString()));
+    /// <summary>
+    /// The address of a page (or with <paramref name="folder"/> of a folder) from the script's path: without the numbers
+    /// in front, which only give the order, and as it suits web addresses – ä → ae, ö → oe, ü → ue, ß → ss, é → e,
+    /// spaces → "-", other characters left out: "10_Grundlagen/40_Winkelsätze/20_Größe.geo" → "Grundlagen/Winkelsaetze/Groesse.html".
+    /// </summary>
+    internal static string PageName(string relative, bool folder = false) =>
+        string.Join("/", (folder ? relative : Path.ChangeExtension(relative, ".html")).Split('/').Select(part => WebName(SortNumber().Replace(part, ""))));
 
-    // "10_Grundlagen/20_Strecken.geo" → "Grundlagen/Strecken.html": the numbers in front only give the order
-    internal static string PageName(string relative) =>
-        string.Join("/", Path.ChangeExtension(relative, ".html").Split('/').Select(part => SortNumber().Replace(part, "")));
+    // "Winkelsätze und Größen" → "Winkelsaetze-und-Groessen"
+    private static string WebName(string part)
+    {
+        var name = new StringBuilder();
+        foreach (char c in part.Normalize(NormalizationForm.FormC))
+        {
+            string? replacement = c switch
+            {
+                'ä' => "ae", 'ö' => "oe", 'ü' => "ue", 'Ä' => "Ae", 'Ö' => "Oe", 'Ü' => "Ue", 'ß' => "ss",
+                ' ' => "-",
+                _ when char.IsAsciiLetterOrDigit(c) || c is '-' or '_' or '.' => c.ToString(),
+                // é → e: the letter without its accent
+                _ => string.Concat(c.ToString().Normalize(NormalizationForm.FormD).Where(char.IsAsciiLetter)),
+            };
+            name.Append(replacement);
+        }
+        return System.Text.RegularExpressions.Regex.Replace(name.ToString(), "-{2,}", "-");
+    }
+
+    // the characters of a script's path that its address leaves out (each once): neither ASCII nor an umlaut, ß or a letter with an accent
+    internal static string DroppedCharacters(string relative) =>
+        string.Join(" ", relative.Normalize(NormalizationForm.FormC)
+            .Where(c => c != '/' && c != ' ' && WebName(c.ToString()).Length == 0).Distinct().Select(c => c.ToString()));
+
+    // the heading of a chapter from its folder's name: "40_Winkelsätze" → "Winkelsätze", "30_Strahl-und-Gerade" → "Strahl und Gerade"
+    internal static string DisplayName(string folder) => SortNumber().Replace(folder, "").Replace('-', ' ').Replace('_', ' ');
 
     [System.Text.RegularExpressions.GeneratedRegex(@"^\d+_(?=.)")]
     private static partial System.Text.RegularExpressions.Regex SortNumber();
@@ -403,7 +436,7 @@ internal static partial class Program
     }
 
     // the animation, or null after an error (reported)
-    private static AnimationData? CompileFile(string file, string displayName)
+    private static AnimationData? CompileFile(string file, string displayName, Action<string>? error = null)
     {
         try
         {
@@ -411,8 +444,126 @@ internal static partial class Program
         }
         catch (ScriptError e)
         {
-            Console.Error.WriteLine(displayName + ": " + e);
+            (error ?? Console.Error.WriteLine)(displayName + ": " + e);
             return null;
+        }
+    }
+
+    /// <summary>
+    /// The scripts of a book in their order: segment by segment, files and folders of a folder together by their names,
+    /// numbers by value ("30_Rechte-Winkel.geo" before "40_Winkelsätze/…" before "50_Winkelarten.geo").
+    /// </summary>
+    internal sealed class BookOrder : IComparer<string>
+    {
+        public static BookOrder Instance { get; } = new();
+
+        public int Compare(string? x, string? y)
+        {
+            string[] a = (x ?? "").Split('/');
+            string[] b = (y ?? "").Split('/');
+            for (int i = 0; i < Math.Min(a.Length, b.Length); i++)
+            {
+                string left = i == a.Length - 1 ? Path.GetFileNameWithoutExtension(a[i]) : a[i];
+                string right = i == b.Length - 1 ? Path.GetFileNameWithoutExtension(b[i]) : b[i];
+                int result = IndexPage.NaturalOrder.Instance.Compare(left, right);
+                if (result != 0)
+                {
+                    return result;
+                }
+            }
+            return a.Length.CompareTo(b.Length);
+        }
+    }
+
+    /// <summary>
+    /// The progress of an export: in a console one line that shows the script being exported; errors (red) and warnings
+    /// (yellow) stand on lines of their own above it, so that none gets lost among the pages; at the end a summary.
+    /// </summary>
+    private sealed class Progress(int total)
+    {
+        private readonly bool live = !Console.IsOutputRedirected && !Console.IsErrorRedirected;
+        private int done;
+        private int errors;
+        private int warnings;
+        private int shown;
+
+        public void Step(string name)
+        {
+            done++;
+            if (live)
+            {
+                string text = $"[{done}/{total}] {name}";
+                int width = Math.Max(20, SafeWidth() - 1);
+                if (text.Length > width)
+                {
+                    text = text[..(width - 1)] + "…";
+                }
+                Clear();
+                Console.Write(text);
+                shown = text.Length;
+            }
+        }
+
+        public void Error(string message)
+        {
+            errors++;
+            Report(message, ConsoleColor.Red);
+        }
+
+        public void Warning(string message)
+        {
+            warnings++;
+            Report("Warning: " + message, ConsoleColor.Yellow);
+        }
+
+        public void Finish(string summary)
+        {
+            Clear();
+            string problems = (errors > 0 ? $", {errors} error{(errors == 1 ? "" : "s")}" : "") + (warnings > 0 ? $", {warnings} warning{(warnings == 1 ? "" : "s")}" : "");
+            if (live && errors > 0)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+            }
+            Console.WriteLine(summary + problems + (errors > 0 ? " – see above." : "."));
+            if (live)
+            {
+                Console.ResetColor();
+            }
+        }
+
+        private void Report(string message, ConsoleColor color)
+        {
+            Clear();
+            if (live)
+            {
+                Console.ForegroundColor = color;
+            }
+            Console.Error.WriteLine(message);
+            if (live)
+            {
+                Console.ResetColor();
+            }
+        }
+
+        private void Clear()
+        {
+            if (live && shown > 0)
+            {
+                Console.Write("\r" + new string(' ', shown) + "\r");
+                shown = 0;
+            }
+        }
+
+        private static int SafeWidth()
+        {
+            try
+            {
+                return Console.WindowWidth > 0 ? Console.WindowWidth : 80;
+            }
+            catch (IOException)
+            {
+                return 80;
+            }
         }
     }
 

@@ -14,7 +14,8 @@ public static partial class IndexPage
     /// The index for the pages in book order (paths relative to the index, with "/"); its title, description, way back
     /// home and footer from <paramref name="settings"/> (else the folder's name), its icon and address from <paramref name="head"/>.
     /// </summary>
-    public static string Create(string folderName, IEnumerable<(string Path, AnimationData Animation)> pages, BookSettings? settings = null, PageHead? head = null)
+    public static string Create(string folderName, IEnumerable<(string Path, AnimationData Animation)> pages, BookSettings? settings = null, PageHead? head = null,
+        IReadOnlyDictionary<string, string>? chapters = null)
     {
         settings ??= BookSettings.None;
         string title = settings.Title ?? folderName;
@@ -51,6 +52,11 @@ public static partial class IndexPage
                   .count { color: #6b7280; font-size: 15px; white-space: nowrap; }
                   details ol { padding: 0 14px 14px; }
                   details li { background: #f6f7f9; box-shadow: none; }
+                  details details { margin: 0 14px 10px; background: #f6f7f9; box-shadow: none; }
+                  details details summary { padding: 10px 14px; }
+                  summary h3 { flex: 1; margin: 0; color: #222; font-size: 18px; }
+                  summary:hover h3 { color: #1565c0; }
+                  details details li { background: #fff; }
                   ol { margin: 0; padding: 0; list-style: none; }
                   li { margin: 0 0 8px; padding: 10px 14px; border-radius: 6px; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
                   a { color: #1565c0; font-size: 19px; text-decoration: none; }
@@ -73,39 +79,66 @@ public static partial class IndexPage
         {
             html.Append("    <p class=\"intro\">").Append(Inline(settings.Description)).Append("</p>\n");
         }
-        foreach (var folder in pages
-            .Where(page => !page.Animation.IsEmpty)
-            .GroupBy(page => page.Path.Contains('/') ? page.Path.Substring(0, page.Path.LastIndexOf('/')) : string.Empty))
+        // a chapter (folder) opens with a click, so that a long book stays clear, and holds its pages and its own chapters
+        // in book order; the pages of the book's folder itself stand open
+        List<(string Path, AnimationData Animation)> shown = pages.Where(page => !page.Animation.IsEmpty).ToList();
+        string FolderOf(string path) => path.Contains('/') ? path[..path.LastIndexOf('/')] : "";
+        void Write(string folder, int depth)
         {
-            // a chapter (subfolder) opens with a click, so that a long book stays clear; the pages of the folder itself
-            // stand open above the chapters
-            bool chapter = folder.Key.Length > 0;
-            if (chapter)
+            string indent = new(' ', 4 + 2 * depth);
+            bool inList = false;
+            var done = new HashSet<string>(StringComparer.Ordinal);
+            foreach ((string path, AnimationData animation) in shown)
             {
-                int count = folder.Count();
-                html.Append("    <details data-chapter=\"").Append(Encode(folder.Key)).Append("\">\n")
-                    .Append("      <summary><h2>").Append(Encode(folder.Key.Replace("/", " / "))).Append("</h2>")
-                    .Append("<span class=\"count\">").Append(count).Append(count == 1 ? " Seite" : " Seiten").Append("</span></summary>\n");
-            }
-            html.Append("    <ol>\n");
-            foreach ((string path, AnimationData animation) in folder)
-            {
-                string name = TitleOf(path, animation);
-                string link = string.Join("/", path.Split('/').Select(Uri.EscapeDataString));
-                html.Append("      <li><a href=\"").Append(link).Append("\">").Append(Encode(name)).Append("</a>");
-                string description = HtmlExporter.DescriptionOf(animation);
-                if (description.Length > 0)
+                string at = FolderOf(path);
+                if (at == folder)
                 {
-                    html.Append("<p>").Append(Encode(description)).Append("</p>");
+                    if (!inList)
+                    {
+                        html.Append(indent).Append("<ol>\n");
+                        inList = true;
+                    }
+                    string link = string.Join("/", path.Split('/').Select(Uri.EscapeDataString));
+                    html.Append(indent).Append("  <li><a href=\"").Append(link).Append("\">").Append(Encode(TitleOf(path, animation))).Append("</a>");
+                    string description = HtmlExporter.DescriptionOf(animation);
+                    if (description.Length > 0)
+                    {
+                        html.Append("<p>").Append(Encode(description)).Append("</p>");
+                    }
+                    html.Append("</li>\n");
+                    continue;
                 }
-                html.Append("</li>\n");
+                // a page further down: the chapter directly below this folder that holds it, once, where its first page is
+                if (!(folder.Length == 0 || at.StartsWith(folder + "/", StringComparison.Ordinal)))
+                {
+                    continue;
+                }
+                string rest = folder.Length == 0 ? at : at[(folder.Length + 1)..];
+                string chapter = (folder.Length == 0 ? "" : folder + "/") + rest.Split('/')[0];
+                if (!done.Add(chapter))
+                {
+                    continue;
+                }
+                if (inList)
+                {
+                    html.Append(indent).Append("</ol>\n");
+                    inList = false;
+                }
+                int count = shown.Count(page => FolderOf(page.Path) == chapter || page.Path.StartsWith(chapter + "/", StringComparison.Ordinal));
+                string heading = chapters != null && chapters.TryGetValue(chapter, out string? name) ? name : chapter[(chapter.LastIndexOf('/') + 1)..];
+                string tag = depth == 0 ? "h2" : "h3";
+                html.Append(indent).Append("<details data-chapter=\"").Append(Encode(chapter)).Append("\">\n")
+                    .Append(indent).Append("  <summary><").Append(tag).Append('>').Append(Encode(heading)).Append("</").Append(tag).Append('>')
+                    .Append("<span class=\"count\">").Append(count).Append(count == 1 ? " Seite" : " Seiten").Append("</span></summary>\n");
+                Write(chapter, depth + 1);
+                html.Append(indent).Append("</details>\n");
             }
-            html.Append("    </ol>\n");
-            if (chapter)
+            if (inList)
             {
-                html.Append("    </details>\n");
+                html.Append(indent).Append("</ol>\n");
             }
         }
+        Write("", 0);
         if (settings.Footer != null)
         {
             html.Append("    <footer>").Append(Inline(settings.Footer)).Append("</footer>\n");

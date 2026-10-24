@@ -82,7 +82,8 @@ public sealed class CliTests : IDisposable
             Assert.Contains("<a href=\"one.html\">one</a>", index);
             Assert.Contains("<a href=\"Prop2.html\">Satz 2</a><p>Zwei mit AB.</p>", index);
             Assert.True(index.IndexOf("Prop2.html") < index.IndexOf("Prop10.html") && index.IndexOf("Prop10.html") < index.IndexOf("<h2>"), index);
-            Assert.Contains("<h2>sub / deeper</h2>", index);
+            Assert.Contains("<summary><h2>sub</h2>", index);
+            Assert.Contains("<summary><h3>deeper</h3>", index);
             Assert.Contains("<a href=\"sub/deeper/three.html\">three</a>", index);
             Assert.DoesNotContain("styles.html", index);
             Assert.Contains("Satz 10</a>", index);
@@ -109,7 +110,7 @@ public sealed class CliTests : IDisposable
         Assert.False(File.Exists(Path.Combine(folder, "_def.html")));
         Assert.False(Directory.Exists(Path.Combine(folder, "Stile")) || File.Exists(Path.Combine(folder, "_Stile", "farben.html")));
         Assert.True(File.Exists(Path.Combine(folder, "Grundlagen", "Punkte.html")));
-        string strecken = File.ReadAllText(Path.Combine(folder, "Grundlagen", "Strecken-und-Längen.html"));
+        string strecken = File.ReadAllText(Path.Combine(folder, "Grundlagen", "Strecken-und-Laengen.html"));
         string kreis = File.ReadAllText(Path.Combine(folder, "Mehr", "Kreis.html"));
         // by default every page has the player inside
         Assert.Contains("function valueAt", kreis);
@@ -118,21 +119,24 @@ public sealed class CliTests : IDisposable
         // links with the scripts' names lead to the pages
         Assert.Contains("[Punkte](Punkte.html#1)", strecken);
         Assert.Contains("\\u003Chttps://mathepedia.de\\u003E", strecken);
-        Assert.Contains("[Strecken](../Grundlagen/Strecken-und-L%C3%A4ngen.html)", kreis);
+        Assert.Contains("[Strecken](../Grundlagen/Strecken-und-Laengen.html)", kreis);
         // the book: overview, previous and next page across folders
         string index = File.ReadAllText(Path.Combine(folder, "index.html"));
         Assert.True(index.IndexOf("Grundlagen/Punkte.html") < index.IndexOf("Strecken-und-") && index.IndexOf("Strecken-und-") < index.IndexOf("Mehr/Kreis.html"), index);
         // chapters open with a click
         Assert.Contains("<details data-chapter=\"Grundlagen\">\n      <summary><h2>Grundlagen</h2><span class=\"count\">2 Seiten</span></summary>", index);
         Assert.Contains("<summary><h2>Mehr</h2><span class=\"count\">1 Seite</span></summary>", index);
-        Assert.Contains("window.GEO_BOOK = {\"index\":\"../index.html\",\"previous\":{\"title\":\"Strecken\",\"href\":\"../Grundlagen/Strecken-und-L%C3%A4ngen.html\"},\"next\":null", kreis);
-        Assert.Contains("\"previous\":null,\"next\":{\"title\":\"Strecken\",\"href\":\"Strecken-und-L%C3%A4ngen.html\"}",
+        Assert.Contains("window.GEO_BOOK = {\"index\":\"../index.html\",\"previous\":{\"title\":\"Strecken\",\"href\":\"../Grundlagen/Strecken-und-Laengen.html\"},\"next\":null", kreis);
+        Assert.Contains("\"previous\":null,\"next\":{\"title\":\"Strecken\",\"href\":\"Strecken-und-Laengen.html\"}",
             File.ReadAllText(Path.Combine(folder, "Grundlagen", "Punkte.html")));
 
-        // names that are better avoided in web addresses give a warning
-        Assert.Equal("ä", Program.UnsafeCharacters("Grundlagen/Strecken-und-Längen.html"));
-        Assert.Equal("ß (space) ö", Program.UnsafeCharacters("Mehr/Maße und Größen.html"));
-        Assert.Equal("", Program.UnsafeCharacters("Grundlagen/Strahl-und-Gerade.html"));
+        // names as people write them, addresses as web servers like them
+        Assert.Equal("Grundlagen/Winkelsaetze/Masse-und-Groessen.html", Program.PageName("10_Grundlagen/40_Winkelsätze/20_Maße und Größen.geo"));
+        Assert.Equal("Cafe-Ueber.html", Program.PageName("Café-Über.geo"));
+        Assert.Equal("Winkelsätze", Program.DisplayName("40_Winkelsätze"));
+        Assert.Equal("Strahl und Gerade", Program.DisplayName("30_Strahl-und-Gerade"));
+        Assert.Equal("", Program.DroppedCharacters("10_Grundlagen/20_Maße und Größen.geo"));
+        Assert.Equal("? €", Program.DroppedCharacters("Was?/Preis€.geo"));
 
         // with assets: the player's files once in assets/, the pages link to them (with a fingerprint against old copies in caches)
         Assert.Equal(0, Program.ExportDirectory(folder, assets: true));
@@ -176,7 +180,7 @@ public sealed class CliTests : IDisposable
         Assert.Contains("\"home\":{\"title\":\"mathepedia.de\",\"href\":\"https://mathepedia.de/\"},\"footer\":\"\\u00A9 T. S. \\u00B7 [Impressum](https://mathepedia.de/impressum)\"", kreis);
         string sitemap = File.ReadAllText(Path.Combine(folder, "sitemap.xml"));
         Assert.Contains("<loc>https://mathepedia.de/geometrie/</loc>", sitemap);
-        Assert.Contains("<loc>https://mathepedia.de/geometrie/Grundlagen/Strecken-und-L%C3%A4ngen.html</loc>", sitemap);
+        Assert.Contains("<loc>https://mathepedia.de/geometrie/Grundlagen/Strecken-und-Laengen.html</loc>", sitemap);
         // with assets the icon goes there
         Assert.Equal(0, Program.ExportDirectory(folder, assets: true));
         Assert.True(File.Exists(Path.Combine(folder, "assets", "winkel.svg")));
@@ -186,6 +190,27 @@ public sealed class CliTests : IDisposable
         // two scripts with the same page
         Write(Path.Combine("20_Mehr", "30_Kreis.geo"), "point A = 1 1");
         Assert.Equal(1, Program.ExportDirectory(folder));
+    }
+
+    [Fact]
+    public void ExportDirectoryNestsChaptersInTheirOrder()
+    {
+        Directory.CreateDirectory(Path.Combine(folder, "20_Winkel", "40_Winkelsätze"));
+        Write(Path.Combine("20_Winkel", "30_Rechte-Winkel.geo"), "title Rechte Winkel\npoint A = 1 1");
+        Write(Path.Combine("20_Winkel", "40_Winkelsätze", "10_Scheitelwinkel.geo"), "title Scheitelwinkel\npoint A = 1 1");
+        Write(Path.Combine("20_Winkel", "50_Winkelarten.geo"), "title Winkelarten\npoint A = 1 1");
+        Write(Path.Combine("20_Winkel", "40_Winkelsätze", "20_Nebenwinkel.geo"), "title Nebenwinkel\npoint A = 1 1");
+        Assert.Equal(0, Program.ExportDirectory(folder));
+        // the subfolder where its number puts it, with its heading as written, a chapter in its chapter
+        string index = File.ReadAllText(Path.Combine(folder, "index.html"));
+        int Where(string text) => index.IndexOf(text, StringComparison.Ordinal);
+        Assert.True(Where("Rechte Winkel") < Where("<summary><h3>Winkelsätze</h3><span class=\"count\">2 Seiten</span></summary>")
+            && Where("Winkelsätze</h3>") < Where("Scheitelwinkel") && Where("Nebenwinkel") < Where("Winkelarten"), index);
+        Assert.Contains("<summary><h2>Winkel</h2><span class=\"count\">4 Seiten</span></summary>", index);
+        Assert.Contains("href=\"Winkel/Winkelsaetze/Scheitelwinkel.html\"", index);
+        // turning the pages goes the same way
+        string nebenwinkel = File.ReadAllText(Path.Combine(folder, "Winkel", "Winkelsaetze", "Nebenwinkel.html"));
+        Assert.Contains("\"previous\":{\"title\":\"Scheitelwinkel\",\"href\":\"Scheitelwinkel.html\"},\"next\":{\"title\":\"Winkelarten\",\"href\":\"../Winkelarten.html\"}", nebenwinkel);
     }
 
     [Fact]
