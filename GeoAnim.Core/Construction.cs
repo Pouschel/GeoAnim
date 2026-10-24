@@ -414,6 +414,17 @@ public sealed class Construction
         Move(point, target.Position, duration, easing);
     }
 
+    /// <summary>Moves a text at coordinates to <paramref name="target"/> (its centre); a text next to a point moves with the point.</summary>
+    public void Move(GeoText text, Vec target, double? duration = null, Easing? easing = null) =>
+        Move(OwnPositionOf(text), target, duration, easing);
+
+    /// <summary>Moves a text at coordinates to where <paramref name="target"/> is at this moment.</summary>
+    public void Move(GeoText text, GeoPoint target, double? duration = null, Easing? easing = null) =>
+        Move(OwnPositionOf(text), target, duration, easing);
+
+    private static GeoPoint OwnPositionOf(GeoText text) => text.OwnPosition
+        ?? throw new GeoException($"The text {text.Name} stands next to the point {text.Parents[0].Name} and moves with it: move the point (or place the text at coordinates).");
+
     /// <summary>Moves a free point to <paramref name="target"/>; dependent objects follow.</summary>
     public void Move(GeoPoint point, Vec target, double? duration = null, Easing? easing = null)
     {

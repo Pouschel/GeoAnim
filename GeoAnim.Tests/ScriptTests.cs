@@ -636,8 +636,32 @@ public class ScriptTests
         ErrorAt("point A = 0 0\nstep s\n  move A B to 1 1", 3, 12, "Expected \"along\"");
         ErrorAt("point A = 0 0\nstep s\n  rotate A around A 90", 3, 21, "\"by\"");
         ErrorAt("point A = 0 0\nstep s\n  rotate around A by 90", 3, 10, "names of objects");
-        ErrorAt("point A = 0 0\ntext t = \"x\" at 1 1\nstep s\n  move t along A A", 4, 3, "not built from free points");
         ErrorAt("point A = 0 0\nmove A along A A", 2, 1, "only possible inside a step");
+    }
+
+    [Fact]
+    public void TextsAtCoordinatesMove()
+    {
+        AnimationData animation = ScriptCompiler.Compile("""
+            point P = 6 1
+            point Q = 8 2
+            point M = 0 0
+            text t = "Hallo" at 1 1
+            text u = "neben P" at P
+            step bewegen
+              move t to 4 3
+              move t to P
+              move t along P Q
+              rotate t around M by 90
+            """);
+        JsonElement text = JsonDocument.Parse(animation.ToJson()).RootElement.GetProperty("primitives").EnumerateArray()
+            .First(p => p.GetProperty("type").GetString() == "text" && p.GetProperty("tracks").GetProperty("text")[0][1].GetString() == "Hallo");
+        double Last(string track) => text.GetProperty("tracks").GetProperty(track)[text.GetProperty("tracks").GetProperty(track).GetArrayLength() - 1][1].GetDouble();
+        // to (4, 3), to P (6, 1), by PQ = (2, 1) to (8, 2), around (0, 0) by 90° to (−2, 8)
+        Assert.Equal(-2, Last("x"), 6);
+        Assert.Equal(8, Last("y"), 6);
+        ErrorAt("point P = 0 0\ntext u = \"x\" at P\nstep s\n  move u to 1 1", 4, 3, "moves with it");
+        ErrorAt("point P = 0 0\ntext t = \"x\" at 1 1\nstep s\n  move t to 30", 4, 8, "not to a number");
     }
 
     [Fact]

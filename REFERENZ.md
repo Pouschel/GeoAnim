@@ -159,8 +159,9 @@ Aktionen stehen in einem Schritt und laufen nacheinander. Die Optionen *Ablauf* 
 | | `hide label all` | *Ablauf* | blendet alle Beschriftungen aus |
 | `move` | `move A to x y` | *Ablauf* | freier Punkt zu Koordinaten |
 | | `move A to P` | *Ablauf* | freier Punkt dorthin, wo P gerade ist |
+| | `move t to x y` · `move t to P` | *Ablauf* | Text an festen Koordinaten (ein Text neben einem Punkt wandert mit dem Punkt) |
 | | `move P to n` | *Ablauf* | Punkt auf seinem Kreis (Grad) bzw. seiner Strecke (Position) |
-| | `move A B … along P Q` | *Ablauf* | verschiebt Objekte um den Vektor PQ (ihre freien Punkte) |
+| | `move A B … along P Q` | *Ablauf* | verschiebt Objekte um den Vektor PQ (ihre freien Punkte; bei einem Text an festen Koordinaten seine Position) |
 | `rotate` | `rotate A B … around M by n` | *Ablauf* | dreht Objekte um M um n Grad (negativ: im Uhrzeigersinn) |
 | `pause` | `pause` · `pause n` | – | wartet 500 ms bzw. n ms |
 | `together` | `together` … `end` | – | alles dazwischen beginnt gleichzeitig |

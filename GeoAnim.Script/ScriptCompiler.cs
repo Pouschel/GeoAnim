@@ -260,9 +260,27 @@ public static class ScriptCompiler
                         {
                             break;
                         }
-                        GeoPoint point = NotInput(s.Point, "move") as GeoPoint
-                            ?? throw new ScriptError(s.Point.Line, s.Point.Column, $"{s.Point.Name} is a {Resolve(s.Point).Kind}, not a point.");
+                        GeoObject moved = NotInput(s.Point, "move");
                         Options options = ToOptions(s.Options, "move", ["duration", "easing"]);
+                        if (moved is GeoText text)
+                        {
+                            // a text at coordinates: to coordinates or to a point
+                            if (s.TargetPoint != null)
+                            {
+                                c.Move(text, ResolvePoint(s.TargetPoint), options.Duration, options.Easing);
+                            }
+                            else if (s.Target != null)
+                            {
+                                c.Move(text, s.Target.Value, options.Duration, options.Easing);
+                            }
+                            else
+                            {
+                                throw new ScriptError(s.Point.Line, s.Point.Column, $"A text moves to coordinates (\"move {s.Point.Name} to 2 3\") or to a point, not to a number.");
+                            }
+                            break;
+                        }
+                        GeoPoint point = moved as GeoPoint
+                            ?? throw new ScriptError(s.Point.Line, s.Point.Column, $"{s.Point.Name} is a {moved.Kind}, not a point or text (\"move … along P Q\" moves other objects).");
                         if (s.TargetPoint != null)
                         {
                             c.Move(point, ResolvePoint(s.TargetPoint), options.Duration, options.Easing);

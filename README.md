@@ -149,10 +149,10 @@ Koordinaten sind mathematisch: die y-Achse zeigt nach oben. Der Maßstab ist in 
 | `hide k1 k2` | blendet Objekte aus |
 | `hide all` / `hide label all` | blendet alles aus, was gerade zu sehen ist (etwa am Anfang eines Schritts, der eine neue Zeichnung beginnt), bzw. alle Beschriftungen; in einer mit `use` benutzten Datei nur deren eigene Objekte |
 | `show label A B s` / `hide label A B s` | blendet nur die Beschriftungen ein bzw. aus (Punkte, sowie Strecken, Strahlen, Geraden und Winkel mit `label`); sie wandern weiter mit ihren Objekten. Auch für mit `nolabel` angelegte Objekte; vor dem Zeichnen gilt es für das spätere Erscheinen |
-| `move A to 4 5` | bewegt einen freien Punkt |
+| `move A to 4 5` | bewegt einen freien Punkt – oder einen Text an festen Koordinaten (`move t to 4 5`, `move t to P`; ein Text neben einem Punkt wandert mit diesem) |
 | `move P to 150` | bewegt einen Punkt auf seinem Kreis (Winkel) bzw. seiner Strecke (Position) |
 | `move C1 to P` | bewegt einen freien Punkt dorthin, wo der Punkt P in diesem Moment ist (P kann konstruiert sein; bewegt sich P später, bleibt C1, wo er ist) |
-| `move A B C along P Q` | verschiebt Objekte um den Vektor von P nach Q (so wie er beim Start der Bewegung ist): bewegt werden die freien Punkte, aus denen sie gebaut sind (bei einem Vieleck seine Ecken, bei einem Mittelpunkt dessen Punkte), alles davon Abhängige folgt |
+| `move A B C along P Q` | verschiebt Objekte um den Vektor von P nach Q (so wie er beim Start der Bewegung ist): bewegt werden die freien Punkte, aus denen sie gebaut sind (bei einem Vieleck seine Ecken, bei einem Mittelpunkt dessen Punkte, bei einem Text an festen Koordinaten seine Position), alles davon Abhängige folgt |
 | `rotate A B C around M by 60` | dreht Objekte um M um 60° gegen den Uhrzeigersinn (negativ: im Uhrzeigersinn, auch über 360°); die freien Punkte laufen auf Kreisbögen, die Figur bleibt unterwegs unverformt; Voreinstellungen mit `default rotate duration …` |
 | `pause 300` | wartet (Standard 500 ms) |
 | `together` … `end` | alles dazwischen beginnt gleichzeitig; der Block dauert so lange wie die längste Aktion |

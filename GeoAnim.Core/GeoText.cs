@@ -1,25 +1,34 @@
 namespace GeoAnim;
 
-/// <summary>A text at fixed coordinates or next to a point (it then moves with the point); it fades in.</summary>
+/// <summary>
+/// A text at coordinates or next to a point (it then moves with the point); it fades in. A text at coordinates has a
+/// free point of its own as its position (not a named object), so it can move like a point.
+/// </summary>
 public sealed class GeoText : GeoObject
 {
-    private readonly Vec? fixedPosition;
-    private readonly GeoPoint? anchor;
+    private readonly GeoPoint anchor;
     private Primitive? text;
 
     internal GeoText(string name, string content, Vec position, Options options)
-        : base(name, options)
+        : this(name, content, GeoPoint.Free(name + "#position", position, Options.None), options, ownPosition: true)
     {
-        Content = content;
-        fixedPosition = position;
     }
 
     internal GeoText(string name, string content, GeoPoint anchor, Options options)
+        : this(name, content, anchor, options, ownPosition: false)
+    {
+    }
+
+    private GeoText(string name, string content, GeoPoint anchor, Options options, bool ownPosition)
         : base(name, options, anchor)
     {
         Content = content;
         this.anchor = anchor;
+        OwnPosition = ownPosition ? anchor : null;
     }
+
+    /// <summary>The position of a text at coordinates (a free point, it can move); null for a text next to a point.</summary>
+    internal GeoPoint? OwnPosition { get; }
 
     public override string Kind => "text";
 
@@ -29,9 +38,9 @@ public sealed class GeoText : GeoObject
 
     internal override Easing DefaultEasing => Easing.EaseOut;
 
-    private Vec Position => anchor?.Position ?? fixedPosition!.Value;
+    private Vec Position => anchor.Position;
 
-    internal override void Compute() => IsDefined = anchor?.IsDefined ?? true;
+    internal override void Compute() => IsDefined = anchor.IsDefined;
 
     internal override void Render(RenderContext context, Span span)
     {
@@ -40,11 +49,11 @@ public sealed class GeoText : GeoObject
             IsDrawn = true;
             text = context.Scene.Create("text", Layers.Text);
             text.Animate("text", span, Content);
-            text.Animate("anchor", span, anchor == null ? "middle" : "start");
+            text.Animate("anchor", span, OwnPosition != null ? "middle" : "start");
         }
         // an offset is in coordinates; the default distance from a point is in points
         Vec offset = Options.Offset ?? new Vec(0, 0);
-        Vec distance = Options.Offset == null && anchor != null ? Defaults.LabelOffset : new Vec(0, 0);
+        Vec distance = Options.Offset == null && OwnPosition == null ? Defaults.LabelOffset : new Vec(0, 0);
         text.Animate("opacity", span, Visibility * Reveal);
         if (IsDefined)
         {
