@@ -119,7 +119,7 @@ Alle Objekte: `art name = Definition Optionen…`. Vor dem ersten `step` gehöre
 | `angle w = A S B` | Winkel bei S, gegen den Uhrzeigersinn vom Strahl SA zum Strahl SB (auch über 180°, auch 360°); ein rechter Winkel ohne Beschriftung bekommt den Punkt |
 | `angle w = use datei A B …` | Ergebnis einer anderen Datei |
 
-**Optionen:** `color` `width` `fill` `opacity` `label` `nolabel` `labelsize` `radius` `arrow` · `arrow start` · `arrow end` · `arrow both`, *Zeichnen*.
+**Optionen:** `color` `width` `fill` `opacity` `label` `nolabel` `labelsize` `radius` `offset` (verschiebt die Beschriftung von der Winkelhalbierenden aus) `arrow` · `arrow start` · `arrow end` · `arrow both`, *Zeichnen*.
 
 ### `text` – Text im Bild
 
@@ -192,7 +192,7 @@ Aktionen stehen in einem Schritt und laufen nacheinander. Die Optionen *Ablauf* 
 | `nolabel` | – | ✓ | ✓ | ✓ | | | ✓ | | |
 | `labelsize` | n (pt) | ✓ | ✓ | ✓ | | | ✓ | | |
 | `labelpos` | n (0 bei A, 1 bei B) | | ✓ | ✓ | | | | | |
-| `offset` | x y (Koordinateneinheiten) | ✓ | ✓ | ✓ | | | | ✓ | |
+| `offset` | x y (Koordinateneinheiten) | ✓ | ✓ | ✓ | | | ✓ | ✓ | |
 | `radius` | n (Einheiten) | | | | | | ✓ | | |
 | `arrow` | – · `start` · `end` · `both` | | ✓ | | | | ✓ | | |
 | `hidden` | – | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | |

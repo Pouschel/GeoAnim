@@ -592,6 +592,10 @@ public class ScriptTests
         JsonElement angle = JsonDocument.Parse(ScriptCompiler.Compile("point A = 1 0\npoint S = 0 0\npoint C = 0 1\nangle w = A S C arrow start").ToJson())
             .RootElement.GetProperty("primitives").EnumerateArray().Single(p => p.GetProperty("type").GetString() == "angle");
         Assert.Equal("start", angle.GetProperty("tracks").GetProperty("arrow")[0][1].GetString());
+        // the label of an angle can be moved
+        JsonElement moved = JsonDocument.Parse(ScriptCompiler.Compile("point A = 1 0\npoint S = 0 0\npoint C = 0 1\nangle w = A S C label \"x\" offset 0.2 -0.1").ToJson())
+            .RootElement.GetProperty("primitives").EnumerateArray().Single(p => p.GetProperty("type").GetString() == "angle").GetProperty("tracks");
+        Assert.Equal((0.2, -0.1), (moved.GetProperty("ox")[0][1].GetDouble(), moved.GetProperty("oy")[0][1].GetDouble()));
         ErrorAt("point A = 0 0\npoint B = 1 0\nline g = A B arrow", 3, 14, "not possible for line");
         ErrorAt("point A = 0 0\narrow start", 2, 1, "command");
     }

@@ -354,8 +354,9 @@
     parts.dot.setAttribute('fill', v.color)
     parts.dot.setAttribute('opacity', reveal * (1 - labelShown))
     if (v.text) {
-      const x = cx + bx * distance - width / 2
-      const y = cy - by * distance - height / 2 + 0.7 * size
+      // "offset x y": moved from its place on the bisector, in units of the coordinates
+      const x = cx + bx * distance - width / 2 + (v.ox || 0) * scale
+      const y = cy - by * distance - height / 2 + 0.7 * size - (v.oy || 0) * scale
       parts.label.setAttribute('transform', `translate(${x} ${y})`)
       parts.label.setAttribute('fill', v.color)
       parts.label.style.color = v.color
