@@ -45,7 +45,7 @@ public sealed class GeoStraight : GeoObject
         IsDefined = A.IsDefined && B.IsDefined && Direction.Length > 1e-9;
 
     /// <summary>The visible end points: the segment itself, or the line or ray cut at the edges of the view.</summary>
-    private (Vec Start, Vec End)? VisiblePart(ViewWindow view)
+    internal (Vec Start, Vec End)? VisiblePart(ViewWindow view)
     {
         Vec a = A.Position;
         Vec d = Direction;

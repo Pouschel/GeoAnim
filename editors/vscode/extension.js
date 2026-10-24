@@ -29,6 +29,12 @@ const reported = new Map()
 const definitions = new Map()
 const references = new Map()
 let keywords = null
+// the objects shown as ghosts in the preview: the one the cursor is on, and for a while the one under the mouse
+let cursorName = null
+let hoverName = null
+let hoverTimer = null
+let sentHighlight = ''
+const inspections = new Map()
 
 // ------------------------------------------------------------------ finding and starting geoanim
 
@@ -337,7 +343,7 @@ function definitionAt (document, position) {
 
 const isThisFile = (document, file) => !file || path.resolve(file).toLowerCase() === document.uri.fsPath.toLowerCase()
 
-function hover (document, position) {
+async function hover (document, position) {
   const found = definitionAt(document, position)
   if (!found) {
     return null
@@ -347,7 +353,54 @@ function hover (document, position) {
   text.appendCodeblock(definition.text, 'geo')
   const kind = { var: 'Var', set: 'Text', object: 'Objekt' }[definition.kind] || definition.kind
   text.appendMarkdown(`${kind}, ${isThisFile(document, definition.file) ? '' : path.basename(definition.file) + ', '}Zeile ${definition.line}`)
+  // an object in the script shown in the preview: its values there now, and its ghost in the picture
+  if (definition.kind === 'object' && preview && previewReady && document === previewDocument) {
+    showHoverGhost(definition.name)
+    const now = await inspect(definition.name)
+    if (now) {
+      const when = now.step > 0 ? `Schritt ${now.step}` : 'Startbild'
+      text.appendMarkdown(`\n\n---\n\n**Vorschau, ${when}:** ` + (now.info === null ? 'hier noch nicht definiert' : now.info))
+    }
+  }
   return new vscode.Hover(text, range)
+}
+
+// asks the preview for an object's values at its current time (null if it does not answer quickly)
+function inspect (name) {
+  const id = nextId++
+  return new Promise(resolve => {
+    const timer = setTimeout(() => {
+      inspections.delete(id)
+      resolve(null)
+    }, 500)
+    inspections.set(id, result => {
+      clearTimeout(timer)
+      resolve(result)
+    })
+    preview.webview.postMessage({ type: 'inspect', id, name })
+  })
+}
+
+// ghosts: the object under the mouse for a few seconds (a tooltip has no end that an extension sees), the one the
+// cursor is on as long as it stays there
+function showHoverGhost (name) {
+  hoverName = name
+  clearTimeout(hoverTimer)
+  hoverTimer = setTimeout(() => {
+    hoverName = null
+    sendHighlight()
+  }, 4000)
+  sendHighlight()
+}
+
+function sendHighlight () {
+  const names = [...new Set([cursorName, hoverName].filter(name => name))]
+  const key = names.join(' ')
+  if (!preview || !previewReady || key === sentHighlight) {
+    return
+  }
+  sentHighlight = key
+  preview.webview.postMessage({ type: 'highlight', names })
 }
 
 function definitionLocation (document, position) {
@@ -507,8 +560,14 @@ function openPreview () {
     if (message && message.type === 'step' && typeof message.index === 'number') {
       revealStep(message.index)
     }
+    if (message && message.type === 'inspected' && inspections.has(message.id)) {
+      const answer = inspections.get(message.id)
+      inspections.delete(message.id)
+      answer(message.result)
+    }
     if (message && message.type === 'ready') {
       previewReady = true
+      sentHighlight = null
       if (previewDocument) {
         const result = lastResults.get(previewDocument.uri.toString())
         if (result) {
@@ -607,6 +666,10 @@ function followCursor (editor) {
     previewStep = index
     preview.webview.postMessage({ type: 'step', index })
   }
+  // the object whose name the cursor is on: its ghost in the preview
+  const found = editor.selection.isEmpty ? definitionAt(editor.document, editor.selection.active) : null
+  cursorName = found && found.definition.kind === 'object' ? found.definition.name : null
+  sendHighlight()
 }
 
 // ------------------------------------------------------------------ activation

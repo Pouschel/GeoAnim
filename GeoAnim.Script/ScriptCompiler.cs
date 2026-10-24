@@ -9,9 +9,10 @@ public static class ScriptCompiler
     /// <summary>Compiles a script file (with the files it includes and uses).</summary>
     public static AnimationData CompileFile(string path) => Compile(ScriptSource.FromFile(path));
 
-    public static AnimationData Compile(ScriptSource source)
+    /// <param name="inspect">For an editor: the animation also describes every object over time (<see cref="Construction.Inspect"/>).</param>
+    public static AnimationData Compile(ScriptSource source, bool inspect = false)
     {
-        Construction construction = CompileConstruction(source);
+        Construction construction = CompileConstruction(source, inspect);
         try
         {
             return construction.Build();
@@ -62,12 +63,12 @@ public static class ScriptCompiler
     /// <summary>Compiles the script into a construction that is not yet built.</summary>
     public static Construction CompileConstruction(string source) => CompileConstruction(ScriptSource.FromText(source));
 
-    public static Construction CompileConstruction(ScriptSource source)
+    public static Construction CompileConstruction(ScriptSource source, bool inspect = false)
     {
         try
         {
             List<Statement> statements = Parser.Parse(source.Text);
-            var construction = new Construction();
+            var construction = new Construction { Inspect = inspect };
             var executor = new Executor(construction, source, source.MainFile == null ? [] : [source.MainFile], new UseCounter(), null);
             foreach (Statement statement in statements)
             {

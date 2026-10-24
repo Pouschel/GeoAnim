@@ -41,6 +41,12 @@ public sealed class AnimationData
     /// <summary>The word forms that link to this page from the other pages of "geoanim exportdir" ("keyword").</summary>
     public IReadOnlyList<PageKeyword> Keywords { get; internal init; } = [];
 
+    /// <summary>
+    /// For an editor (<see cref="Construction.Inspect"/>): every object over time with its names, written as "inspect";
+    /// empty otherwise.
+    /// </summary>
+    internal IReadOnlyList<InspectedObject> Inspection { get; init; } = [];
+
     public ViewWindow View { get; }
 
     public Color Background { get; }
@@ -88,6 +94,7 @@ public sealed class AnimationData
         {
             Description = Description,
             Keywords = Keywords,
+            Inspection = Inspection,
         };
 
     /// <summary>Whether nothing is drawn (e.g. a file with only defaults and vars).</summary>
@@ -160,34 +167,58 @@ public sealed class AnimationData
             foreach (Primitive primitive in primitives)
             {
                 json.WriteStartObject();
-                json.WriteNumber("id", primitive.Id);
-                json.WriteString("type", primitive.Type);
-                json.WriteNumber("layer", primitive.Layer);
-                json.WriteStartObject("tracks");
-                foreach (KeyValuePair<string, List<Primitive.Key>> track in primitive.Tracks)
-                {
-                    json.WriteStartArray(track.Key);
-                    foreach (Primitive.Key key in Simplify(track.Value, ToleranceFor(primitive.Type, track.Key)))
-                    {
-                        // [time, value] or [time, value, easing]
-                        json.WriteStartArray();
-                        json.WriteNumberValue(RoundTime(key.Time * timeScale));
-                        WriteValue(json, key.Value);
-                        if (key.Easing != Easing.Linear)
-                        {
-                            json.WriteStringValue(EasingFunctions.Code(key.Easing));
-                        }
-                        json.WriteEndArray();
-                    }
-                    json.WriteEndArray();
-                }
-                json.WriteEndObject();
+                WritePrimitive(json, primitive);
                 json.WriteEndObject();
             }
             json.WriteEndArray();
+            if (Inspection.Count > 0)
+            {
+                // "inspect": [{ "names": ["P"], "id": 1, "type": "dot", "layer": 0, "tracks": { …, "info": […] } }, …]
+                json.WriteStartArray("inspect");
+                foreach (InspectedObject inspected in Inspection)
+                {
+                    json.WriteStartObject();
+                    json.WriteStartArray("names");
+                    foreach (string name in inspected.Names)
+                    {
+                        json.WriteStringValue(name);
+                    }
+                    json.WriteEndArray();
+                    WritePrimitive(json, inspected.Ghost);
+                    json.WriteEndObject();
+                }
+                json.WriteEndArray();
+            }
             json.WriteEndObject();
         }
         return Encoding.UTF8.GetString(stream.ToArray());
+    }
+
+    // id, type, layer and tracks of a primitive (inside its object)
+    private void WritePrimitive(Utf8JsonWriter json, Primitive primitive)
+    {
+        json.WriteNumber("id", primitive.Id);
+        json.WriteString("type", primitive.Type);
+        json.WriteNumber("layer", primitive.Layer);
+        json.WriteStartObject("tracks");
+        foreach (KeyValuePair<string, List<Primitive.Key>> track in primitive.Tracks)
+        {
+            json.WriteStartArray(track.Key);
+            foreach (Primitive.Key key in Simplify(track.Value, ToleranceFor(primitive.Type, track.Key)))
+            {
+                // [time, value] or [time, value, easing]
+                json.WriteStartArray();
+                json.WriteNumberValue(RoundTime(key.Time * timeScale));
+                WriteValue(json, key.Value);
+                if (key.Easing != Easing.Linear)
+                {
+                    json.WriteStringValue(EasingFunctions.Code(key.Easing));
+                }
+                json.WriteEndArray();
+            }
+            json.WriteEndArray();
+        }
+        json.WriteEndObject();
     }
 
     private static double RoundTime(double time) => Math.Round(time, 1);

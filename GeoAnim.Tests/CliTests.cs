@@ -294,6 +294,17 @@ public sealed class CliTests : IDisposable
         Assert.Contains("degrees", Ask(new { id = 14, type = "keywords" }).GetProperty("keywords").EnumerateArray().Select(k => k.GetString()));
 
         // the player page for the preview: everything inside, no animation, waiting for messages
+        // for tooltips and ghosts: every object over time, also a hidden one, with its values
+        JsonElement inspect = Ask(new { id = 9, type = "compile", file = main, text = "point A = 1 1\npoint B = 4 5 color red\ncircle k = center A through B hidden" })
+            .GetProperty("animation").GetProperty("inspect");
+        JsonElement circle = inspect.EnumerateArray().Single(o => o.GetProperty("names")[0].GetString() == "k");
+        Assert.Equal("arc", circle.GetProperty("type").GetString());
+        string info = circle.GetProperty("tracks").GetProperty("info")[0][1].GetString()!;
+        Assert.Contains("Mittelpunkt A (1 | 1), Radius 5", info);
+        Assert.Contains("nicht gezeichnet (hidden)", info);
+        Assert.Contains("Farbe red", inspect[1].GetProperty("tracks").GetProperty("info")[0][1].GetString());
+        Assert.DoesNotContain("\"inspect\"", GeoAnim.Script.ScriptCompiler.Compile("point A = 1 1").ToJson());
+
         string html = Ask(new { id = 10, type = "player" }).GetProperty("html").GetString()!;
         Assert.Contains("window.GEO_EMBEDDED = true;", html);
         Assert.DoesNotContain("GEO_ANIMATION =", html);

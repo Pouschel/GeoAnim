@@ -41,6 +41,7 @@ public sealed class Construction
     private double time;
     private AnimationStep? currentStep;
     private bool built;
+    private Inspector? inspector;
     private double speed = 1;
     private string? title;
 
@@ -285,6 +286,7 @@ public sealed class Construction
             throw new GeoException($"{item} cannot be constructed from the current positions.");
         }
         Register(item);
+        Record(item, Span.At(time));
         if (!item.Options.Hidden)
         {
             RunOrQueue([DrawActionFor(item, item.Options)]);
@@ -692,6 +694,7 @@ public sealed class Construction
                 action.Begin(ctx, 0);
                 action.End(ctx, Span.At(0));
             }
+            RecordAll(Span.At(0));
             return;
         }
         double start = time;
@@ -714,6 +717,7 @@ public sealed class Construction
                 }
                 RecomputeAll();
                 RenderAll(new Span(previous, now));
+                RecordAll(new Span(previous, now));
                 previous = now;
             }
         }
@@ -723,6 +727,7 @@ public sealed class Construction
             {
                 action.End(ctx, new Span(start, start + action.Duration, action.Easing));
             }
+            RecordAll(Span.At(start + length));
         }
         time = start + length;
     }
@@ -743,6 +748,29 @@ public sealed class Construction
         }
     }
 
+    /// <summary>
+    /// Whether the animation also describes every object over time, the hidden ones too (<see cref="AnimationData.Inspection"/>),
+    /// for an editor; set it before the first object.
+    /// </summary>
+    public bool Inspect
+    {
+        get => inspector != null;
+        set => inspector = value ? inspector ?? new Inspector() : null;
+    }
+
+    private void Record(GeoObject item, Span span) => inspector?.Record(item, view, span);
+
+    private void RecordAll(Span span)
+    {
+        if (inspector != null)
+        {
+            foreach (GeoObject item in objects)
+            {
+                inspector.Record(item, view, span);
+            }
+        }
+    }
+
     /// <summary>Finishes the construction and returns the animation (a construction is built once).</summary>
     public AnimationData Build()
     {
@@ -758,6 +786,10 @@ public sealed class Construction
         {
             Description = Description,
             Keywords = keywords.ToList(),
+            Inspection = inspector == null ? [] : inspector.Ghosts
+                .Select(g => new InspectedObject(objectsByName.Where(n => n.Value == g.Item).Select(n => n.Key).ToList(), g.Ghost))
+                .Where(g => g.Names.Count > 0)
+                .ToList(),
         };
     }
 
@@ -792,6 +824,9 @@ public sealed class Construction
         return formulas;
     }
 }
+
+/// <summary>An object with all its names and its ghost (see <see cref="Construction.Inspect"/>).</summary>
+internal sealed record InspectedObject(IReadOnlyList<string> Names, Primitive Ghost);
 
 /// <summary>A word form that links to a page: to its start (step 0) or to the end of a step (1, 2, …).</summary>
 public sealed record PageKeyword(string Form, int Step);

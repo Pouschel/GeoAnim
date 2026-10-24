@@ -9,7 +9,8 @@ namespace GeoAnim.Cli;
 /// "geoanim daemon": compiles for an editor (the VS Code extension), one JSON request per line on standard input, one
 /// JSON answer per line on standard output. The process stays, so MathJax starts only once.
 /// <list type="bullet">
-/// <item>{"id": 1, "type": "compile", "file": "C:\\…\\a.geo", "text": "…"} → {"id": 1, "animation": {…} or null,
+/// <item>{"id": 1, "type": "compile", "file": "C:\\…\\a.geo", "text": "…"} → {"id": 1, "animation": {…} (with "inspect": every
+/// object over time, for tooltips and ghosts in the preview) or null,
 /// "errors": [{"file": "C:\\…", "line": 3, "column": 7, "message": "…"}], "files": ["C:\\…", …], "definitions":
 /// [{"name": "k", "kind": "var" | "set" | "object", "text": "…", "file": "C:\\…", "line": 4, "column": 5}, …],
 /// "references": [{"name": "k", "file": "C:\\…", "line": 4, "column": 5}, …] (every place a name stands)} – the
@@ -75,7 +76,7 @@ internal static class Daemon
         try
         {
             source = Path.IsPathRooted(file) ? ScriptSource.FromFile(file, text) : ScriptSource.FromText(text);
-            animation = ScriptCompiler.Compile(source).ToJson();
+            animation = ScriptCompiler.Compile(source, inspect: true).ToJson();
         }
         catch (ScriptError e)
         {

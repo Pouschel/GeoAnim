@@ -282,7 +282,7 @@ File.WriteAllText("mittelsenkrechte.html", HtmlExporter.Export(c.Build()));
 
 `editors/vscode` ist eine Erweiterung für VS Code: Syntaxhervorhebung (Befehle, Hilfswörter, Optionen, Zahlen, Farben,
 neue Objektnamen, Vars, Texte, Formeln, Dateipfade, Kommentare), eine Live-Vorschau neben dem Editor, die schon beim
-Tippen aktualisiert und dem Schritt unter dem Cursor folgt, und Fehler als rote Unterstreichung. Dahinter steht
+Tippen aktualisiert und dem Schritt unter dem Cursor folgt, Fehler als rote Unterstreichung und Tooltips mit Definition und aktuellen Werten eines Objekts, das dabei in der Vorschau als Geist erscheint (auch versteckte Hilfsobjekte). Dahinter steht
 `geoanim daemon` (JSON-Zeilen über Standardein- und -ausgabe). Einrichten: siehe `editors/vscode/README.md`.
 
 ## Aufbau
