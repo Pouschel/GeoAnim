@@ -188,6 +188,69 @@ public class ConstructionTests
         Assert.Equal(360, sweep[sweep.GetArrayLength() - 1][1].GetDouble());
     }
 
+    // the result depends on the movement, not on how the position on the circle is written
+    [Theory]
+    [InlineData(270, 630, 360)]
+    [InlineData(-90, 270, 360)]
+    [InlineData(-90, -450, 0)]
+    [InlineData(-90, 630, 360)]
+    [InlineData(270, 270, 0)]
+    public void FullTurnFollowsTheMovement(double from, double to, double expected)
+    {
+        var c = new Construction();
+        GeoPoint s = c.Point("S", 0, 0);
+        GeoPoint a = c.Point("A", 0, -2);
+        GeoCircle k = c.Circle("k", s, 2);
+        GeoPoint p = c.PointOn("P", k, from);
+        GeoAngle w = c.Angle("w", a, s, p);
+        Assert.Equal(0, w.Degrees);
+        c.Step("turn");
+        c.Move(p, to, duration: 800, easing: Easing.Linear);
+        c.Build();
+        Assert.Equal(expected, w.Degrees);
+    }
+
+    // without a movement: the point is placed one turn on ("on k at 360")
+    [Theory]
+    [InlineData(0, 360, 360)]
+    [InlineData(0, 0, 0)]
+    [InlineData(270, 630, 360)]
+    [InlineData(270, 270, 0)]
+    [InlineData(270, -90, 0)]
+    [InlineData(0, -360, 0)]
+    public void FullAnglePlacedAtOnce(double firstArm, double second, double expected)
+    {
+        var c = new Construction();
+        GeoPoint s = c.Point("S", 6.5, -2.2);
+        double radians = firstArm * Math.PI / 180;
+        GeoPoint a = c.Point("A", 6.5 + 2 * Math.Cos(radians), -2.2 + 2 * Math.Sin(radians));
+        GeoCircle k = c.Circle("k", s, 2, new Options { Hidden = true });
+        GeoPoint b = c.PointOn("B", k, second);
+        GeoAngle w = c.Angle("w", a, s, b);
+        Assert.Equal(expected, w.Degrees);
+        JsonElement sweep = Json(c).GetProperty("primitives").EnumerateArray()
+            .Single(p => p.GetProperty("type").GetString() == "angle")
+            .GetProperty("tracks").GetProperty("sweep");
+        Assert.Equal(expected, sweep[sweep.GetArrayLength() - 1][1].GetDouble());
+    }
+
+    [Fact]
+    public void FullTurnOfTheFirstArm()
+    {
+        var c = new Construction();
+        GeoPoint s = c.Point("S", 0, 0);
+        GeoPoint a = c.Point("A", 2, 0);
+        GeoPoint p = c.Point("P", 2, 0);
+        GeoAngle w = c.Angle("w", a, s, p);
+        c.Step("first arm clockwise once round");
+        c.Rotate([a], s, -360, duration: 800, easing: Easing.Linear);
+        Assert.Equal(360, w.Degrees);
+        c.Step("and back");
+        c.Rotate([a], s, 360, duration: 800, easing: Easing.Linear);
+        c.Build();
+        Assert.Equal(0, w.Degrees);
+    }
+
     [Fact]
     public void HideFadesOut()
     {

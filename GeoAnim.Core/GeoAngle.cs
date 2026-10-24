@@ -9,6 +9,10 @@ public sealed class GeoAngle : GeoObject
 {
     private Primitive? sector;
     private double? lastStart;
+    private double? lastDegrees;
+
+    // how close (in degrees) the arms must be to count as lying on top of each other
+    private const double ArmsTogether = 1e-6;
 
     internal GeoAngle(string name, GeoPoint a, GeoPoint vertex, GeoPoint c, Options options)
         : base(name, options, a, vertex, c)
@@ -50,17 +54,16 @@ public sealed class GeoAngle : GeoObject
         double start = Math.Atan2(first.Y, first.X) * 180 / Math.PI;
         double end = Math.Atan2(second.Y, second.X) * 180 / Math.PI;
         Degrees = ((end - start) % 360 + 360) % 360;
-        // A point moving on a circle around the vertex keeps its unwrapped path parameter. This distinguishes the
-        // initial position (0 degrees) from the same position after one or more complete counterclockwise turns
-        // (360 degrees). From the point coordinates alone, a null angle and a full angle are indistinguishable.
-        if (Degrees < 1e-9 && C.Path is GeoCircle circle && ReferenceEquals(circle.Center, Vertex))
+        // With both arms on top of each other the positions cannot tell a null angle (0°) from a full angle (360°); where
+        // the angle comes from can: from more than 180° the second arm has turned counterclockwise onto the first one (or
+        // the first one clockwise onto the second), so it is a full angle, and it stays one while the arms stay together.
+        // Movements are computed in small steps, so the angle before is always close. (This also settles a value like
+        // 359.9999999° that rounding gives for arms that lie on top of each other.)
+        if (Degrees < ArmsTogether || Degrees > 360 - ArmsTogether)
         {
-            double normalizedStart = ((start % 360) + 360) % 360;
-            if (C.Parameter - normalizedStart > 1e-9)
-            {
-                Degrees = 360;
-            }
+            Degrees = (lastDegrees ?? DegreesWhenDefined(start)) > 180 ? 360 : 0;
         }
+        lastDegrees = Degrees;
         // the start stays continuous while points move (no jump from 179° to -179°), so the player interpolates well
         if (lastStart is double previous)
         {
@@ -68,6 +71,19 @@ public sealed class GeoAngle : GeoObject
         }
         Start = start;
         lastStart = start;
+    }
+
+    // A new angle with its arms on top of each other has no movement before it. Its second point may lie on a circle
+    // around the vertex, given by the angle on it: one turn or more beyond the first arm ("on k at 360" with the first
+    // arm at 0°) means a full angle; at the first arm itself ("at 0", "at -90" with the first arm at 270°) a null angle.
+    private double DegreesWhenDefined(double start)
+    {
+        if (C.Path is GeoCircle circle && ReferenceEquals(circle.Center, Vertex))
+        {
+            double turns = (C.Parameter - (start % 360 + 360) % 360) / 360;
+            return Math.Round(turns) >= 1 ? 360 : 0;
+        }
+        return 0;
     }
 
     internal override void Render(RenderContext context, Span span)
