@@ -118,7 +118,13 @@ internal enum UseMode
 /// <summary>"use Prop1.geo A B": the outputs of another file, constructed from these inputs.</summary>
 internal sealed record UseDefinition(string Path, int PathLine, int PathColumn, IReadOnlyList<NameRef> Arguments, UseMode Mode) : Definition;
 
-internal sealed record TextDefinition(string Content, Vec? Position, NameRef? Anchor) : Definition;
+internal sealed record TextDefinition(string Content, Vec? Position, NameRef? Anchor) : Definition
+{
+    /// <summary>"below t [gap n]": the text one line below the text t.</summary>
+    public NameRef? Above { get; init; }
+
+    public double Gap { get; init; }
+}
 
 /// <summary>The options of a statement ("color red duration 800"), in their order.</summary>
 internal sealed record OptionList(IReadOnlyList<OptionValue> Values)

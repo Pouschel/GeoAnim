@@ -444,7 +444,7 @@ public static class ScriptCompiler
         {
             "point" => ["color", "size", "labelsize", "label", "offset", "shift", "draw"],
             "polygon" => ["color", "width", "fill", "opacity", "draw"],
-            "text" => ["color", "size", "offset", "shift", "draw"],
+            "text" => ["color", "size", "offset", "shift", "align", "draw"],
             "segment" or "ray" => ["color", "width", "label", "labelsize", "labelpos", "offset", "shift", "arrow", "draw"],
             "line" => ["color", "width", "label", "labelsize", "labelpos", "offset", "shift", "draw"],
             "angle" => ["color", "width", "fill", "opacity", "label", "labelsize", "radius", "offset", "shift", "arrow", "draw"],
@@ -572,6 +572,10 @@ public static class ScriptCompiler
                     break;
                 case PolygonDefinition d:
                     created = c.Polygon(name0, d.Vertices.Select(ResolvePoint).ToList(), options);
+                    break;
+                case TextDefinition d when d.Above != null:
+                    created = c.Text(name0, d.Content, Resolve(d.Above) as GeoText
+                        ?? throw new ScriptError(d.Above.Line, d.Above.Column, $"{d.Above.Name} is a {Resolve(d.Above).Kind}; \"below\" names a text."), d.Gap, options);
                     break;
                 case TextDefinition d:
                     created = d.Anchor != null
@@ -829,6 +833,7 @@ public static class ScriptCompiler
                     "arrow" => options with { Arrow = (string)option.Value! switch { "start" => Arrow.Start, "both" => Arrow.Both, _ => Arrow.End } },
                     "offset" => options with { Offset = (Vec)option.Value! },
                     "shift" => options with { Shift = (Vec)option.Value! },
+                    "align" => options with { Align = (string)option.Value! switch { "left" => TextAlign.Left, "right" => TextAlign.Right, _ => TextAlign.Center } },
                     "hidden" => options with { Hidden = true },
                     "linear" => options with { Easing = Easing.Linear },
                     "easein" => options with { Easing = Easing.EaseIn },

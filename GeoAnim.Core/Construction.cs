@@ -245,6 +245,13 @@ public sealed class Construction
     public GeoText Text(string name, string content, GeoPoint anchor, Options? options = null) =>
         Define(new GeoText(name, CheckText(content), anchor, options ?? Options.None));
 
+    /// <summary>
+    /// A text one line below <paramref name="above"/> (a text at coordinates or below one), with the same alignment;
+    /// <paramref name="gap"/> units further down. It moves with the text above.
+    /// </summary>
+    public GeoText Text(string name, string content, GeoText above, double gap = 0, Options? options = null) =>
+        Define(new GeoText(name, CheckText(content), above, gap, options ?? Options.None));
+
     // the formulas of a text must be complete ($…$)
     private static string CheckText(string text)
     {
@@ -458,7 +465,9 @@ public sealed class Construction
         Move(OwnPositionOf(text), target, duration, easing);
 
     private static GeoPoint OwnPositionOf(GeoText text) => text.OwnPosition
-        ?? throw new GeoException($"The text {text.Name} stands next to the point {text.Parents[0].Name} and moves with it: move the point (or place the text at coordinates).");
+        ?? throw new GeoException(text.Above != null
+            ? $"The text {text.Name} stands below the text {text.Above.Name} and moves with it: move that one (or shift this one with \"move label {text.Name} to …\")."
+            : $"The text {text.Name} stands next to the point {text.Parents[0].Name} and moves with it: move the point (or place the text at coordinates).");
 
     /// <summary>Moves a free point to <paramref name="target"/>; dependent objects follow.</summary>
     public void Move(GeoPoint point, Vec target, double? duration = null, Easing? easing = null)

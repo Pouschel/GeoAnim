@@ -688,6 +688,35 @@ public class ScriptTests
     }
 
     [Fact]
+    public void TextsAlignAndStandBelowEachOther()
+    {
+        AnimationData animation = ScriptCompiler.Compile("""
+            point P = 0 0
+            text t1 = "erste Zeile" at 1 2 align left
+            text t2 = "zweite" below t1
+            text t3 = "dritte" below t2 gap 0.3 shift 0.5 0
+            text r = "rechts" at 9 2 align right
+            text m = "Mitte" at 5 5
+            step
+              hide t2
+            """);
+        JsonElement[] texts = JsonDocument.Parse(animation.ToJson()).RootElement.GetProperty("primitives").EnumerateArray()
+            .Where(p => p.GetProperty("type").GetString() == "text").ToArray();
+        JsonElement Text(string content) => texts.Single(t => t.GetProperty("tracks").GetProperty("text")[0][1].GetString() == content);
+        string Anchor(string content) => Text(content).GetProperty("tracks").GetProperty("anchor")[0][1].GetString()!;
+        // the lines of a block take the alignment of the first one; they refer to the text above (the player places them)
+        Assert.Equal(["start", "start", "start", "end", "middle"], new[] { "erste Zeile", "zweite", "dritte", "rechts", "Mitte" }.Select(Anchor));
+        Assert.Equal(Text("erste Zeile").GetProperty("id").GetInt32(), (int)Text("zweite").GetProperty("tracks").GetProperty("below")[0][1].GetDouble());
+        Assert.Equal(Text("zweite").GetProperty("id").GetInt32(), (int)Text("dritte").GetProperty("tracks").GetProperty("below")[0][1].GetDouble());
+        Assert.Equal(0.3, Text("dritte").GetProperty("tracks").GetProperty("belowGap")[0][1].GetDouble());
+        Assert.False(Text("zweite").GetProperty("tracks").TryGetProperty("x", out _));
+        ErrorAt("point P = 0 0\ntext u = \"x\" at P\ntext v = \"y\" below u", 3, 1, "not below the text u next to a point");
+        ErrorAt("point P = 0 0\ntext v = \"y\" below P", 2, 20, "\"below\" names a text");
+        ErrorAt("text t = \"x\" at 1 1 align oben", 1, 27, "left, center or right");
+        ErrorAt("text t = \"x\" near 1 1", 1, 14, "\"at\"");
+    }
+
+    [Fact]
     public void TextsAtCoordinatesMove()
     {
         AnimationData animation = ScriptCompiler.Compile("""

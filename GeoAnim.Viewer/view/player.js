@@ -199,11 +199,25 @@
         const layout = layoutText(element, text, size, align)
         element.layoutWidth = layout.width
         element.layoutLines = layout.lines
+        element.layoutTop = layout.top
+        element.layoutBottom = layout.bottom
         element.layoutKey = key
       }
-      // "shift": from the default place, in units of the coordinates
-      let x = toX(v.x) + (v.dx || 0) * unit + (v.sx || 0) * scale
-      let y = toY(v.y) - (v.dy || 0) * unit - (v.sy || 0) * scale
+      let x
+      let y
+      if (v.below !== undefined) {
+        // below another text: under its bottom with the space between the lines of a text (plus the gap), at the same
+        // place across ("shift" from there)
+        const above = boxOf(itemsById[v.below])
+        x = above.x + (v.sx || 0) * scale
+        y = above.bottom + LINE_GAP * size + (v.belowGap || 0) * scale - element.layoutTop - (v.sy || 0) * scale
+      } else {
+        // "shift": from the default place, in units of the coordinates
+        x = toX(v.x) + (v.dx || 0) * unit + (v.sx || 0) * scale
+        y = toY(v.y) - (v.dy || 0) * unit - (v.sy || 0) * scale
+      }
+      // where it stands (before the alignment) and how far down it reaches: for a text below this one
+      element.box = { x, bottom: y + element.layoutBottom }
       if (v.nx !== undefined) {
         // the label of a line: its box moved along the normal (nx, ny) until it is gap points away from the line
         const width = element.layoutWidth
@@ -220,6 +234,31 @@
       element.setAttribute('fill', v.color)
       element.style.color = v.color
     }
+  }
+
+  // the place of a text (where it stands across, its bottom) for a text below it: as drawn last; a text not drawn yet
+  // is laid out once for it (hidden texts cannot be measured: then estimated from its lines)
+  function boxOf (item) {
+    if (!item) {
+      return { x: 0, bottom: 0 }
+    }
+    if (item.element.box) {
+      return item.element.box
+    }
+    const values = {}
+    for (const name in item.primitive.tracks) {
+      values[name] = valueAt(item.primitive.tracks[name], Math.max(time, item.primitive.tracks[name][0][0]))
+    }
+    const size = textSize(values.size)
+    const lines = (values.text || '').split('\n').length
+    const bottom = 0.3 * size + (lines - 1) * LINE_HEIGHT * size
+    if (values.below !== undefined) {
+      const above = boxOf(itemsById[values.below])
+      const top = above.bottom + LINE_GAP * size + (values.belowGap || 0) * scale + 0.75 * size - (values.sy || 0) * scale
+      return { x: above.x + (values.sx || 0) * scale, bottom: top + bottom }
+    }
+    const y = toY(values.y) - (values.dy || 0) * unit - (values.sy || 0) * scale
+    return { x: toX(values.x) + (values.dx || 0) * unit + (values.sx || 0) * scale, bottom: y + bottom }
   }
 
   // texts in the picture grow with it, but stay readable in a small one (like the description below it)
@@ -406,6 +445,8 @@
 
   // distance of the lines of a text in the picture, in font sizes
   const LINE_HEIGHT = 1.3
+  // the space between two lines of letters (a line reaches 0.75 above its baseline and 0.3 below)
+  const LINE_GAP = LINE_HEIGHT - 1.05
 
   // lays out a text in the picture: its lines (a new paragraph: a new line) aligned to the left, centre or right, with
   // bold, italic, code and links (underlined) from Markdown; the first baseline at y = 0. Returns width and lines.
@@ -415,14 +456,23 @@
     flattenInline(parseMarkdown(text), {}, lines)
     let widest = 0
     const widths = []
+    // how far the text reaches above its first baseline and below it (formulas can reach further than letters)
+    let topOfFirst = -0.75 * size
+    let bottom = 0.3 * size
     const rows = lines.map((pieces, index) => {
       const row = create('g', {}, group)
+      const baseline = index * LINE_HEIGHT * size
+      bottom = Math.max(bottom, baseline + 0.3 * size)
       let x = 0
       for (const piece of pieces) {
         const formula = piece.math !== undefined ? formulaOf(piece.math) : null
         if (formula) {
           const element = formulaElement(formula)
           const [, top, width, height] = formula.box
+          if (index === 0) {
+            topOfFirst = Math.min(topOfFirst, top / 1000 * size)
+          }
+          bottom = Math.max(bottom, baseline + (top + height) / 1000 * size)
           element.setAttribute('x', x)
           element.setAttribute('y', top / 1000 * size)
           element.setAttribute('width', width / 1000 * size)
@@ -456,7 +506,7 @@
       const shift = align === 'middle' ? (widest - widths[index]) / 2 : align === 'end' ? widest - widths[index] : 0
       row.setAttribute('transform', `translate(${shift} ${index * LINE_HEIGHT * size})`)
     })
-    return { width: widest, lines: lines.length }
+    return { width: widest, lines: lines.length, top: topOfFirst, bottom }
   }
 
   // Markdown pieces → lines of pieces with their style
@@ -685,6 +735,8 @@
   const PLACEHOLDER = /(?<!\\)\{([A-Za-z_][A-Za-z0-9_]*'*)(?::(\d))?\}/g
   let numbers = []
   let numberValues = {}
+  // the items by the id of their primitive (a text below another one finds it)
+  let itemsById = {}
 
   function updateNumbers () {
     numberValues = {}
@@ -733,6 +785,10 @@
       }
       return { primitive, element, shown: true }
     })
+    itemsById = {}
+    for (const item of items) {
+      itemsById[item.primitive.id] = item
+    }
   }
 
   function render () {

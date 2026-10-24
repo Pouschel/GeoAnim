@@ -127,8 +127,9 @@ Alle Objekte: `art name = Definition Optionen…`. Vor dem ersten `step` gehöre
 |---|---|
 | `text t = "…" at x y` · `text t = name at x y` | an festen Koordinaten (zentriert) |
 | `text t = "…" at P` · `text t = name at P` | neben einem Punkt, wandert mit ihm |
+| `text t = "…" below s` · `text t = "…" below s gap n` | eine Zeile unter dem Text s (einem Text an Koordinaten oder selbst unter einem), mit dessen Ausrichtung; `gap`: n Einheiten Abstand zusätzlich; wandert mit s |
 
-**Optionen:** `color` `size` `shift` (`offset` veraltet), *Zeichnen*. Ein Text an festen Koordinaten steht mit seiner Mitte dort; `shift` verschiebt ihn von da aus.
+**Optionen:** `color` `size` `align` · `align left` · `align center` · `align right` `shift` (`offset` veraltet), *Zeichnen*. Ein Text an festen Koordinaten steht standardmäßig mit seiner Mitte dort (`align center`); `align left` beginnt dort, `align right` endet dort (mehrzeilige Texte entsprechend bündig). `shift` verschiebt ihn von da aus.
 
 ## Zahlen
 
@@ -197,6 +198,7 @@ Aktionen stehen in einem Schritt und laufen nacheinander. Die Optionen *Ablauf* 
 | `shift` | x y (Koordinateneinheiten) – Verschiebung der Beschriftung von ihrem gewohnten Platz aus | ✓ | ✓ | ✓ | | | ✓ | ✓ | |
 | `offset` | x y – *veraltet*: Lage relativ zum Punkt selbst (ohne den gewohnten Abstand); beim Winkel wie `shift` | ✓ | ✓ | ✓ | | | ✓ | ✓ | |
 | `radius` | n (Einheiten) | | | | | | ✓ | | |
+| `align` | `left` · `center` · `right` | | | | | | | ✓ | |
 | `arrow` | – · `start` · `end` · `both` | | ✓ | | | | ✓ | | |
 | `hidden` | – | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | |
 | `duration` | n (ms) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | `show` `hide` `move` `rotate` `together` |
@@ -227,4 +229,4 @@ Aktionen stehen in einem Schritt und laufen nacheinander. Die Optionen *Ablauf* 
 
 Diese Wörter können keine Namen sein:
 
-`title` `description` `info` `keyword` `view` `background` `grid` `axes` `speed` `var` `default` `include` `input` `output` `use` `draw` `steps` `copy` `set` `step` `point` `segment` `line` `ray` `circle` `polygon` `angle` `text` `number` `length` `degrees` `area` `perimeter` `show` `hide` `all` `move` `rotate` `along` `around` `by` `pause` `together` `end` `midpoint` `intersect` `center` `through` `radius` `at` `to` `on` `x` `y` `duration` `color` `width` `fill` `opacity` `size` `labelsize` `labelpos` `label` `nolabel` `hidden` `offset` `shift` `arrow` `start` `both` `linear` `ease` `easein` `easeout` `easeinout`
+`title` `description` `info` `keyword` `view` `background` `grid` `axes` `speed` `var` `default` `include` `input` `output` `use` `draw` `steps` `copy` `set` `step` `point` `segment` `line` `ray` `circle` `polygon` `angle` `text` `number` `length` `degrees` `area` `perimeter` `show` `hide` `all` `move` `rotate` `along` `around` `by` `pause` `together` `end` `midpoint` `intersect` `center` `through` `radius` `at` `to` `on` `x` `y` `below` `gap` `align` `left` `right` `duration` `color` `width` `fill` `opacity` `size` `labelsize` `labelpos` `label` `nolabel` `hidden` `offset` `shift` `arrow` `start` `both` `linear` `ease` `easein` `easeout` `easeinout`

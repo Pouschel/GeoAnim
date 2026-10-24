@@ -9,7 +9,7 @@ internal sealed class Parser
         "title", "description", "info", "keyword", "view", "background", "grid", "axes", "speed", "var", "default", "include", "input", "output", "use",
         "draw", "steps", "copy", "set", "step", "point", "segment", "line", "ray", "circle", "polygon", "angle",
         "text", "number", "length", "degrees", "area", "perimeter", "show", "hide", "all", "move", "rotate", "along", "around", "by", "pause", "together", "end", "midpoint", "intersect", "center", "through",
-        "radius", "at", "to", "on", "x", "y",
+        "radius", "at", "to", "on", "x", "y", "below", "gap", "align", "left", "right",
         "duration", "color", "width", "fill", "opacity", "size", "labelsize", "labelpos", "label", "nolabel", "hidden", "offset", "shift",
         "arrow", "start", "both", "linear", "ease", "easein", "easeout", "easeinout",
     };
@@ -17,7 +17,7 @@ internal sealed class Parser
     private static readonly HashSet<string> OptionNames = new(StringComparer.Ordinal)
     {
         "duration", "color", "width", "fill", "opacity", "size", "radius", "labelsize", "labelpos", "label", "nolabel", "hidden", "offset", "shift",
-        "arrow", "linear", "ease", "easein", "easeout", "easeinout",
+        "arrow", "align", "linear", "ease", "easein", "easeout", "easeinout",
     };
 
     /// <summary>The kinds a "default" can name.</summary>
@@ -594,7 +594,24 @@ internal sealed class Parser
         NameRef name = ExpectNewName();
         ExpectSymbol("=");
         string content = ExpectText("the text");
-        ExpectWord("at");
+        // "below t", "below t gap 0.2": one line below another text
+        if (Current.Kind == TokenKind.Name && Current.Text == "below")
+        {
+            position++;
+            NameRef above = ExpectName();
+            double gap = 0;
+            if (Current.Kind == TokenKind.Name && Current.Text == "gap")
+            {
+                position++;
+                gap = ExpectNumber("the gap (in units)");
+            }
+            return new DefineStatement(word.Line, word.Column, "text", [name], new TextDefinition(content, null, null) { Above = above, Gap = gap }, ParseOptions());
+        }
+        if (!(Current.Kind == TokenKind.Name && Current.Text == "at"))
+        {
+            throw Error(Current, $"Expected \"at\" (coordinates or a point) or \"below\" (another text) after the text, not {Current.Describe()}.");
+        }
+        position++;
         TextDefinition definition = Current.Kind == TokenKind.Number
             ? new TextDefinition(content, ParseCoordinates(), null)
             : new TextDefinition(content, null, ExpectName());
@@ -753,6 +770,9 @@ internal sealed class Parser
                 "color" or "fill" => ExpectColor(),
                 "label" => ExpectText("the label"),
                 "offset" or "shift" => ParseCoordinates(),
+                "align" => Current.Kind == TokenKind.Name && Current.Text is "left" or "center" or "right"
+                    ? Next().Text
+                    : throw Error(Current, $"Expected left, center or right after \"align\", not {Current.Describe()}."),
                 // "arrow" alone: at the end; "arrow start", "arrow end", "arrow both"
                 "arrow" => Current.Kind == TokenKind.Name && Current.Text is "start" or "end" or "both" ? Next().Text : "end",
                 "nolabel" or "hidden" or "linear" or "ease" or "easein" or "easeout" or "easeinout" => null,

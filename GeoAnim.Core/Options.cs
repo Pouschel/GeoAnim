@@ -53,6 +53,9 @@ public sealed record Options
     /// </summary>
     public Vec? Shift { get; init; }
 
+    /// <summary>How a text stands at its place: beginning there, centred (default for a text at coordinates) or ending there.</summary>
+    public TextAlign? Align { get; init; }
+
     /// <summary>Define the object without showing it (show it later with Show).</summary>
     public bool Hidden { get; init; }
 
