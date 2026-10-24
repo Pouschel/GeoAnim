@@ -122,7 +122,9 @@ public sealed class CliTests : IDisposable
         // the book: overview, previous and next page across folders
         string index = File.ReadAllText(Path.Combine(folder, "index.html"));
         Assert.True(index.IndexOf("Grundlagen/Punkte.html") < index.IndexOf("Strecken-und-") && index.IndexOf("Strecken-und-") < index.IndexOf("Mehr/Kreis.html"), index);
-        Assert.Contains("<h2>Grundlagen</h2>", index);
+        // chapters open with a click
+        Assert.Contains("<details data-chapter=\"Grundlagen\">\n      <summary><h2>Grundlagen</h2><span class=\"count\">2 Seiten</span></summary>", index);
+        Assert.Contains("<summary><h2>Mehr</h2><span class=\"count\">1 Seite</span></summary>", index);
         Assert.Contains("window.GEO_BOOK = {\"index\":\"../index.html\",\"previous\":{\"title\":\"Strecken\",\"href\":\"../Grundlagen/Strecken-und-L%C3%A4ngen.html\"},\"next\":null", kreis);
         Assert.Contains("\"previous\":null,\"next\":{\"title\":\"Strecken\",\"href\":\"Strecken-und-L%C3%A4ngen.html\"}",
             File.ReadAllText(Path.Combine(folder, "Grundlagen", "Punkte.html")));

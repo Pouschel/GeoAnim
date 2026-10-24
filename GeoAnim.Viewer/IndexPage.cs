@@ -41,6 +41,16 @@ public static partial class IndexPage
                          font-family: 'STIX Two Text', Georgia, 'Times New Roman', serif; line-height: 1.4; }
                   h1 { font-size: 30px; margin: 0 0 18px; }
                   h2 { font-size: 21px; margin: 30px 0 8px; color: #4a5160; }
+                  details { margin: 0 0 10px; border-radius: 8px; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+                  summary { display: flex; align-items: baseline; gap: 12px; padding: 14px 18px; cursor: pointer; list-style: none; user-select: none; }
+                  summary::-webkit-details-marker { display: none; }
+                  summary::before { content: '▸'; color: #6b7280; transition: transform 0.15s; }
+                  details[open] > summary::before { transform: rotate(90deg); }
+                  summary:hover h2 { color: #1565c0; }
+                  summary h2 { flex: 1; margin: 0; color: #222; }
+                  .count { color: #6b7280; font-size: 15px; white-space: nowrap; }
+                  details ol { padding: 0 14px 14px; }
+                  details li { background: #f6f7f9; box-shadow: none; }
                   ol { margin: 0; padding: 0; list-style: none; }
                   li { margin: 0 0 8px; padding: 10px 14px; border-radius: 6px; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
                   a { color: #1565c0; font-size: 19px; text-decoration: none; }
@@ -67,9 +77,15 @@ public static partial class IndexPage
             .Where(page => !page.Animation.IsEmpty)
             .GroupBy(page => page.Path.Contains('/') ? page.Path.Substring(0, page.Path.LastIndexOf('/')) : string.Empty))
         {
-            if (folder.Key.Length > 0)
+            // a chapter (subfolder) opens with a click, so that a long book stays clear; the pages of the folder itself
+            // stand open above the chapters
+            bool chapter = folder.Key.Length > 0;
+            if (chapter)
             {
-                html.Append("    <h2>").Append(Encode(folder.Key.Replace("/", " / "))).Append("</h2>\n");
+                int count = folder.Count();
+                html.Append("    <details data-chapter=\"").Append(Encode(folder.Key)).Append("\">\n")
+                    .Append("      <summary><h2>").Append(Encode(folder.Key.Replace("/", " / "))).Append("</h2>")
+                    .Append("<span class=\"count\">").Append(count).Append(count == 1 ? " Seite" : " Seiten").Append("</span></summary>\n");
             }
             html.Append("    <ol>\n");
             foreach ((string path, AnimationData animation) in folder)
@@ -85,11 +101,33 @@ public static partial class IndexPage
                 html.Append("</li>\n");
             }
             html.Append("    </ol>\n");
+            if (chapter)
+            {
+                html.Append("    </details>\n");
+            }
         }
         if (settings.Footer != null)
         {
             html.Append("    <footer>").Append(Inline(settings.Footer)).Append("</footer>\n");
         }
+        // the chapters opened last time stay open (in this browser)
+        html.Append("""
+                <script>
+                  (() => {
+                    const key = 'geoanim-open:' + location.pathname
+                    const chapters = [...document.querySelectorAll('details[data-chapter]')]
+                    let open = []
+                    try { open = JSON.parse(localStorage.getItem(key) || '[]') } catch (error) {}
+                    for (const chapter of chapters) {
+                      chapter.open = open.includes(chapter.dataset.chapter)
+                      chapter.addEventListener('toggle', () => {
+                        try { localStorage.setItem(key, JSON.stringify(chapters.filter(c => c.open).map(c => c.dataset.chapter))) } catch (error) {}
+                      })
+                    }
+                  })()
+                </script>
+
+            """);
         html.Append("  </body>\n</html>\n");
         return html.ToString();
     }
