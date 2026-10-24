@@ -457,6 +457,35 @@ public class ScriptTests
     }
 
     [Fact]
+    public void HideAllHidesEverythingVisible()
+    {
+        Construction c = ScriptCompiler.CompileConstruction("""
+            point A = 0 0
+            point B = 4 0
+            segment s = A B label "$a$"
+            circle k = center A through B hidden
+            number l = length s
+            step neue Zeichnung
+              hide label all
+              hide all duration 300
+            step weiter
+              point C = 1 1
+            """);
+        AnimationData animation = c.Build();
+        JsonElement primitives = JsonDocument.Parse(animation.ToJson()).RootElement.GetProperty("primitives");
+        double Last(JsonElement p, string track) => p.GetProperty("tracks").GetProperty(track)[p.GetProperty("tracks").GetProperty(track).GetArrayLength() - 1][1].GetDouble();
+        // the dots of A and B and the segment are faded out, C is new; the hidden circle was never drawn
+        double[] dots = primitives.EnumerateArray().Where(p => p.GetProperty("type").GetString() == "dot").Select(p => Last(p, "opacity")).ToArray();
+        Assert.Equal([0.0, 0.0, 1.0], dots);
+        Assert.Equal(0, Last(primitives.EnumerateArray().Single(p => p.GetProperty("type").GetString() == "line"), "opacity"));
+        Assert.DoesNotContain(primitives.EnumerateArray(), p => p.GetProperty("type").GetString() == "arc");
+        // hide label all, then hide all: 300 ms after the 400 ms of the labels
+        Assert.Equal(700, animation.Steps[0].End - animation.Steps[0].Start, 6);
+        ErrorAt("point A = 0 0\nstep s\nshow all", 3, 6, "only possible with \"hide\"");
+        ErrorAt("point A = 0 0\nhide all", 2, 1, "only possible inside a step");
+    }
+
+    [Fact]
     public void ShowLabelFadesLabelsInAndOut()
     {
         AnimationData animation = ScriptCompiler.Compile("""

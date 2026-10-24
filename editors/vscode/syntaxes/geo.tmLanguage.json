@@ -516,6 +516,10 @@
           "include": "#comment"
         },
         {
+          "match": "\\ball\\b",
+          "name": "keyword.other.geo"
+        },
+        {
           "begin": "(?=\\b(?:duration|color|width|fill|opacity|size|radius|labelsize|labelpos|label|nolabel|hidden|offset|arrow|linear|ease|easein|easeout|easeinout|draw|steps)\\b)",
           "end": "(?=$)",
           "patterns": [

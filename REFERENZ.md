@@ -155,6 +155,8 @@ Aktionen stehen in einem Schritt und laufen nacheinander. Die Optionen *Ablauf* 
 | | `show label A B …` | *Ablauf* | blendet nur Beschriftungen ein |
 | `hide` | `hide A B …` | *Ablauf* | blendet Objekte aus |
 | | `hide label A B …` | *Ablauf* | blendet nur Beschriftungen aus |
+| | `hide all` | *Ablauf* | blendet alles aus, was gerade zu sehen ist (etwa am Anfang eines Schritts mit neuer Zeichnung) |
+| | `hide label all` | *Ablauf* | blendet alle Beschriftungen aus |
 | `move` | `move A to x y` | *Ablauf* | freier Punkt zu Koordinaten |
 | | `move A to P` | *Ablauf* | freier Punkt dorthin, wo P gerade ist |
 | | `move P to n` | *Ablauf* | Punkt auf seinem Kreis (Grad) bzw. seiner Strecke (Position) |
@@ -222,4 +224,4 @@ Aktionen stehen in einem Schritt und laufen nacheinander. Die Optionen *Ablauf* 
 
 Diese Wörter können keine Namen sein:
 
-`title` `description` `info` `keyword` `view` `background` `grid` `axes` `speed` `var` `default` `include` `input` `output` `use` `draw` `steps` `copy` `set` `step` `point` `segment` `line` `ray` `circle` `polygon` `angle` `text` `number` `length` `degrees` `area` `perimeter` `show` `hide` `move` `rotate` `along` `around` `by` `pause` `together` `end` `midpoint` `intersect` `center` `through` `radius` `at` `to` `on` `x` `y` `duration` `color` `width` `fill` `opacity` `size` `labelsize` `labelpos` `label` `nolabel` `hidden` `offset` `arrow` `start` `both` `linear` `ease` `easein` `easeout` `easeinout`
+`title` `description` `info` `keyword` `view` `background` `grid` `axes` `speed` `var` `default` `include` `input` `output` `use` `draw` `steps` `copy` `set` `step` `point` `segment` `line` `ray` `circle` `polygon` `angle` `text` `number` `length` `degrees` `area` `perimeter` `show` `hide` `all` `move` `rotate` `along` `around` `by` `pause` `together` `end` `midpoint` `intersect` `center` `through` `radius` `at` `to` `on` `x` `y` `duration` `color` `width` `fill` `opacity` `size` `labelsize` `labelpos` `label` `nolabel` `hidden` `offset` `arrow` `start` `both` `linear` `ease` `easein` `easeout` `easeinout`

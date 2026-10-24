@@ -147,6 +147,7 @@ Koordinaten sind mathematisch: die y-Achse zeigt nach oben. Der Maßstab ist in 
 | `info Erklärung …` | Erklärung zum aktuellen Schritt, unter seiner Beschreibung linksbündig (mehrzeilig mit `|`, Absätze, Markdown, Formeln; ein weiteres `info` wird ein neuer Absatz) |
 | `show A k1` | zeigt Objekte (zeichnet versteckte, blendet ausgeblendete ein) |
 | `hide k1 k2` | blendet Objekte aus |
+| `hide all` / `hide label all` | blendet alles aus, was gerade zu sehen ist (etwa am Anfang eines Schritts, der eine neue Zeichnung beginnt), bzw. alle Beschriftungen; in einer mit `use` benutzten Datei nur deren eigene Objekte |
 | `show label A B s` / `hide label A B s` | blendet nur die Beschriftungen ein bzw. aus (Punkte, sowie Strecken, Strahlen, Geraden und Winkel mit `label`); sie wandern weiter mit ihren Objekten. Auch für mit `nolabel` angelegte Objekte; vor dem Zeichnen gilt es für das spätere Erscheinen |
 | `move A to 4 5` | bewegt einen freien Punkt |
 | `move P to 150` | bewegt einen Punkt auf seinem Kreis (Winkel) bzw. seiner Strecke (Position) |

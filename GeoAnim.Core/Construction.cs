@@ -375,6 +375,26 @@ public sealed class Construction
         RunOrQueue(actions);
     }
 
+    /// <summary>
+    /// Hides everything visible (<paramref name="items"/>: all objects, or a part), e.g. at the start of a step that
+    /// begins a new picture; with <paramref name="labelsOnly"/> only the labels. Numbers are not drawn anyway.
+    /// </summary>
+    public void HideAll(IEnumerable<GeoObject>? items = null, bool labelsOnly = false, double? duration = null, Easing? easing = null)
+    {
+        RequireStep("hide all");
+        List<GeoObject> candidates = (items ?? objects).Where(item => item is not GeoNumber).Distinct().ToList();
+        if (labelsOnly)
+        {
+            List<GeoObject> labelled = candidates.Where(item => item.HasLabel && item.IsDrawn && item.LabelUsed && item.LabelOpacity > 0).ToList();
+            if (labelled.Count > 0)
+            {
+                ShowLabels(labelled, false, duration, easing);
+            }
+            return;
+        }
+        HideVisible(candidates, duration, easing);
+    }
+
     public void HideVisible(IEnumerable<GeoObject> items, double? duration = null, Easing? easing = null)
     {
         List<GeoObject> visible = items.Where(item => (item.IsDrawn || IsQueued(item)) && item.Opacity > 0).ToList();

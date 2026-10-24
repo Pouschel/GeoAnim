@@ -8,7 +8,7 @@ internal sealed class Parser
     {
         "title", "description", "info", "keyword", "view", "background", "grid", "axes", "speed", "var", "default", "include", "input", "output", "use",
         "draw", "steps", "copy", "set", "step", "point", "segment", "line", "ray", "circle", "polygon", "angle",
-        "text", "number", "length", "degrees", "area", "perimeter", "show", "hide", "move", "rotate", "along", "around", "by", "pause", "together", "end", "midpoint", "intersect", "center", "through",
+        "text", "number", "length", "degrees", "area", "perimeter", "show", "hide", "all", "move", "rotate", "along", "around", "by", "pause", "together", "end", "midpoint", "intersect", "center", "through",
         "radius", "at", "to", "on", "x", "y",
         "duration", "color", "width", "fill", "opacity", "size", "labelsize", "labelpos", "label", "nolabel", "hidden", "offset",
         "arrow", "start", "both", "linear", "ease", "easein", "easeout", "easeinout",
@@ -608,6 +608,16 @@ internal sealed class Parser
         if (label)
         {
             Next();
+        }
+        // "hide all", "hide label all": everything visible
+        if (Current.Kind == TokenKind.Name && Current.Text == "all")
+        {
+            if (word.Text == "show")
+            {
+                throw Error(Current, "\"all\" is only possible with \"hide\" (\"hide all\", \"hide label all\"); \"show\" needs the names of objects.");
+            }
+            Next();
+            return new ShowStatement(word.Line, word.Column, false, [], ParseOptions(), label) { All = true };
         }
         var targets = new List<NameRef>();
         while (Current.Kind == TokenKind.Name && !IsOption(Current.Text))

@@ -43,7 +43,11 @@ internal sealed record OutputStatement(int Line, int Column, IReadOnlyList<NameR
 
 /// <summary>"show A k" / "hide A k", or with <see cref="Label"/> "show label A B": only the labels.</summary>
 internal sealed record ShowStatement(int Line, int Column, bool Show, IReadOnlyList<NameRef> Targets, OptionList Options, bool Label = false)
-    : Statement(Line, Column);
+    : Statement(Line, Column)
+{
+    /// <summary>"hide all", "hide label all": everything visible (no targets).</summary>
+    public bool All { get; init; }
+}
 
 /// <summary>
 /// "move P to x y" (Target), "move P to 90" (Parameter: angle or position on a path) or "move P to Q" (TargetPoint: where

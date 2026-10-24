@@ -222,8 +222,15 @@ public static class ScriptCompiler
                         {
                             break;
                         }
-                        List<GeoObject> targets = s.Targets.Select(t => NotInput(t, s.Show ? "show" : "hide")).ToList();
                         Options options = ToOptions(s.Options, s.Show ? "show" : "hide", ["duration", "easing"]);
+                        if (s.All)
+                        {
+                            // a used file hides only its own objects
+                            c.HideAll(module == null ? null : c.Objects.Where(o => o.Key.StartsWith(module.Prefix + ".", StringComparison.Ordinal)).Select(o => o.Value),
+                                s.Label, options.Duration, options.Easing);
+                            break;
+                        }
+                        List<GeoObject> targets = s.Targets.Select(t => NotInput(t, s.Show ? "show" : "hide")).ToList();
                         if (s.Label)
                         {
                             foreach ((NameRef name, GeoObject target) in s.Targets.Zip(targets))
