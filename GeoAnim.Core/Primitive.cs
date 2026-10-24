@@ -69,6 +69,9 @@ internal sealed class Primitive(int id, string type, int layer)
         track.Add(new Key(span.End, value, span.Easing));
     }
 
+    /// <summary>When the primitive got its first value (of any property), or null if it has none yet.</summary>
+    public double? FirstTime => tracks.Values.Where(t => t.Count > 0).Select(t => (double?)t[0].Time).Min();
+
     /// <summary>The last value of the property, or null if it has none yet.</summary>
     public object? Current(string property) =>
         tracks.TryGetValue(property, out List<Key>? track) && track.Count > 0 ? track[^1].Value : null;

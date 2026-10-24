@@ -54,6 +54,13 @@ public abstract class GeoObject
     {
         if (LabelShift.X != 0 || LabelShift.Y != 0 || ShiftChanges || label.Current(x) != null)
         {
+            // a track that starts later than its primitive ("move label" in a later step) would leave the primitive
+            // without a value until then, and the player would not draw it at all: the shift so far holds from its start
+            if (label.Current(x) == null && label.FirstTime is double first && first < span.Start)
+            {
+                label.Animate(x, Span.At(first), LabelShift.X);
+                label.Animate(y, Span.At(first), LabelShift.Y);
+            }
             label.Animate(x, span, LabelShift.X);
             label.Animate(y, span, LabelShift.Y);
         }

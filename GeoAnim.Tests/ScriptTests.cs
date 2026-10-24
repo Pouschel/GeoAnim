@@ -688,6 +688,32 @@ public class ScriptTests
     }
 
     [Fact]
+    public void LabelMovedInALaterStepIsShownFromTheStart()
+    {
+        // the shift tracks used to begin with "move label": until then the player had no value and drew nothing
+        AnimationData animation = ScriptCompiler.Compile("""
+            point A = 4 0
+            point S = 0 0
+            point B = 0 4
+            angle alpha = A S B label "$beta$"
+            step eins
+              pause 500
+            step zwei
+              move label alpha A to -0.4 0
+            """);
+        JsonElement[] primitives = JsonDocument.Parse(animation.ToJson()).RootElement.GetProperty("primitives").EnumerateArray().ToArray();
+        JsonElement angle = primitives.Single(p => p.GetProperty("type").GetString() == "angle");
+        JsonElement label = primitives.Single(p => p.GetProperty("type").GetString() == "text" && p.GetProperty("tracks").GetProperty("text")[0][1].GetString() == "$A$");
+        foreach ((JsonElement primitive, string track) in new[] { (angle, "ox"), (angle, "oy"), (label, "sx"), (label, "sy") })
+        {
+            JsonElement keys = primitive.GetProperty("tracks").GetProperty(track);
+            Assert.Equal(0, keys[0][0].GetDouble());
+            Assert.Equal(0, keys[0][1].GetDouble());
+            Assert.Equal(-0.4 * (track is "ox" or "sx" ? 1 : 0), keys[keys.GetArrayLength() - 1][1].GetDouble(), 6);
+        }
+    }
+
+    [Fact]
     public void TextsAlignAndStandBelowEachOther()
     {
         AnimationData animation = ScriptCompiler.Compile("""
