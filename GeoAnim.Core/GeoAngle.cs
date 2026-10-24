@@ -120,12 +120,8 @@ public sealed class GeoAngle : GeoObject
         sector.Animate("fill", span, (Options.Fill ?? color).ToHex());
         sector.Animate("fillOpacity", span, Options.FillOpacity ?? Defaults.FillOpacity);
         sector.Animate("size", span, Options.LabelSize ?? Defaults.LabelSize);
-        if (Options.Offset is { } offset)
-        {
-            // the label moved from its place on the bisector (in units)
-            sector.Animate("ox", span, offset.X);
-            sector.Animate("oy", span, offset.Y);
-        }
+        // the label moved from its place on the bisector (in units): "shift", or "offset" as before
+        RenderShift(sector, span, "ox", "oy");
         if (Options.Arrow != Arrow.None)
         {
             // on the arc: at its end (counterclockwise), at its start (clockwise) or both

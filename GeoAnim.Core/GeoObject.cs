@@ -13,6 +13,8 @@ public abstract class GeoObject
         Parents = parents;
         LabelOpacity = options.NoLabel ? 0 : 1;
         LabelUsed = !options.NoLabel;
+        // an angle's offset was a shift from its place on the bisector from the start
+        LabelShift = options.Shift ?? (this is GeoAngle && options.Offset is { } offset ? offset : new Vec(0, 0));
     }
 
     public string Name { get; }
@@ -40,6 +42,22 @@ public abstract class GeoObject
 
     /// <summary>Whether the label is ever shown: only then it gets a primitive.</summary>
     internal bool LabelUsed { get; set; }
+
+    /// <summary>The label's shift from its default place (units); "shift" sets it, "move label … to" changes it.</summary>
+    internal Vec LabelShift { get; set; }
+
+    /// <summary>Whether the label's shift changes during the animation ("move label"): then it is always written.</summary>
+    internal bool ShiftChanges { get; set; }
+
+    /// <summary>Writes the label's shift into its primitive (tracks sx, sy) once there is one.</summary>
+    internal void RenderShift(Primitive label, Span span, string x = "sx", string y = "sy")
+    {
+        if (LabelShift.X != 0 || LabelShift.Y != 0 || ShiftChanges || label.Current(x) != null)
+        {
+            label.Animate(x, span, LabelShift.X);
+            label.Animate(y, span, LabelShift.Y);
+        }
+    }
 
     /// <summary>Whether it has primitives in the animation (it was shown once).</summary>
     internal bool IsDrawn { get; private protected set; }

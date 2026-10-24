@@ -73,7 +73,7 @@ Alle Objekte: `art name = Definition Optionen…`. Vor dem ersten `step` gehöre
 | `point X = copy P` | freier Punkt an der Stelle, an der P gerade ist |
 | `point D = use datei A B …` | Ergebnis einer anderen Datei (siehe [`use`](#dateien)) |
 
-**Optionen:** `color` `size` `label` `nolabel` `labelsize` `offset`, *Zeichnen*.
+**Optionen:** `color` `size` `label` `nolabel` `labelsize` `shift` (`offset` veraltet), *Zeichnen*.
 
 ### `segment`, `ray`, `line` – Strecke, Strahl, Gerade
 
@@ -89,7 +89,7 @@ Alle Objekte: `art name = Definition Optionen…`. Vor dem ersten `step` gehöre
 | Option | `segment` | `ray` | `line` |
 |---|:-:|:-:|:-:|
 | `color` `width` | ✓ | ✓ | ✓ |
-| `label` `nolabel` `labelsize` `labelpos` `offset` | ✓ | ✓ | ✓ |
+| `label` `nolabel` `labelsize` `labelpos` `shift` (`offset` veraltet) | ✓ | ✓ | ✓ |
 | `arrow` · `arrow start` · `arrow end` · `arrow both` | ✓ | ✓ | – |
 | *Zeichnen* | ✓ | ✓ | ✓ |
 
@@ -119,7 +119,7 @@ Alle Objekte: `art name = Definition Optionen…`. Vor dem ersten `step` gehöre
 | `angle w = A S B` | Winkel bei S, gegen den Uhrzeigersinn vom Strahl SA zum Strahl SB (auch über 180°, auch 360°); ein rechter Winkel ohne Beschriftung bekommt den Punkt |
 | `angle w = use datei A B …` | Ergebnis einer anderen Datei |
 
-**Optionen:** `color` `width` `fill` `opacity` `label` `nolabel` `labelsize` `radius` `offset` (verschiebt die Beschriftung von der Winkelhalbierenden aus) `arrow` · `arrow start` · `arrow end` · `arrow both`, *Zeichnen*.
+**Optionen:** `color` `width` `fill` `opacity` `label` `nolabel` `labelsize` `radius` `shift` (verschiebt die Beschriftung von der Winkelhalbierenden aus; `offset` ist dasselbe) `arrow` · `arrow start` · `arrow end` · `arrow both`, *Zeichnen*.
 
 ### `text` – Text im Bild
 
@@ -128,7 +128,7 @@ Alle Objekte: `art name = Definition Optionen…`. Vor dem ersten `step` gehöre
 | `text t = "…" at x y` · `text t = name at x y` | an festen Koordinaten (zentriert) |
 | `text t = "…" at P` · `text t = name at P` | neben einem Punkt, wandert mit ihm |
 
-**Optionen:** `color` `size` `offset`, *Zeichnen*.
+**Optionen:** `color` `size` `shift` (`offset` veraltet), *Zeichnen*. Ein Text an festen Koordinaten steht mit seiner Mitte dort; `shift` verschiebt ihn von da aus.
 
 ## Zahlen
 
@@ -151,9 +151,9 @@ Aktionen stehen in einem Schritt und laufen nacheinander. Die Optionen *Ablauf* 
 |---|---|---|---|
 | `step` | `step Text …` | – | neuer Schritt; mit `|` fortsetzbar |
 | `info` | `info Text …` | – | Erklärung zum Schritt, linksbündig unter der Beschreibung; mit `|` fortsetzbar; ein weiteres `info` wird ein neuer Absatz |
-| `show` | `show A B …` | *Ablauf* | zeigt Objekte (zeichnet versteckte, blendet ausgeblendete ein) |
+| `show` | `show A B …` | *Ablauf* | zeigt Objekte (zeichnet versteckte, blendet ausgeblendete ein); schon sichtbare bleiben, wie sie sind |
 | | `show label A B …` | *Ablauf* | blendet nur Beschriftungen ein |
-| `hide` | `hide A B …` | *Ablauf* | blendet Objekte aus |
+| `hide` | `hide A B …` | *Ablauf* | blendet Objekte aus; nicht sichtbare (schon ausgeblendet oder nie gezeigt) bleiben, wie sie sind |
 | | `hide label A B …` | *Ablauf* | blendet nur Beschriftungen aus |
 | | `hide all` | *Ablauf* | blendet alles aus, was gerade zu sehen ist (etwa am Anfang eines Schritts mit neuer Zeichnung) |
 | | `hide label all` | *Ablauf* | blendet alle Beschriftungen aus |
@@ -161,6 +161,7 @@ Aktionen stehen in einem Schritt und laufen nacheinander. Die Optionen *Ablauf* 
 | | `move A to P` | *Ablauf* | freier Punkt dorthin, wo P gerade ist |
 | | `move t to x y` · `move t to P` | *Ablauf* | Text an festen Koordinaten (ein Text neben einem Punkt wandert mit dem Punkt) |
 | | `move P to n` | *Ablauf* | Punkt auf seinem Kreis (Grad) bzw. seiner Strecke (Position) |
+| | `move label A B … to x y` | *Ablauf* | verschiebt die Beschriftungen auf den Shift x y (von ihrem gewohnten Platz aus), z. B. wenn sie nach einer Bewegung stören |
 | | `move A B … along P Q` | *Ablauf* | verschiebt Objekte um den Vektor PQ (ihre freien Punkte; bei einem Text an festen Koordinaten seine Position) |
 | `rotate` | `rotate A B … around M by n` | *Ablauf* | dreht Objekte um M um n Grad (negativ: im Uhrzeigersinn) |
 | `pause` | `pause` · `pause n` | – | wartet 500 ms bzw. n ms |
@@ -193,7 +194,8 @@ Aktionen stehen in einem Schritt und laufen nacheinander. Die Optionen *Ablauf* 
 | `nolabel` | – | ✓ | ✓ | ✓ | | | ✓ | | |
 | `labelsize` | n (pt) | ✓ | ✓ | ✓ | | | ✓ | | |
 | `labelpos` | n (0 bei A, 1 bei B) | | ✓ | ✓ | | | | | |
-| `offset` | x y (Koordinateneinheiten) | ✓ | ✓ | ✓ | | | ✓ | ✓ | |
+| `shift` | x y (Koordinateneinheiten) – Verschiebung der Beschriftung von ihrem gewohnten Platz aus | ✓ | ✓ | ✓ | | | ✓ | ✓ | |
+| `offset` | x y – *veraltet*: Lage relativ zum Punkt selbst (ohne den gewohnten Abstand); beim Winkel wie `shift` | ✓ | ✓ | ✓ | | | ✓ | ✓ | |
 | `radius` | n (Einheiten) | | | | | | ✓ | | |
 | `arrow` | – · `start` · `end` · `both` | | ✓ | | | | ✓ | | |
 | `hidden` | – | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | |
@@ -225,4 +227,4 @@ Aktionen stehen in einem Schritt und laufen nacheinander. Die Optionen *Ablauf* 
 
 Diese Wörter können keine Namen sein:
 
-`title` `description` `info` `keyword` `view` `background` `grid` `axes` `speed` `var` `default` `include` `input` `output` `use` `draw` `steps` `copy` `set` `step` `point` `segment` `line` `ray` `circle` `polygon` `angle` `text` `number` `length` `degrees` `area` `perimeter` `show` `hide` `all` `move` `rotate` `along` `around` `by` `pause` `together` `end` `midpoint` `intersect` `center` `through` `radius` `at` `to` `on` `x` `y` `duration` `color` `width` `fill` `opacity` `size` `labelsize` `labelpos` `label` `nolabel` `hidden` `offset` `arrow` `start` `both` `linear` `ease` `easein` `easeout` `easeinout`
+`title` `description` `info` `keyword` `view` `background` `grid` `axes` `speed` `var` `default` `include` `input` `output` `use` `draw` `steps` `copy` `set` `step` `point` `segment` `line` `ray` `circle` `polygon` `angle` `text` `number` `length` `degrees` `area` `perimeter` `show` `hide` `all` `move` `rotate` `along` `around` `by` `pause` `together` `end` `midpoint` `intersect` `center` `through` `radius` `at` `to` `on` `x` `y` `duration` `color` `width` `fill` `opacity` `size` `labelsize` `labelpos` `label` `nolabel` `hidden` `offset` `shift` `arrow` `start` `both` `linear` `ease` `easein` `easeout` `easeinout`

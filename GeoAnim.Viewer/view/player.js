@@ -201,8 +201,9 @@
         element.layoutLines = layout.lines
         element.layoutKey = key
       }
-      let x = toX(v.x) + (v.dx || 0) * unit
-      let y = toY(v.y) - (v.dy || 0) * unit
+      // "shift": from the default place, in units of the coordinates
+      let x = toX(v.x) + (v.dx || 0) * unit + (v.sx || 0) * scale
+      let y = toY(v.y) - (v.dy || 0) * unit - (v.sy || 0) * scale
       if (v.nx !== undefined) {
         // the label of a line: its box moved along the normal (nx, ny) until it is gap points away from the line
         const width = element.layoutWidth

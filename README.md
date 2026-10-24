@@ -145,13 +145,14 @@ Koordinaten sind mathematisch: die y-Achse zeigt nach oben. Der Maßstab ist in 
 |---|---|
 | `step Beschreibung bis zum Zeilenende` | neuer Schritt; der Text erscheint unter dem Bild |
 | `info Erklärung …` | Erklärung zum aktuellen Schritt, unter seiner Beschreibung linksbündig (mehrzeilig mit `|`, Absätze, Markdown, Formeln; ein weiteres `info` wird ein neuer Absatz) |
-| `show A k1` | zeigt Objekte (zeichnet versteckte, blendet ausgeblendete ein) |
-| `hide k1 k2` | blendet Objekte aus |
+| `show A k1` | zeigt Objekte (zeichnet versteckte, blendet ausgeblendete ein); was schon zu sehen ist, bleibt, wie es ist |
+| `hide k1 k2` | blendet Objekte aus; was nicht zu sehen ist (schon ausgeblendet oder nie gezeigt), bleibt, wie es ist – hat ein `show`/`hide` nichts zu tun, kostet es keine Zeit |
 | `hide all` / `hide label all` | blendet alles aus, was gerade zu sehen ist (etwa am Anfang eines Schritts, der eine neue Zeichnung beginnt), bzw. alle Beschriftungen; in einer mit `use` benutzten Datei nur deren eigene Objekte |
 | `show label A B s` / `hide label A B s` | blendet nur die Beschriftungen ein bzw. aus (Punkte, sowie Strecken, Strahlen, Geraden und Winkel mit `label`); sie wandern weiter mit ihren Objekten. Auch für mit `nolabel` angelegte Objekte; vor dem Zeichnen gilt es für das spätere Erscheinen |
 | `move A to 4 5` | bewegt einen freien Punkt – oder einen Text an festen Koordinaten (`move t to 4 5`, `move t to P`; ein Text neben einem Punkt wandert mit diesem) |
 | `move P to 150` | bewegt einen Punkt auf seinem Kreis (Winkel) bzw. seiner Strecke (Position) |
 | `move C1 to P` | bewegt einen freien Punkt dorthin, wo der Punkt P in diesem Moment ist (P kann konstruiert sein; bewegt sich P später, bleibt C1, wo er ist) |
+| `move label A s to 0.3 -0.2` | verschiebt Beschriftungen auf einen neuen `shift` (gleitend, 400 ms), etwa wenn sie nach einer Bewegung etwas überdecken |
 | `move A B C along P Q` | verschiebt Objekte um den Vektor von P nach Q (so wie er beim Start der Bewegung ist): bewegt werden die freien Punkte, aus denen sie gebaut sind (bei einem Vieleck seine Ecken, bei einem Mittelpunkt dessen Punkte, bei einem Text an festen Koordinaten seine Position), alles davon Abhängige folgt |
 | `rotate A B C around M by 60` | dreht Objekte um M um 60° gegen den Uhrzeigersinn (negativ: im Uhrzeigersinn, auch über 360°); die freien Punkte laufen auf Kreisbögen, die Figur bleibt unterwegs unverformt; Voreinstellungen mit `default rotate duration …` |
 | `pause 300` | wartet (Standard 500 ms) |
@@ -174,7 +175,8 @@ Hinter einer Anweisung, in beliebiger Reihenfolge:
 | `label "$a$"` | Strecke, Strahl, Gerade, Winkel | Beschriftung, die mit dem Objekt wandert; bei Linien standardmäßig in der Mitte, knapp rechts von der Richtung A → B (beim gegen den Uhrzeigersinn benannten Dreieck also außen), beim Winkel auf der Winkelhalbierenden im Sektor (beim rechten Winkel statt des Punkts) |
 | `arrow` / `arrow start` / `arrow both` | Strecke, Strahl, Winkel | Pfeilspitze am Ende (bei B; `arrow end` ist dasselbe), am Anfang (bei A) oder an beiden Enden (Maßpfeile); beim Strahl sitzt die Spitze am Bildrand; beim Winkel auf dem Bogen: am Ende zeigt sie gegen den Uhrzeigersinn (die Drehrichtung von A B C), mit `start` im Uhrzeigersinn. Die Spitze wächst mit der Linienbreite, hat deren Farbe und wandert beim Zeichnen mit. Für Winkelschenkel als Pfeile: `segment SP = S P arrow` mit ausgeblendetem Punkt P |
 | `labelpos 0.3` | Strecke, Strahl, Gerade | Lage der Beschriftung bei A + 0.3·(B − A) (Standard 0.5); beim Strahl auch über 1, bei der Geraden beliebig |
-| `offset 0.3 -0.5` | Punkt (Beschriftung), Text, Strecke/Strahl/Gerade (Beschriftung), Winkel (Beschriftung) | Lage in Koordinateneinheiten relativ zum Punkt bzw. zur Stelle `labelpos`: dort beginnt die Grundlinie des Textes (bei Text an festen Koordinaten und bei Linien: ihre Mitte); ohne `offset` steht die Beschriftung knapp daneben. Beim Winkel verschiebt `offset` die Beschriftung von ihrem Platz auf der Winkelhalbierenden aus (z. B. bei übereinanderliegenden Winkelbögen); der Bogen bleibt, wo er ist |
+| `shift 0.3 -0.2` | Punkt, Strecke, Strahl, Gerade, Winkel, Text | verschiebt die Beschriftung (bzw. den Text) in Koordinateneinheiten von dort aus, wo sie ohne Angabe stünde: `shift 0 0` ändert nichts. Während der Animation nachjustieren mit `move label A to 0.3 -0.2` |
+| `offset 0.3 -0.5` | Punkt (Beschriftung), Text, Strecke/Strahl/Gerade (Beschriftung), Winkel (Beschriftung) | *veraltet, besser `shift`:* Lage in Koordinateneinheiten relativ zum Punkt bzw. zur Stelle `labelpos`: dort beginnt die Grundlinie des Textes (bei Text an festen Koordinaten und bei Linien: ihre Mitte); ohne `offset` steht die Beschriftung knapp daneben. Beim Winkel verschiebt `offset` die Beschriftung von ihrem Platz auf der Winkelhalbierenden aus (z. B. bei übereinanderliegenden Winkelbögen); der Bogen bleibt, wo er ist |
 | `fill lightblue` | Vieleck | Füllfarbe (Standard: die Linienfarbe) |
 | `opacity 0.3` | Vieleck | Deckkraft der Füllung (Standard 0.2) |
 | `hidden` | Objekte | nur definieren, nicht zeigen |

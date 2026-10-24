@@ -457,6 +457,27 @@ public class ScriptTests
     }
 
     [Fact]
+    public void ShowAndHideLeaveObjectsAloneThatAreSoAlready()
+    {
+        AnimationData animation = ScriptCompiler.Compile("""
+            point A = 0 0
+            point B = 4 0 hidden
+            step schon da, noch nie gezeigt
+              show A
+              hide B
+            step ausgeblendet
+              hide A
+            step noch einmal ausgeblendet
+              hide A
+              show label A
+            """);
+        // nothing to do takes no time: the steps without action last 500 ms, "hide A" 400 ms
+        Assert.Equal([500.0, 400.0, 500.0], animation.Steps.Select(s => s.End - s.Start));
+        JsonElement dots = JsonDocument.Parse(animation.ToJson()).RootElement.GetProperty("primitives");
+        Assert.Single(dots.EnumerateArray(), p => p.GetProperty("type").GetString() == "dot");
+    }
+
+    [Fact]
     public void HideAllHidesEverythingVisible()
     {
         Construction c = ScriptCompiler.CompileConstruction("""
@@ -637,6 +658,33 @@ public class ScriptTests
         ErrorAt("point A = 0 0\nstep s\n  rotate A around A 90", 3, 21, "\"by\"");
         ErrorAt("point A = 0 0\nstep s\n  rotate around A by 90", 3, 10, "names of objects");
         ErrorAt("point A = 0 0\nmove A along A A", 2, 1, "only possible inside a step");
+    }
+
+    [Fact]
+    public void ShiftMovesLabelsFromTheirDefaultPlace()
+    {
+        AnimationData animation = ScriptCompiler.Compile("""
+            point A = 0 0 shift 0.2 -0.1
+            point B = 4 0
+            segment s = A B label "$a$"
+            angle w = B A B label "x" shift 0.3 0
+            step nachjustieren
+              move label A s to 0 -0.5 duration 300
+            """);
+        JsonElement[] texts = JsonDocument.Parse(animation.ToJson()).RootElement.GetProperty("primitives").EnumerateArray()
+            .Where(p => p.GetProperty("type").GetString() == "text").ToArray();
+        JsonElement Track(string text, string track) => texts.Single(t => t.GetProperty("tracks").GetProperty("text")[0][1].GetString() == text).GetProperty("tracks").GetProperty(track);
+        // A: from (0.2, −0.1) to (0, −0.5); the default distance stays (dx 7, dy 7)
+        Assert.Equal((0.2, -0.1), (Track("$A$", "sx")[0][1].GetDouble(), Track("$A$", "sy")[0][1].GetDouble()));
+        Assert.Equal((0.0, -0.5), (Track("$A$", "sx")[Track("$A$", "sx").GetArrayLength() - 1][1].GetDouble(), Track("$A$", "sy")[Track("$A$", "sy").GetArrayLength() - 1][1].GetDouble()));
+        Assert.Equal(7, Track("$A$", "dx")[0][1].GetDouble());
+        // s had no shift: it starts from 0 and gets one now; B is untouched
+        Assert.Equal(0, Track("$a$", "sy")[0][1].GetDouble());
+        Assert.Equal(-0.5, Track("$a$", "sy")[Track("$a$", "sy").GetArrayLength() - 1][1].GetDouble());
+        Assert.False(texts.Single(t => t.GetProperty("tracks").GetProperty("text")[0][1].GetString() == "$B$").GetProperty("tracks").TryGetProperty("sx", out _));
+        Assert.Equal(300, animation.Steps[0].End - animation.Steps[0].Start, 6);
+        ErrorAt("point A = 0 0\npoint B = 1 0\nsegment s = A B\nstep x\nmove label s to 0 1", 5, 12, "has no label");
+        ErrorAt("point A = 0 0\nmove label A to 0 1", 2, 1, "only possible inside a step");
     }
 
     [Fact]

@@ -60,6 +60,7 @@ public sealed class GeoText : GeoObject
             text.Animate("x", span, Position.X + offset.X);
             text.Animate("y", span, Position.Y + offset.Y);
         }
+        RenderShift(text, span);
         text.Animate("dx", span, distance.X);
         text.Animate("dy", span, distance.Y);
         text.Animate("size", span, Options.Size ?? Defaults.TextSize);

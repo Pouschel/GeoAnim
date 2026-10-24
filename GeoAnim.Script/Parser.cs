@@ -10,13 +10,13 @@ internal sealed class Parser
         "draw", "steps", "copy", "set", "step", "point", "segment", "line", "ray", "circle", "polygon", "angle",
         "text", "number", "length", "degrees", "area", "perimeter", "show", "hide", "all", "move", "rotate", "along", "around", "by", "pause", "together", "end", "midpoint", "intersect", "center", "through",
         "radius", "at", "to", "on", "x", "y",
-        "duration", "color", "width", "fill", "opacity", "size", "labelsize", "labelpos", "label", "nolabel", "hidden", "offset",
+        "duration", "color", "width", "fill", "opacity", "size", "labelsize", "labelpos", "label", "nolabel", "hidden", "offset", "shift",
         "arrow", "start", "both", "linear", "ease", "easein", "easeout", "easeinout",
     };
 
     private static readonly HashSet<string> OptionNames = new(StringComparer.Ordinal)
     {
-        "duration", "color", "width", "fill", "opacity", "size", "radius", "labelsize", "labelpos", "label", "nolabel", "hidden", "offset",
+        "duration", "color", "width", "fill", "opacity", "size", "radius", "labelsize", "labelpos", "label", "nolabel", "hidden", "offset", "shift",
         "arrow", "linear", "ease", "easein", "easeout", "easeinout",
     };
 
@@ -633,9 +633,16 @@ internal sealed class Parser
         return new ShowStatement(word.Line, word.Column, word.Text == "show", targets, ParseOptions(), label);
     }
 
-    // "move A B C along P Q", or one point: "move A to …"
+    // "move A B C along P Q", or one point: "move A to …"; "move label A B to 0.2 -0.3": the labels' shift
     private Statement ParseMove(Token word)
     {
+        if (Current.Kind == TokenKind.Name && Current.Text == "label")
+        {
+            Next();
+            List<NameRef> labelled = ParseTargets(word, "to");
+            ExpectWord("to");
+            return new LabelShiftStatement(word.Line, word.Column, labelled, ParseCoordinates(), ParseOptions());
+        }
         List<NameRef> targets = ParseTargets(word, "along");
         if (Current.Is("along") && Current.Kind == TokenKind.Name)
         {
@@ -745,7 +752,7 @@ internal sealed class Parser
                 "opacity" => ExpectOpacity(),
                 "color" or "fill" => ExpectColor(),
                 "label" => ExpectText("the label"),
-                "offset" => ParseCoordinates(),
+                "offset" or "shift" => ParseCoordinates(),
                 // "arrow" alone: at the end; "arrow start", "arrow end", "arrow both"
                 "arrow" => Current.Kind == TokenKind.Name && Current.Text is "start" or "end" or "both" ? Next().Text : "end",
                 "nolabel" or "hidden" or "linear" or "ease" or "easein" or "easeout" or "easeinout" => null,

@@ -314,17 +314,20 @@ public sealed class Construction
 
     // ------------------------------------------------------------------ actions
 
-    /// <summary>Shows objects: draws them if they were defined hidden, fades them in if they were hidden.</summary>
+    /// <summary>
+    /// Shows objects: draws them if they were defined hidden, fades them in if they were hidden. An object that is
+    /// visible already (or is being drawn) is left alone; if nothing is to do, it takes no time.
+    /// </summary>
     public void Show(IEnumerable<GeoObject> items, double? duration = null, Easing? easing = null)
     {
         var actions = new List<TimelineAction>();
-        foreach (GeoObject item in items)
+        foreach (GeoObject item in items.Distinct())
         {
             if (!item.IsDrawn && !IsQueued(item))
             {
                 actions.Add(new DrawAction(item, duration ?? item.DefaultDuration, easing ?? item.DefaultEasing));
             }
-            else
+            else if (item.IsDrawn && item.Opacity < 1)
             {
                 actions.Add(new FadeAction(item, 1, duration ?? 400, easing ?? Easing.EaseOut));
             }
@@ -332,17 +335,19 @@ public sealed class Construction
         RunOrQueue(actions);
     }
 
-    /// <summary>Fades objects out (their dependent objects stay).</summary>
+    /// <summary>
+    /// Fades objects out (their dependent objects stay). An object that is not to be seen (hidden already, or never
+    /// shown) is left alone; if nothing is to do, it takes no time.
+    /// </summary>
     public void Hide(IEnumerable<GeoObject> items, double? duration = null, Easing? easing = null)
     {
         var actions = new List<TimelineAction>();
-        foreach (GeoObject item in items)
+        foreach (GeoObject item in items.Distinct())
         {
-            if (!item.IsDrawn && !IsQueued(item))
+            if ((item.IsDrawn && item.Opacity > 0) || IsQueued(item))
             {
-                throw new GeoException($"{item} has not been shown yet.");
+                actions.Add(new FadeAction(item, 0, duration ?? 400, easing ?? Easing.EaseOut));
             }
-            actions.Add(new FadeAction(item, 0, duration ?? 400, easing ?? Easing.EaseOut));
         }
         RunOrQueue(actions);
     }
@@ -363,7 +368,11 @@ public sealed class Construction
             }
             if (item.IsDrawn)
             {
-                actions.Add(new LabelFadeAction(item, show ? 1 : 0, duration ?? 400, easing ?? Easing.EaseOut));
+                // a label that is there already (or not there) is left alone
+                if (item.LabelOpacity != (show ? 1 : 0) || (show && !item.LabelUsed))
+                {
+                    actions.Add(new LabelFadeAction(item, show ? 1 : 0, duration ?? 400, easing ?? Easing.EaseOut));
+                }
             }
             else
             {
@@ -393,6 +402,32 @@ public sealed class Construction
             return;
         }
         HideVisible(candidates, duration, easing);
+    }
+
+    /// <summary>
+    /// Moves the labels of objects to the shift <paramref name="shift"/> from their default place (units), e.g. after a
+    /// movement that brought a label too close to something; a label not drawn yet takes it at once.
+    /// </summary>
+    public void ShiftLabels(IEnumerable<GeoObject> items, Vec shift, double? duration = null, Easing? easing = null)
+    {
+        RequireStep("move label");
+        var actions = new List<TimelineAction>();
+        foreach (GeoObject item in items)
+        {
+            if (!item.HasLabel && item is not GeoText)
+            {
+                throw new GeoException($"{item} has no label.");
+            }
+            if (item.IsDrawn)
+            {
+                actions.Add(new LabelShiftAction(item, shift, duration ?? 400, easing ?? Easing.EaseInOut));
+            }
+            else
+            {
+                item.LabelShift = shift;
+            }
+        }
+        RunOrQueue(actions);
     }
 
     public void HideVisible(IEnumerable<GeoObject> items, double? duration = null, Easing? easing = null)

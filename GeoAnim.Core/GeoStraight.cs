@@ -134,6 +134,7 @@ public sealed class GeoStraight : GeoObject
         }
         label.Animate("size", span, size);
         label.Animate("color", span, ColorOr(Defaults.LineColor).ToHex());
+        RenderShift(label, span);
     }
 }
 

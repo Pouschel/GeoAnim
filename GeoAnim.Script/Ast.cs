@@ -57,6 +57,10 @@ internal sealed record ShowStatement(int Line, int Column, bool Show, IReadOnlyL
 internal sealed record NumberStatement(int Line, int Column, NameRef Name, string Measure, IReadOnlyList<NameRef> Arguments)
     : Statement(Line, Column);
 
+/// <summary>"move label A B to 0.2 -0.3": the labels shifted from their default place.</summary>
+internal sealed record LabelShiftStatement(int Line, int Column, IReadOnlyList<NameRef> Targets, Vec Shift, OptionList Options)
+    : Statement(Line, Column);
+
 /// <summary>"move A B C along P Q": the objects moved by the vector PQ.</summary>
 internal sealed record TranslateStatement(int Line, int Column, IReadOnlyList<NameRef> Targets, NameRef From, NameRef To, OptionList Options)
     : Statement(Line, Column);

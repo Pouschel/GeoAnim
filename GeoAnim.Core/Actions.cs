@@ -94,6 +94,30 @@ internal sealed class LabelFadeAction(GeoObject target, double toOpacity, double
     public override void Apply(double progress) => target.LabelOpacity = fromOpacity + (toOpacity - fromOpacity) * progress;
 }
 
+/// <summary>Moves the label of a drawn object to another shift from its default place ("move label A to 0.2 -0.3").</summary>
+internal sealed class LabelShiftAction(GeoObject target, Vec toShift, double duration, Easing easing) : TimelineAction(duration, easing)
+{
+    private Vec fromShift;
+
+    public override IEnumerable<GeoObject> Objects => [target];
+
+    public override void Begin(RenderContext context, double time)
+    {
+        fromShift = target.LabelShift;
+        // the shift so far, from now on in the label's primitive: the change starts from it
+        target.ShiftChanges = true;
+        target.Render(context, Span.At(time));
+    }
+
+    public override void End(RenderContext context, Span span)
+    {
+        target.LabelShift = toShift;
+        target.Render(context, span);
+    }
+
+    public override void Apply(double progress) => target.LabelShift = Vec.Lerp(fromShift, toShift, progress);
+}
+
 /// <summary>Moves a free point; everything that depends on it follows.</summary>
 internal sealed class MoveAction(GeoPoint point, Vec target, double duration, Easing easing) : TimelineAction(duration, easing)
 {

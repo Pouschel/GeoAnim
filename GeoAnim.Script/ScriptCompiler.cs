@@ -329,6 +329,26 @@ public static class ScriptCompiler
                         }
                         break;
                     }
+                case LabelShiftStatement s:
+                    {
+                        if (OnlyResult)
+                        {
+                            break;
+                        }
+                        List<GeoObject> targets = s.Targets.Select(t => NotInput(t, "move")).ToList();
+                        foreach ((NameRef name, GeoObject target) in s.Targets.Zip(targets))
+                        {
+                            if (!target.HasLabel && target is not GeoText)
+                            {
+                                throw new ScriptError(name.Line, name.Column, target is GeoStraight or GeoAngle
+                                    ? $"The {target.Kind} {name.Name} has no label: give it one with label \"…\"."
+                                    : $"A {target.Kind} has no label.");
+                            }
+                        }
+                        Options options = ToOptions(s.Options, "move", ["duration", "easing"]);
+                        c.ShiftLabels(targets, s.Shift, options.Duration, options.Easing);
+                        break;
+                    }
                 case TranslateStatement s:
                     {
                         if (OnlyResult)
@@ -422,12 +442,12 @@ public static class ScriptCompiler
 
         private static string[] AllowedOptions(string kind) => kind switch
         {
-            "point" => ["color", "size", "labelsize", "label", "offset", "draw"],
+            "point" => ["color", "size", "labelsize", "label", "offset", "shift", "draw"],
             "polygon" => ["color", "width", "fill", "opacity", "draw"],
-            "text" => ["color", "size", "offset", "draw"],
-            "segment" or "ray" => ["color", "width", "label", "labelsize", "labelpos", "offset", "arrow", "draw"],
-            "line" => ["color", "width", "label", "labelsize", "labelpos", "offset", "draw"],
-            "angle" => ["color", "width", "fill", "opacity", "label", "labelsize", "radius", "offset", "arrow", "draw"],
+            "text" => ["color", "size", "offset", "shift", "draw"],
+            "segment" or "ray" => ["color", "width", "label", "labelsize", "labelpos", "offset", "shift", "arrow", "draw"],
+            "line" => ["color", "width", "label", "labelsize", "labelpos", "offset", "shift", "draw"],
+            "angle" => ["color", "width", "fill", "opacity", "label", "labelsize", "radius", "offset", "shift", "arrow", "draw"],
             _ => ["color", "width", "draw"],
         };
 
@@ -808,6 +828,7 @@ public static class ScriptCompiler
                     "nolabel" => options with { NoLabel = true },
                     "arrow" => options with { Arrow = (string)option.Value! switch { "start" => Arrow.Start, "both" => Arrow.Both, _ => Arrow.End } },
                     "offset" => options with { Offset = (Vec)option.Value! },
+                    "shift" => options with { Shift = (Vec)option.Value! },
                     "hidden" => options with { Hidden = true },
                     "linear" => options with { Easing = Easing.Linear },
                     "easein" => options with { Easing = Easing.EaseIn },

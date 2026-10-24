@@ -47,6 +47,12 @@ public sealed record Options
     /// </summary>
     public Vec? Offset { get; init; }
 
+    /// <summary>
+    /// Shift of a label (of a point, segment, ray, line, angle or a text next to a point) in units of the coordinate
+    /// system, from where it stands by default: (0, 0) changes nothing.
+    /// </summary>
+    public Vec? Shift { get; init; }
+
     /// <summary>Define the object without showing it (show it later with Show).</summary>
     public bool Hidden { get; init; }
 
