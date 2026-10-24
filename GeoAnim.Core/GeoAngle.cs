@@ -50,6 +50,17 @@ public sealed class GeoAngle : GeoObject
         double start = Math.Atan2(first.Y, first.X) * 180 / Math.PI;
         double end = Math.Atan2(second.Y, second.X) * 180 / Math.PI;
         Degrees = ((end - start) % 360 + 360) % 360;
+        // A point moving on a circle around the vertex keeps its unwrapped path parameter. This distinguishes the
+        // initial position (0 degrees) from the same position after one or more complete counterclockwise turns
+        // (360 degrees). From the point coordinates alone, a null angle and a full angle are indistinguishable.
+        if (Degrees < 1e-9 && C.Path is GeoCircle circle && ReferenceEquals(circle.Center, Vertex))
+        {
+            double normalizedStart = ((start % 360) + 360) % 360;
+            if (C.Parameter - normalizedStart > 1e-9)
+            {
+                Degrees = 360;
+            }
+        }
         // the start stays continuous while points move (no jump from 179° to -179°), so the player interpolates well
         if (lastStart is double previous)
         {

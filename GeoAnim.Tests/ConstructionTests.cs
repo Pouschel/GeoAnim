@@ -165,6 +165,30 @@ public class ConstructionTests
     }
 
     [Fact]
+    public void FullTurnIsDistinctFromNullAngle()
+    {
+        var c = new Construction();
+        GeoPoint s = c.Point("S", 0, 0);
+        GeoPoint a = c.Point("A", 2, 0);
+        GeoCircle k = c.Circle("k", s, 2);
+        GeoPoint p = c.PointOn("P", k, 0);
+        GeoAngle w = c.Angle("w", a, s, p);
+
+        Assert.Equal(0, w.Degrees);
+
+        c.Step("full turn");
+        c.Move(p, 360, duration: 400, easing: Easing.Linear);
+        JsonElement json = Json(c);
+
+        Assert.Equal(360, w.Degrees);
+        JsonElement sweep = json.GetProperty("primitives").EnumerateArray()
+            .Single(p => p.GetProperty("type").GetString() == "angle")
+            .GetProperty("tracks").GetProperty("sweep");
+        Assert.Equal(0, sweep[0][1].GetDouble());
+        Assert.Equal(360, sweep[sweep.GetArrayLength() - 1][1].GetDouble());
+    }
+
+    [Fact]
     public void HideFadesOut()
     {
         var c = new Construction();
