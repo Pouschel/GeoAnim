@@ -16,15 +16,18 @@
     <header id="header" hidden>
       <h1 id="title"></h1>
     </header>
-    <!-- picture and description together, centred in the space between title and control bar -->
+    <!-- step caption, picture and explanations together, directly below the title -->
     <div id="content">
+      <!-- the numbered description of the current step, above the picture -->
+      <div id="caption-box">
+        <div id="caption" aria-live="polite"></div>
+      </div>
       <main id="stage">
         <svg id="scene" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title caption"></svg>
         <div id="message">Loading…</div>
         <div id="error" hidden></div>
       </main>
       <div id="texts">
-        <div id="caption" aria-live="polite"></div>
         <div id="info" hidden></div>
         <!-- in an exported book: the next page, below the last step -->
         <div id="next-page" hidden><a></a></div>

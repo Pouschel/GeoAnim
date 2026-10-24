@@ -880,31 +880,58 @@
 
   // the description below the picture keeps the height of the tallest one (formulas, several lines), so that the
   // picture does not change its size while the animation plays
+  // the description of a step above the picture, with its number in front ("2 · …"; empty at the starting picture)
+  function setCaption (index) {
+    const caption = $('caption')
+    const text = index >= 0 ? withNumbers(steps()[index].caption) : ''
+    const key = index + '\u0000' + text
+    caption.captionIndex = index
+    if (caption.richText === key) {
+      return
+    }
+    caption.richText = key
+    caption.textContent = ''
+    if (index >= 0) {
+      const number = document.createElement('span')
+      number.className = 'step-number'
+      number.textContent = (index + 1) + ' · '
+      caption.appendChild(number)
+    }
+    renderInline(caption, parseMarkdown(text))
+  }
+
+  // the space above the picture (step description) and below it (description, info, next page), each as high as
+  // its tallest content over all steps, so that the picture never moves
   function reserveCaptionSpace () {
     if (!animation) {
       return
     }
-    // description and info together
+    const top = $('caption-box')
     const box = $('texts')
-    const caption = $('caption')
-    const current = [caption.richText || '', $('info').richText || '']
-    box.style.minHeight = ''
+    const shownStep = $('caption').captionIndex ?? -1
+    const shownInfo = $('info').richText || ''
     const nextShown = !$('next-page').hidden
+    top.style.minHeight = ''
+    box.style.minHeight = ''
+    let topHeight = top.offsetHeight
     let height = box.offsetHeight
     // the starting picture: the page's description
-    setRichText(caption, '')
+    setCaption(-1)
     showInfo(withNumbers(animation.description))
     showNextPage(-1)
+    topHeight = Math.max(topHeight, top.offsetHeight)
     height = Math.max(height, box.offsetHeight)
     steps().forEach((step, index) => {
-      setRichText(caption, withNumbers(step.caption))
+      setCaption(index)
       showInfo(withNumbers(step.info))
       showNextPage(index)
+      topHeight = Math.max(topHeight, top.offsetHeight)
       height = Math.max(height, box.offsetHeight)
     })
-    setRichText(caption, current[0])
-    showInfo(current[1])
+    setCaption(shownStep)
+    showInfo(shownInfo)
     $('next-page').hidden = !nextShown
+    top.style.minHeight = topHeight + 'px'
     box.style.minHeight = height + 'px'
   }
 
@@ -927,7 +954,8 @@
     }
     const view = animation.view
     const ratio = (view.xmax - view.xmin) / (view.ymax - view.ymin)
-    // the space between title and control bar, without the description and the margins (16 left and right, 10 above).
+    // the space between title and control bar, without the texts above and below the picture and the margins (16 left
+    // and right, 10 in all).
     // The texts grow with the picture, so their height depends on its width and the other way round: a few rounds
     // settle it (starting with the full width)
     const content = $('content')
@@ -936,14 +964,14 @@
       const before = width
       setTextScale(width / REFERENCE_WIDTH)
       reserveCaptionSpace()
-      const available = Math.max(1, content.clientHeight - 10 - $('texts').offsetHeight)
+      const available = Math.max(1, content.clientHeight - 10 - $('caption-box').offsetHeight - $('texts').offsetHeight)
       width = Math.max(1, Math.min(content.clientWidth - 32, available * ratio))
       if (Math.abs(width - before) < 2) {
         break
       }
     }
     const height = width / ratio
-    // the stage gets the picture's height, so that picture and description stand together in the middle
+    // the stage gets the picture's height, so that the texts above and below stay right at the picture
     stage.style.flex = 'none'
     stage.style.height = height + 'px'
     scene.setAttribute('width', width)
@@ -1070,7 +1098,7 @@
     }
     const list = steps()
     const index = currentStepIndex()
-    setRichText($('caption'), withNumbers(index >= 0 ? list[index].caption : ''))
+    setCaption(index)
     // the starting picture: what the page is about (the description from the script)
     showInfo(withNumbers(index >= 0 ? list[index].info : animation.description))
     showNextPage(index)

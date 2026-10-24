@@ -20,11 +20,12 @@ header {
   text-align: center;
 }
 
+/* step description, picture and explanations directly below the title; spare height (a tall window) stays below */
 #content {
   display: flex;
   flex: 1;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   min-height: 0;
 }
 
@@ -40,7 +41,7 @@ h1 {
   position: relative;
   flex: 1 1 auto;
   min-height: 0;
-  margin: 10px 16px 0;
+  margin: 4px 16px 0;
 }
 
 #scene {
@@ -104,6 +105,10 @@ h1 a {
   color: #1565c0;
 }
 
+#caption .step-number {
+  color: #8a909c;
+}
+
 #caption code {
   padding: 0 0.2em;
   border-radius: 3px;
@@ -112,7 +117,7 @@ h1 a {
   font-size: 0.85em;
 }
 
-/* description and info: never squeezed; their height is measured and the picture gets the rest */
+/* below the picture: description, info and next page, never squeezed; their height is measured and the picture gets the rest */
 #texts {
   flex: none;
   box-sizing: border-box;
@@ -123,7 +128,7 @@ h1 a {
   box-sizing: border-box;
   max-width: 44em;
   margin: 0 auto;
-  padding: 0 16px 10px;
+  padding: 8px 16px 10px;
   color: #333;
   font-size: var(--info-size, 17px);
   line-height: 1.45;
@@ -146,11 +151,19 @@ h1 a {
   font-size: 0.85em;
 }
 
-#caption {
+/* above the picture: the numbered step description, close to the picture (its height is reserved for the longest) */
+#caption-box {
+  display: flex;
   flex: none;
+  flex-direction: column;
+  justify-content: flex-end;
+  box-sizing: border-box;
+}
+
+#caption {
   box-sizing: border-box;
   min-height: 1.4em;
-  padding: 10px 16px 6px;
+  padding: 4px 16px 8px;
   font-size: var(--caption-size, 20px);
   line-height: 1.4;
   text-align: center;
@@ -265,7 +278,7 @@ h1 a {
   box-sizing: border-box;
   max-width: 44em;
   margin: 0 auto;
-  padding: 0 16px 10px;
+  padding: 8px 16px 10px;
   font-size: var(--info-size, 17px);
   text-align: right;
 }
