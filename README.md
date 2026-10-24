@@ -65,6 +65,8 @@ Weitere Beispiele in `Samples/`: Umkreis eines Dreiecks (mit bewegtem Eckpunkt) 
 
 ## Die Sprache
 
+Zum Nachschlagen: [REFERENZ.md](REFERENZ.md) listet alle Befehle mit allen Schreibweisen und den jeweils erlaubten Optionen.
+
 Eine Anweisung pro Zeile; Einrückung ist egal. Alle Angaben werden nur durch Leerzeichen getrennt, ohne Kommas und Klammern (Koordinaten: `2 3`). `#` beginnt einen Kommentar (außer `#rgb` / `#rrggbb` als Farbe). Zahlen mit Punkt (`2.5`, `-0.5`). Hinter `title` und `step` ist der Rest der Zeile der Text, so wie er dasteht, ohne Anführungszeichen (auch `#` gehört dann dazu). Andere Texte (`text`, `label`) stehen in doppelten Anführungszeichen (`\"` für ein Anführungszeichen darin), weil danach noch Optionen folgen können. Namen bestehen aus Buchstaben, Ziffern und `_`, gefolgt von beliebig vielen `'` (`A'`, `P_1`); Groß-/Kleinschreibung zählt. Schlüsselwörter (`point`, `to`, `x`, `by`, `length`, …) sind als Namen nicht erlaubt.
 
 **Lange Texte und Auszeichnungen:** Eine Zeile, die mit `|` beginnt, setzt den Text der `title`-, `step`- oder `set`-Zeile davor fort (mit einem Leerzeichen angehängt); eine Zeile mit nur `|` beginnt einen neuen Absatz:
