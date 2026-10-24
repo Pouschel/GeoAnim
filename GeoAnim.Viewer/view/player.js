@@ -343,14 +343,16 @@
     parts.fill.setAttribute('fill-opacity', v.fillOpacity)
     parts.arc.setAttribute('stroke', v.color)
     parts.arc.setAttribute('stroke-width', v.width * unit)
-    // a right angle: the arc with a dot
+    // a right angle: the arc with a dot – unless it has a label, which stands there instead (while the label is hidden
+    // with "hide label", the dot shows; the two fade into each other)
     const right = Math.abs(v.sweep - 90) < 0.05
+    const labelShown = v.text ? (v.labelOpacity === undefined ? 1 : v.labelOpacity) : 0
     const [dx, dy] = polar(cx, cy, v.start + v.sweep / 2, radius * 0.45)
     parts.dot.setAttribute('cx', dx)
     parts.dot.setAttribute('cy', dy)
-    parts.dot.setAttribute('r', right ? Math.max(1.5, 1.4 * v.width) * unit : 0)
+    parts.dot.setAttribute('r', right && labelShown < 1 ? Math.max(1.5, 1.4 * v.width) * unit : 0)
     parts.dot.setAttribute('fill', v.color)
-    parts.dot.setAttribute('opacity', reveal)
+    parts.dot.setAttribute('opacity', reveal * (1 - labelShown))
     if (v.text) {
       const x = cx + bx * distance - width / 2
       const y = cy - by * distance - height / 2 + 0.7 * size
