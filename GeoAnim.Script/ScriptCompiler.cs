@@ -372,6 +372,33 @@ public static class ScriptCompiler
                         c.Rotate(targets, ResolvePoint(s.Center), s.Degrees, options.Duration, options.Easing);
                         break;
                     }
+                case ReflectStatement s:
+                    {
+                        if (OnlyResult)
+                        {
+                            break;
+                        }
+                        List<GeoObject> targets = s.Targets.Select(t => NotInput(t, "reflect")).ToList();
+                        Options options = ToOptions(s.Options, "reflect", ["duration", "easing", "straight"]);
+                        if (s.InPoint)
+                        {
+                            c.Reflect(targets, ResolvePoint(s.Axis), options.Straight, options.Duration, options.Easing);
+                        }
+                        else if (s.Second != null)
+                        {
+                            c.Reflect(targets, ResolvePoint(s.Axis), ResolvePoint(s.Second), options.Straight, options.Duration, options.Easing);
+                        }
+                        else
+                        {
+                            GeoObject axis = Resolve(s.Axis);
+                            GeoStraight line = axis as GeoStraight
+                                ?? throw new ScriptError(s.Axis.Line, s.Axis.Column, axis is GeoPoint
+                                    ? $"{s.Axis.Name} is a point: reflect in a point with \"in {s.Axis.Name}\", across a line through two points with \"across {s.Axis.Name} Q\"."
+                                    : $"{s.Axis.Name} is a {axis.Kind}, not a segment, ray or line.");
+                            c.Reflect(targets, line.A, line.B, options.Straight, options.Duration, options.Easing);
+                        }
+                        break;
+                    }
                 case PauseStatement s:
                     // a used file drawn in one step goes without its pauses
                     if (module == null || module.Mode is UseMode.Steps or UseMode.Play)
@@ -836,6 +863,7 @@ public static class ScriptCompiler
                     "shift" => options with { Shift = (Vec)option.Value! },
                     "align" => options with { Align = (string)option.Value! switch { "left" => TextAlign.Left, "right" => TextAlign.Right, _ => TextAlign.Center } },
                     "hidden" => options with { Hidden = true },
+                    "straight" => options with { Straight = true },
                     "linear" => options with { Easing = Easing.Linear },
                     "easein" => options with { Easing = Easing.EaseIn },
                     "easeout" => options with { Easing = Easing.EaseOut },

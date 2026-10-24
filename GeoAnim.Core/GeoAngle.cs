@@ -1,7 +1,8 @@
 namespace GeoAnim;
 
 /// <summary>
-/// An angle A B C: at the vertex B, counterclockwise from the ray BA to the ray BC (so it can be more than 180°). It is
+/// An angle A B C: at the vertex B, counterclockwise from the ray BA to the ray BC (so it can be more than 180°; after a
+/// reflection clockwise). It is
 /// drawn as a filled sector with an arc; its label stands on the bisector. Without a radius the player sizes the sector
 /// so that the label fits between the arms (or a standard size without label); a right angle gets the arc with a dot.
 /// </summary>
@@ -53,6 +54,11 @@ public sealed class GeoAngle : GeoObject
         }
         double start = Math.Atan2(first.Y, first.X) * 180 / Math.PI;
         double end = Math.Atan2(second.Y, second.X) * 180 / Math.PI;
+        if (Mirrored)
+        {
+            // reflected: clockwise from BA to BC, that is counterclockwise from BC to BA
+            (start, end) = (end, start);
+        }
         Degrees = ((end - start) % 360 + 360) % 360;
         // With both arms on top of each other the positions cannot tell a null angle (0°) from a full angle (360°); where
         // the angle comes from can: from more than 180° the second arm has turned counterclockwise onto the first one (or

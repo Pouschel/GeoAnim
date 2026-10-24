@@ -69,6 +69,13 @@ internal sealed record TranslateStatement(int Line, int Column, IReadOnlyList<Na
 internal sealed record RotateStatement(int Line, int Column, IReadOnlyList<NameRef> Targets, NameRef Center, double Degrees, OptionList Options)
     : Statement(Line, Column);
 
+/// <summary>
+/// "reflect A B C across g" / "across P Q" (in a line: <paramref name="Second"/> is the second point, if given) or
+/// "reflect A B C in Z" (<paramref name="InPoint"/>).
+/// </summary>
+internal sealed record ReflectStatement(int Line, int Column, IReadOnlyList<NameRef> Targets, NameRef Axis, NameRef? Second, bool InPoint, OptionList Options)
+    : Statement(Line, Column);
+
 internal sealed record MoveStatement(int Line, int Column, NameRef Point, Vec? Target, double? Parameter, OptionList Options, NameRef? TargetPoint = null)
     : Statement(Line, Column);
 

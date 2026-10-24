@@ -11,7 +11,7 @@ Alle Befehle mit allen Schreibweisen und den Optionen, die jeweils erlaubt sind.
 - [Texte, Vars, Voreinstellungen](#texte-vars-voreinstellungen): `set`, `var`, `default`
 - [Objekte](#objekte): `point`, `segment`, `line`, `ray`, `circle`, `polygon`, `angle`, `text`
 - [Zahlen](#zahlen): `number`
-- [Schritte und Aktionen](#schritte-und-aktionen): `step`, `info`, `show`, `hide`, `move`, `rotate`, `pause`, `together`
+- [Schritte und Aktionen](#schritte-und-aktionen): `step`, `info`, `show`, `hide`, `move`, `rotate`, `reflect`, `pause`, `together`
 - [Dateien](#dateien): `include`, `use`, `input`, `output`
 - [Optionen](#optionen) – welche Option für welchen Befehl
 - [Farben](#farben), [Standardwerte](#standardwerte), [Schlüsselwörter](#schlüsselwörter)
@@ -53,7 +53,7 @@ Vor dem ersten `step` (außer `keyword`).
 |---|---|---|
 | `set` | `set name = Text …` | benannter Text für `text` und `label`; mit `|` fortsetzbar; gilt ab seiner Zeile |
 | `var` | `var name Optionen…` | Optionen mit Namen; darf andere Vars enthalten; gilt ab seiner Zeile, eine spätere gleichnamige ersetzt sie; was für ein Objekt nicht passt, wird übergangen |
-| `default` | `default [Arten…] Optionen…` | Voreinstellung für alle folgenden Objekte der Arten `point` `segment` `line` `ray` `circle` `polygon` `angle` `text` `show` `hide` `move` `rotate`; ohne Art für alle; was nicht passt, wird übergangen |
+| `default` | `default [Arten…] Optionen…` | Voreinstellung für alle folgenden Objekte der Arten `point` `segment` `line` `ray` `circle` `polygon` `angle` `text` `show` `hide` `move` `rotate` `reflect`; ohne Art für alle; was nicht passt, wird übergangen |
 
 Reihenfolge der Optionen eines Objekts: Voreinstellungen ohne Art, dann die der Art, dann die eigenen – die spätere gewinnt.
 
@@ -165,6 +165,8 @@ Aktionen stehen in einem Schritt und laufen nacheinander. Die Optionen *Ablauf* 
 | | `move label A B … to x y` | *Ablauf* | verschiebt die Beschriftungen auf den Shift x y (von ihrem gewohnten Platz aus), z. B. wenn sie nach einer Bewegung stören |
 | | `move A B … along P Q` | *Ablauf* | verschiebt Objekte um den Vektor PQ (ihre freien Punkte; bei einem Text an festen Koordinaten seine Position) |
 | `rotate` | `rotate A B … around M by n` | *Ablauf* | dreht Objekte um M um n Grad (negativ: im Uhrzeigersinn) |
+| `reflect` | `reflect A B … across g` · `reflect A B … across P Q` | *Ablauf*, `straight` | spiegelt Objekte an der Geraden g (auch Strecke oder Strahl) bzw. PQ: die Figur klappt um wie eine Buchseite; mit `straight` laufen die Punkte gleichmäßig senkrecht hinüber |
+| | `reflect A B … in Z` | *Ablauf*, `straight` | spiegelt Objekte am Punkt Z: Drehung um 180°; mit `straight` laufen die Punkte geradlinig durch Z |
 | `pause` | `pause` · `pause n` | – | wartet 500 ms bzw. n ms |
 | `together` | `together` … `end` | – | alles dazwischen beginnt gleichzeitig |
 | | `together duration n` … `end` | `duration` | ebenso, der Block dauert genau n ms |
@@ -201,8 +203,9 @@ Aktionen stehen in einem Schritt und laufen nacheinander. Die Optionen *Ablauf* 
 | `align` | `left` · `center` · `right` | | | | | | | ✓ | |
 | `arrow` | – · `start` · `end` · `both` | | ✓ | | | | ✓ | | |
 | `hidden` | – | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | |
-| `duration` | n (ms) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | `show` `hide` `move` `rotate` `together` |
-| `linear` `ease` `easein` `easeout` `easeinout` | – | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | `show` `hide` `move` `rotate` |
+| `straight` | – | | | | | | | | `reflect` |
+| `duration` | n (ms) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | `show` `hide` `move` `rotate` `reflect` `together` |
+| `linear` `ease` `easein` `easeout` `easeinout` | – | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | `show` `hide` `move` `rotate` `reflect` |
 
 `ease` ist dasselbe wie `easeinout`. Ein Punkt (pt) ist ein Pixel bei 1280 Pixel Bildbreite. Hinter `use` gelten die Optionen der Ergebnisse. Eine direkt geschriebene Option, die nicht passt, ist ein Fehler; aus einer Var oder Voreinstellung wird sie übergangen.
 
@@ -221,7 +224,7 @@ Aktionen stehen in einem Schritt und laufen nacheinander. Die Optionen *Ablauf* 
 | Winkel | schwarz, Füllung 0,2 | 1,5 pt, Radius passend zur Beschriftung | 600 ms, `easeout` |
 | Text | schwarz | 26 pt | 400 ms, `easeout` |
 | `show`, `hide` | | | 400 ms, `easeout` |
-| `move`, `rotate` | | | 1000 ms, `ease` |
+| `move`, `rotate`, `reflect` | | | 1000 ms, `ease` |
 | `pause` | | | 500 ms |
 | Schritt ohne Aktion | | | 500 ms |
 
@@ -229,4 +232,4 @@ Aktionen stehen in einem Schritt und laufen nacheinander. Die Optionen *Ablauf* 
 
 Diese Wörter können keine Namen sein:
 
-`title` `description` `info` `keyword` `view` `background` `grid` `axes` `speed` `var` `default` `include` `input` `output` `use` `draw` `steps` `copy` `set` `step` `point` `segment` `line` `ray` `circle` `polygon` `angle` `text` `number` `length` `degrees` `area` `perimeter` `show` `hide` `all` `move` `rotate` `along` `around` `by` `pause` `together` `end` `midpoint` `intersect` `center` `through` `radius` `at` `to` `on` `x` `y` `below` `gap` `align` `left` `right` `duration` `color` `width` `fill` `opacity` `size` `labelsize` `labelpos` `label` `nolabel` `hidden` `offset` `shift` `arrow` `start` `both` `linear` `ease` `easein` `easeout` `easeinout`
+`title` `description` `info` `keyword` `view` `background` `grid` `axes` `speed` `var` `default` `include` `input` `output` `use` `draw` `steps` `copy` `set` `step` `point` `segment` `line` `ray` `circle` `polygon` `angle` `text` `number` `length` `degrees` `area` `perimeter` `show` `hide` `all` `move` `rotate` `reflect` `along` `around` `across` `in` `by` `pause` `together` `end` `midpoint` `intersect` `center` `through` `radius` `at` `to` `on` `x` `y` `below` `gap` `align` `left` `right` `duration` `color` `width` `fill` `opacity` `size` `labelsize` `labelpos` `label` `nolabel` `hidden` `offset` `shift` `arrow` `start` `both` `straight` `linear` `ease` `easein` `easeout` `easeinout`

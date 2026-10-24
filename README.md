@@ -156,6 +156,8 @@ Koordinaten sind mathematisch: die y-Achse zeigt nach oben. Der Maßstab ist in 
 | `move label A s to 0.3 -0.2` | verschiebt Beschriftungen auf einen neuen `shift` (gleitend, 400 ms), etwa wenn sie nach einer Bewegung etwas überdecken |
 | `move A B C along P Q` | verschiebt Objekte um den Vektor von P nach Q (so wie er beim Start der Bewegung ist): bewegt werden die freien Punkte, aus denen sie gebaut sind (bei einem Vieleck seine Ecken, bei einem Mittelpunkt dessen Punkte, bei einem Text an festen Koordinaten seine Position), alles davon Abhängige folgt |
 | `rotate A B C around M by 60` | dreht Objekte um M um 60° gegen den Uhrzeigersinn (negativ: im Uhrzeigersinn, auch über 360°); die freien Punkte laufen auf Kreisbögen, die Figur bleibt unterwegs unverformt; Voreinstellungen mit `default rotate duration …` |
+| `reflect A B C across g` / `reflect A B C across P Q` | spiegelt Objekte an der Geraden g (auch einer Strecke oder einem Strahl) bzw. an der Geraden PQ, wie sie zu Beginn liegt: Die freien Punkte laufen senkrecht zur Achse auf ihre Bilder, mit dem Kosinus einer halben Drehung – so sieht es aus, wenn die Figur im Raum um die Achse umklappt (wie eine Buchseite; auf halbem Weg liegt alles auf der Achse). Mit `straight` laufen die Punkte gleichmäßig hinüber. Was ganz gespiegelt wird, behält seine Lage: Winkel bleiben so groß (sie werden danach im Uhrzeigersinn gemessen), die Beschriftung einer Strecke bleibt auf derselben Seite der Figur. Wer das Original behalten will, kopiert die Punkte vorher (`copy`) |
+| `reflect A B C in Z` | spiegelt Objekte am Punkt Z: eine Drehung um 180° (die Figur bleibt unterwegs unverformt); mit `straight` laufen die Punkte geradlinig durch Z auf ihre Bilder |
 | `pause 300` | wartet (Standard 500 ms) |
 | `together` … `end` | alles dazwischen beginnt gleichzeitig; der Block dauert so lange wie die längste Aktion |
 | `together duration 2500` … `end` | ebenso, aber der Block dauert genau 2,5 s: alle Aktionen darin werden im selben Verhältnis gestreckt oder gestaucht |
@@ -199,7 +201,7 @@ line m = S T rot width 3
 
 Eine Var gilt ab ihrer Zeile (eine spätere `var` mit demselben Namen ersetzt sie für die folgenden Zeilen) und darf andere Vars enthalten. Optionen gelten der Reihe nach, die spätere gewinnt: `rot color blue` ist blau mit allem Übrigen aus `rot`. Was aus einer Var für ein Objekt nicht passt, wird übergangen (ein Punkt mit `hilfs` nimmt die Farbe, ignoriert `width`); direkt geschriebene Optionen, die nicht passen, bleiben ein Fehler. Vars und Objekte haben verschiedene Namen.
 
-**Voreinstellungen:** `default arten… optionen…` legt Optionen für alle folgenden Objekte fest, damit nicht jedes einzelne sie braucht. Arten: `point`, `segment`, `line`, `ray`, `circle`, `polygon`, `angle`, `text`, `show`, `hide`, `move`; ohne Art gilt die Voreinstellung für alle.
+**Voreinstellungen:** `default arten… optionen…` legt Optionen für alle folgenden Objekte fest, damit nicht jedes einzelne sie braucht. Arten: `point`, `segment`, `line`, `ray`, `circle`, `polygon`, `angle`, `text`, `show`, `hide`, `move`, `rotate`, `reflect`; ohne Art gilt die Voreinstellung für alle.
 
 ```
 default point size 4 labelsize 20

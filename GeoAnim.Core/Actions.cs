@@ -219,6 +219,87 @@ internal sealed class RotateAction(IReadOnlyList<GeoPoint> points, GeoPoint cent
     }
 }
 
+/// <summary>
+/// Reflects free points in a line (taken at the start): each moves at right angles to the axis onto its image, by the
+/// cosine of a half turn – what a turn in space around the axis looks like from above – or evenly ("straight"). Halfway
+/// all lie on the axis; there the objects reflected as a whole change their sense of rotation.
+/// </summary>
+internal sealed class ReflectAction(IReadOnlyList<GeoPoint> points, GeoPoint a, GeoPoint b, bool straight, IReadOnlyList<GeoObject> turned,
+    double duration, Easing easing) : TimelineAction(duration, easing)
+{
+    private Vec[] starts = [];
+    private Vec[] feet = [];
+    private bool halfway;
+
+    public override bool MovesPoints => true;
+
+    public override IEnumerable<GeoObject> Objects => points;
+
+    public override void Begin(RenderContext context, double time)
+    {
+        Vec d = b.Position - a.Position;
+        if (!a.IsDefined || !b.IsDefined || d.Length < 1e-9)
+        {
+            throw new GeoException($"The axis {a.Name}{b.Name} does not exist for the current positions.");
+        }
+        starts = points.Select(p => p.Position).ToArray();
+        // the foot of the perpendicular from each point to the axis
+        feet = starts.Select(p => a.Position + ((p - a.Position).X * d.X + (p - a.Position).Y * d.Y) / (d.X * d.X + d.Y * d.Y) * d).ToArray();
+        halfway = false;
+    }
+
+    public override void End(RenderContext context, Span span) => throw new InvalidOperationException("A reflection is always sampled.");
+
+    public override void Apply(double progress)
+    {
+        double factor = straight ? 1 - 2 * progress : Math.Cos(progress * Math.PI);
+        for (int i = 0; i < points.Count; i++)
+        {
+            points[i].MoveTo(feet[i] + factor * (starts[i] - feet[i]));
+        }
+        if (!halfway && progress >= 0.5)
+        {
+            halfway = true;
+            foreach (GeoObject item in turned)
+            {
+                item.Mirror();
+            }
+        }
+    }
+}
+
+/// <summary>Reflects free points in a point (taken at the start), each running straight through it onto its image.</summary>
+internal sealed class PointReflectAction(IReadOnlyList<GeoPoint> points, GeoPoint center, double duration, Easing easing)
+    : TimelineAction(duration, easing)
+{
+    private Vec[] starts = [];
+    private Vec pivot;
+
+    public override bool MovesPoints => true;
+
+    public override IEnumerable<GeoObject> Objects => points;
+
+    public override void Begin(RenderContext context, double time)
+    {
+        if (!center.IsDefined)
+        {
+            throw new GeoException($"The centre {center.Name} does not exist for the current positions.");
+        }
+        starts = points.Select(p => p.Position).ToArray();
+        pivot = center.Position;
+    }
+
+    public override void End(RenderContext context, Span span) => throw new InvalidOperationException("A reflection is always sampled.");
+
+    public override void Apply(double progress)
+    {
+        for (int i = 0; i < points.Count; i++)
+        {
+            points[i].MoveTo(pivot + (1 - 2 * progress) * (starts[i] - pivot));
+        }
+    }
+}
+
 /// <summary>Nothing happens for a while.</summary>
 internal sealed class PauseAction(double duration) : TimelineAction(duration, Easing.Linear)
 {

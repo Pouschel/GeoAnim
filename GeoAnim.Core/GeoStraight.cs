@@ -121,9 +121,9 @@ public sealed class GeoStraight : GeoObject
             }
             else
             {
-                // the normal to the right: the player moves the text along it until it keeps the gap to the line
+                // the normal to the right (after a reflection to the left): the player moves the text along it until it keeps the gap to the line
                 Vec d = Direction;
-                Vec normal = (1 / d.Length) * new Vec(d.Y, -d.X);
+                Vec normal = (Mirrored ? -1 : 1) / d.Length * new Vec(d.Y, -d.X);
                 label.Animate("nx", span, normal.X);
                 label.Animate("ny", span, normal.Y);
                 label.Animate("gap", span, LabelDistance);

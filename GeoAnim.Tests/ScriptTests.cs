@@ -661,6 +661,77 @@ public class ScriptTests
     }
 
     [Fact]
+    public void ReflectMovesTheFreePointsOntoTheirImages()
+    {
+        Construction c = ScriptCompiler.CompileConstruction("""
+            point P = 0 0
+            point Q = 0 1
+            line g = P Q
+            point A = -4 0
+            point B = -1 0
+            point C = -1 3
+            segment s = A B label "$s$"
+            angle w = B A C
+            point Z = 2 2
+            step falten
+              reflect A B C across g
+            step zurück, geradlinig
+              reflect A B C across P Q straight duration 300
+            step am Punkt
+              reflect A B C in Z
+            step am Punkt geradlinig
+              reflect A in Z straight
+            """);
+        Vec At(string name) => ((GeoPoint)c.Objects[name]).Position;
+        void Near(Vec expected, Vec actual)
+        {
+            Assert.Equal(expected.X, actual.X, 9);
+            Assert.Equal(expected.Y, actual.Y, 9);
+        }
+        // across the y axis and back, then turned around Z = (2, 2) by 180°: A (−4, 0) → (8, 4), C (−1, 3) → (5, 1);
+        // A back through Z to (−4, 0)
+        Near(new Vec(-4, 0), At("A"));
+        Near(new Vec(5, 4), At("B"));
+        Near(new Vec(5, 1), At("C"));
+        Near(new Vec(0, 0), At("P"));
+        ErrorAt("point A = 0 0\nstep s\n  reflect A over A", 3, 19, "\"across\"");
+        ErrorAt("point A = 0 0\npoint B = 1 0\nstep s\n  reflect B across A", 4, 20, "\"in A\"");
+        ErrorAt("point A = 0 0\nreflect A in A", 2, 1, "only possible inside a step");
+        ErrorAt("point A = 0 0\nstep s\n  move A to 1 1 straight", 3, 17, "not possible for move");
+    }
+
+    [Fact]
+    public void ReflectedAnglesAndLabelsKeepTheirSide()
+    {
+        // the angle at A (63.4°) stays that size, measured clockwise now (also while folding: never the outer angle);
+        // the label of AB stays outside the triangle
+        Construction c = ScriptCompiler.CompileConstruction("""
+            point P = 0 0
+            point Q = 0 1
+            point A = 1 0
+            point B = 4 0
+            point C = 2 2
+            segment s = A B label "$s$"
+            angle w = B A C
+            step falten
+              reflect A B C across P Q
+            """);
+        var angle = (GeoAngle)c.Objects["w"];
+        Assert.Equal(Math.Atan2(2, 1) * 180 / Math.PI, angle.Degrees, 6);
+        AnimationData animation = c.Build();
+        JsonElement label = JsonDocument.Parse(animation.ToJson()).RootElement.GetProperty("primitives").EnumerateArray()
+            .Single(p => p.GetProperty("type").GetString() == "text" && p.GetProperty("tracks").GetProperty("text")[0][1].GetString() == "$s$");
+        JsonElement ny = label.GetProperty("tracks").GetProperty("ny");
+        // before: below AB (to the right of A → B); after: A (−1, 0) → B (−4, 0) runs to the left, the label still below
+        Assert.Equal(-1, ny[0][1].GetDouble(), 6);
+        Assert.Equal(-1, ny[ny.GetArrayLength() - 1][1].GetDouble(), 6);
+        JsonElement sweep = animation.ToJson() is string json
+            ? JsonDocument.Parse(json).RootElement.GetProperty("primitives").EnumerateArray().Single(p => p.GetProperty("type").GetString() == "angle").GetProperty("tracks").GetProperty("sweep")
+            : default;
+        Assert.All(sweep.EnumerateArray(), key => Assert.InRange(key[1].GetDouble(), 0, 90 + 1e-6));
+    }
+
+    [Fact]
     public void ShiftMovesLabelsFromTheirDefaultPlace()
     {
         AnimationData animation = ScriptCompiler.Compile("""

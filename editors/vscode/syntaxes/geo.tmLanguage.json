@@ -93,7 +93,7 @@
       ]
     },
     {
-      "begin": "^\\s*(default)\\b((?:\\s+(?:point|segment|line|ray|circle|polygon|angle|text|show|hide|move|rotate)\\b)*)",
+      "begin": "^\\s*(default)\\b((?:\\s+(?:point|segment|line|ray|circle|polygon|angle|text|show|hide|move|rotate|reflect)\\b)*)",
       "beginCaptures": {
         "1": {
           "name": "keyword.control.geo"
@@ -181,7 +181,7 @@
           "include": "#comment"
         },
         {
-          "begin": "(?=\\b(?:duration|color|width|fill|opacity|size|radius|labelsize|labelpos|label|nolabel|hidden|offset|shift|arrow|align|linear|ease|easein|easeout|easeinout|draw|steps)\\b)",
+          "begin": "(?=\\b(?:duration|color|width|fill|opacity|size|radius|labelsize|labelpos|label|nolabel|hidden|offset|shift|arrow|align|straight|linear|ease|easein|easeout|easeinout|draw|steps)\\b)",
           "end": "(?=$)",
           "patterns": [
             {
@@ -367,7 +367,7 @@
           "include": "#comment"
         },
         {
-          "begin": "(?=\\b(?:duration|color|width|fill|opacity|size|radius|labelsize|labelpos|label|nolabel|hidden|offset|shift|arrow|align|linear|ease|easein|easeout|easeinout|draw|steps)\\b)",
+          "begin": "(?=\\b(?:duration|color|width|fill|opacity|size|radius|labelsize|labelpos|label|nolabel|hidden|offset|shift|arrow|align|straight|linear|ease|easein|easeout|easeinout|draw|steps)\\b)",
           "end": "(?=$)",
           "patterns": [
             {
@@ -439,7 +439,7 @@
       ]
     },
     {
-      "begin": "^\\s*(move|rotate)\\b(?=.*\\b(?:along|around)\\b)",
+      "begin": "^\\s*(move|rotate|reflect)\\b(?=.*\\b(?:along|around|across|in)\\b)",
       "beginCaptures": {
         "1": {
           "name": "keyword.control.geo"
@@ -448,7 +448,7 @@
       "end": "$",
       "patterns": [
         {
-          "match": "\\b(along|around|by)\\b",
+          "match": "\\b(along|around|across|in|by)\\b",
           "name": "keyword.other.geo"
         },
         {
@@ -520,7 +520,7 @@
           "name": "keyword.other.geo"
         },
         {
-          "begin": "(?=\\b(?:duration|color|width|fill|opacity|size|radius|labelsize|labelpos|label|nolabel|hidden|offset|shift|arrow|align|linear|ease|easein|easeout|easeinout|draw|steps)\\b)",
+          "begin": "(?=\\b(?:duration|color|width|fill|opacity|size|radius|labelsize|labelpos|label|nolabel|hidden|offset|shift|arrow|align|straight|linear|ease|easein|easeout|easeinout|draw|steps)\\b)",
           "end": "(?=$)",
           "patterns": [
             {
@@ -609,7 +609,7 @@
           }
         },
         {
-          "match": "\\b(duration|color|width|fill|opacity|size|radius|labelsize|labelpos|label|nolabel|hidden|offset|shift|arrow|start|both|align|left|right|linear|ease|easein|easeout|easeinout)\\b",
+          "match": "\\b(duration|color|width|fill|opacity|size|radius|labelsize|labelpos|label|nolabel|hidden|offset|shift|arrow|start|both|straight|align|left|right|linear|ease|easein|easeout|easeinout)\\b",
           "name": "entity.other.attribute-name.option.geo"
         },
         {

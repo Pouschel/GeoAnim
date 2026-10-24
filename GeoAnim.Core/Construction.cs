@@ -505,9 +505,40 @@ public sealed class Construction
         RunOrQueue([new RotateAction(FreePointsOf(items), center, degrees, duration ?? 1000, easing ?? Easing.EaseInOut)]);
     }
 
-    // the free points objects are built from (a free point itself; a segment: its free end points; a midpoint: the free
+    /// <summary>
+    /// Reflects objects in the line through <paramref name="a"/> and <paramref name="b"/> (where they are when it starts):
+    /// the free points they are built from fold over onto their images, as if the figure turned over in space around the
+    /// axis (<paramref name="straight"/>: straight across instead); everything that depends on them follows. Angles and the
+    /// labels of segments keep their side: after the reflection an angle is measured clockwise.
+    /// </summary>
+    public void Reflect(IEnumerable<GeoObject> items, GeoPoint a, GeoPoint b, bool straight = false, double? duration = null, Easing? easing = null)
+    {
+        RequireStep("reflect");
+        List<GeoPoint> points = FreePointsOf(items);
+        // what is reflected as a whole changes its sense of rotation
+        List<GeoObject> turned = objects.Where(o => o is GeoAngle or GeoStraight)
+            .Where(o => FreePoints(o) is { Count: > 0 } own && own.All(points.Contains))
+            .ToList();
+        RunOrQueue([new ReflectAction(points, a, b, straight, turned, duration ?? 1000, easing ?? Easing.EaseInOut)]);
+    }
+
+    /// <summary>
+    /// Reflects objects in the point <paramref name="center"/> (where it is when it starts): a rotation by 180°
+    /// (<paramref name="straight"/>: the free points run straight through the centre instead).
+    /// </summary>
+    public void Reflect(IEnumerable<GeoObject> items, GeoPoint center, bool straight = false, double? duration = null, Easing? easing = null)
+    {
+        RequireStep("reflect");
+        List<GeoPoint> points = FreePointsOf(items);
+        TimelineAction action = straight
+            ? new PointReflectAction(points, center, duration ?? 1000, easing ?? Easing.EaseInOut)
+            : new RotateAction(points, center, 180, duration ?? 1000, easing ?? Easing.EaseInOut);
+        RunOrQueue([action]);
+    }
+
+    // the free points an object is built from (a free point itself; a segment: its free end points; a midpoint: the free
     // points of its two points; …), each once
-    private static List<GeoPoint> FreePointsOf(IEnumerable<GeoObject> items)
+    private static List<GeoPoint> FreePoints(GeoObject item)
     {
         var found = new List<GeoPoint>();
         static void Collect(GeoObject item, List<GeoPoint> into)
@@ -525,10 +556,17 @@ public sealed class Construction
                 Collect(parent, into);
             }
         }
+        Collect(item, found);
+        return found;
+    }
+
+    // the free points of objects, each once; an object without any cannot move
+    private static List<GeoPoint> FreePointsOf(IEnumerable<GeoObject> items)
+    {
+        var found = new List<GeoPoint>();
         foreach (GeoObject item in items)
         {
-            var own = new List<GeoPoint>();
-            Collect(item, own);
+            List<GeoPoint> own = FreePoints(item);
             if (own.Count == 0)
             {
                 throw new GeoException($"{item} is not built from free points, so it cannot move.");

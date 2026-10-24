@@ -8,22 +8,22 @@ internal sealed class Parser
     {
         "title", "description", "info", "keyword", "view", "background", "grid", "axes", "speed", "var", "default", "include", "input", "output", "use",
         "draw", "steps", "copy", "set", "step", "point", "segment", "line", "ray", "circle", "polygon", "angle",
-        "text", "number", "length", "degrees", "area", "perimeter", "show", "hide", "all", "move", "rotate", "along", "around", "by", "pause", "together", "end", "midpoint", "intersect", "center", "through",
+        "text", "number", "length", "degrees", "area", "perimeter", "show", "hide", "all", "move", "rotate", "reflect", "along", "around", "across", "in", "by", "pause", "together", "end", "midpoint", "intersect", "center", "through",
         "radius", "at", "to", "on", "x", "y", "below", "gap", "align", "left", "right",
         "duration", "color", "width", "fill", "opacity", "size", "labelsize", "labelpos", "label", "nolabel", "hidden", "offset", "shift",
-        "arrow", "start", "both", "linear", "ease", "easein", "easeout", "easeinout",
+        "arrow", "start", "both", "straight", "linear", "ease", "easein", "easeout", "easeinout",
     };
 
     private static readonly HashSet<string> OptionNames = new(StringComparer.Ordinal)
     {
         "duration", "color", "width", "fill", "opacity", "size", "radius", "labelsize", "labelpos", "label", "nolabel", "hidden", "offset", "shift",
-        "arrow", "align", "linear", "ease", "easein", "easeout", "easeinout",
+        "arrow", "align", "straight", "linear", "ease", "easein", "easeout", "easeinout",
     };
 
     /// <summary>The kinds a "default" can name.</summary>
     private static readonly HashSet<string> DefaultKinds = new(StringComparer.Ordinal)
     {
-        "point", "segment", "line", "ray", "circle", "polygon", "angle", "text", "show", "hide", "move", "rotate",
+        "point", "segment", "line", "ray", "circle", "polygon", "angle", "text", "show", "hide", "move", "rotate", "reflect",
     };
 
     private readonly List<Token> tokens;
@@ -280,6 +280,9 @@ internal sealed class Parser
                 break;
             case "rotate":
                 statement = ParseRotate(word);
+                break;
+            case "reflect":
+                statement = ParseReflect(word);
                 break;
             case "number":
                 statement = ParseNumber(word);
@@ -724,11 +727,30 @@ internal sealed class Parser
         return new RotateStatement(word.Line, word.Column, targets, center, degrees, ParseOptions());
     }
 
-    // the names of the objects a movement moves, up to "to", "along" or "around"
+    // "reflect A B C across g" (a segment, ray or line), "reflect A B C across P Q" (the line PQ), "reflect A B C in Z"
+    private ReflectStatement ParseReflect(Token word)
+    {
+        List<NameRef> targets = ParseTargets(word, "across\" or \"in");
+        if (Current.Is("in") && Current.Kind == TokenKind.Name)
+        {
+            position++;
+            return new ReflectStatement(word.Line, word.Column, targets, ExpectName(), null, true, ParseOptions());
+        }
+        if (!(Current.Is("across") && Current.Kind == TokenKind.Name))
+        {
+            throw Error(Current, $"Expected \"across\" (a line) or \"in\" (a point) after the objects (\"reflect A B C across g\"), not {Current.Describe()}.");
+        }
+        position++;
+        NameRef axis = ExpectName();
+        NameRef? second = Current.Kind == TokenKind.Name && !IsOption(Current.Text) ? ExpectName() : null;
+        return new ReflectStatement(word.Line, word.Column, targets, axis, second, false, ParseOptions());
+    }
+
+    // the names of the objects a movement moves, up to "to", "along", "around", "across" or "in"
     private List<NameRef> ParseTargets(Token word, string next)
     {
         var targets = new List<NameRef>();
-        while (Current.Kind == TokenKind.Name && !(Current.Text is "to" or "along" or "around"))
+        while (Current.Kind == TokenKind.Name && !(Current.Text is "to" or "along" or "around" or "across" or "in"))
         {
             targets.Add(ExpectName());
         }
@@ -775,7 +797,7 @@ internal sealed class Parser
                     : throw Error(Current, $"Expected left, center or right after \"align\", not {Current.Describe()}."),
                 // "arrow" alone: at the end; "arrow start", "arrow end", "arrow both"
                 "arrow" => Current.Kind == TokenKind.Name && Current.Text is "start" or "end" or "both" ? Next().Text : "end",
-                "nolabel" or "hidden" or "linear" or "ease" or "easein" or "easeout" or "easeinout" => null,
+                "nolabel" or "hidden" or "straight" or "linear" or "ease" or "easein" or "easeout" or "easeinout" => null,
                 _ => throw Error(option, $"Unknown option or var \"{option.Text}\" (possible options: {string.Join(", ", OptionNames.Order())})."),
             };
             values.Add(new OptionValue(option.Text, value, option.Line, option.Column));

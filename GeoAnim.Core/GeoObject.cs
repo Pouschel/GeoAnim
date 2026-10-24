@@ -66,6 +66,15 @@ public abstract class GeoObject
         }
     }
 
+    /// <summary>
+    /// Whether the object was reflected (an odd number of times): an angle is then measured clockwise, the default label of
+    /// a segment, ray or line stands on the other side.
+    /// </summary>
+    internal bool Mirrored { get; private set; }
+
+    /// <summary>Reflects the object's sense of rotation (halfway through a reflection).</summary>
+    internal void Mirror() => Mirrored = !Mirrored;
+
     /// <summary>Whether it has primitives in the animation (it was shown once).</summary>
     internal bool IsDrawn { get; private protected set; }
 
