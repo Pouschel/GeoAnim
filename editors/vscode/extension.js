@@ -716,8 +716,7 @@ function indentUnit (editor) {
   return insertSpaces === false ? '\t' : ' '.repeat(typeof tabSize === 'number' ? tabSize : 2)
 }
 
-// the lines first … last indented one step more between "together" and "end" (with the first line's indentation); the
-// cursor after "together", with a choice of durations
+// the lines first … last indented one step more between "together" and "end" (with the first line's indentation)
 async function surroundTogether (uri, first, last) {
   const editor = vscode.window.activeTextEditor
   if (!editor || editor.document.uri.toString() !== uri.toString()) {
@@ -730,12 +729,9 @@ async function surroundTogether (uri, first, last) {
   }
   const indent = /^\s*/.exec(lines.find(line => line.trim().length > 0) || '')[0]
   const unit = indentUnit(editor)
-  const snippet = new vscode.SnippetString()
-  snippet.appendText(indent + 'together')
-  snippet.appendChoice(['', ' duration 500', ' duration 1000'])
-  snippet.appendText('\n' + lines.map(line => line.trim().length > 0 ? unit + line : line).join('\n') + '\n' + indent + 'end')
+  const text = indent + 'together\n' + lines.map(line => line.trim().length > 0 ? unit + line : line).join('\n') + '\n' + indent + 'end'
   const range = new vscode.Range(first, 0, last, document.lineAt(last).text.length)
-  await editor.insertSnippet(snippet, range, { keepWhitespace: true })
+  await editor.edit(builder => builder.replace(range, text))
 }
 
 // the together block around a line: the lines of "together" and "end", or null
