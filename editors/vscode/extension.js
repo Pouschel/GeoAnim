@@ -688,6 +688,100 @@ function followCursor (editor) {
   sendHighlight()
 }
 
+// ------------------------------------------------------------------ together blocks (Ctrl+.)
+
+// selected lines: put them into a together block; the cursor in a together block: dissolve it
+function provideCodeActions (document, range) {
+  const actions = []
+  if (!range.isEmpty) {
+    const action = new vscode.CodeAction('In together … end einschließen', vscode.CodeActionKind.RefactorRewrite)
+    action.command = { command: 'geoanim.surroundTogether', title: action.title, arguments: [document.uri, range.start.line, lastLineOf(range)] }
+    actions.push(action)
+  }
+  const block = togetherAround(document, range.start.line)
+  if (block) {
+    const action = new vscode.CodeAction('together-Block auflösen', vscode.CodeActionKind.RefactorRewrite)
+    action.edit = dissolveEdit(document, block)
+    actions.push(action)
+  }
+  return actions
+}
+
+// a selection that ends at the start of a line (whole lines selected) ends on the line before
+const lastLineOf = range => range.end.character === 0 && range.end.line > range.start.line ? range.end.line - 1 : range.end.line
+
+// one step of indentation as the editor has it
+function indentUnit (editor) {
+  const { insertSpaces, tabSize } = editor.options
+  return insertSpaces === false ? '\t' : ' '.repeat(typeof tabSize === 'number' ? tabSize : 2)
+}
+
+// the lines first … last indented one step more between "together" and "end" (with the first line's indentation); the
+// cursor after "together", with a choice of durations
+async function surroundTogether (uri, first, last) {
+  const editor = vscode.window.activeTextEditor
+  if (!editor || editor.document.uri.toString() !== uri.toString()) {
+    return
+  }
+  const document = editor.document
+  const lines = []
+  for (let i = first; i <= last; i++) {
+    lines.push(document.lineAt(i).text)
+  }
+  const indent = /^\s*/.exec(lines.find(line => line.trim().length > 0) || '')[0]
+  const unit = indentUnit(editor)
+  const snippet = new vscode.SnippetString()
+  snippet.appendText(indent + 'together')
+  snippet.appendChoice(['', ' duration 500', ' duration 1000'])
+  snippet.appendText('\n' + lines.map(line => line.trim().length > 0 ? unit + line : line).join('\n') + '\n' + indent + 'end')
+  const range = new vscode.Range(first, 0, last, document.lineAt(last).text.length)
+  await editor.insertSnippet(snippet, range, { keepWhitespace: true })
+}
+
+// the together block around a line: the lines of "together" and "end", or null
+function togetherAround (document, line) {
+  let start = -1
+  for (let i = line; i >= 0; i--) {
+    const text = document.lineAt(i).text
+    if (/^\s*together\b/.test(text)) {
+      start = i
+      break
+    }
+    if (/^\s*end\b/.test(text) && i < line) {
+      return null
+    }
+  }
+  if (start < 0) {
+    return null
+  }
+  for (let i = start + 1; i < document.lineCount; i++) {
+    if (/^\s*end\b/.test(document.lineAt(i).text)) {
+      return i >= line ? { start, end: i } : null
+    }
+    if (/^\s*together\b/.test(document.lineAt(i).text)) {
+      return null
+    }
+  }
+  return null
+}
+
+// without "together" and "end"; the lines between one step less indented (as far as they are indented more than the block)
+function dissolveEdit (document, block) {
+  const edit = new vscode.WorkspaceEdit()
+  const outer = /^\s*/.exec(document.lineAt(block.start).text)[0]
+  const inner = []
+  for (let i = block.start + 1; i < block.end; i++) {
+    inner.push(document.lineAt(i).text)
+  }
+  // the common indentation of the lines inside, beyond the block's own
+  const extra = Math.min(...inner.filter(line => line.trim().length > 0).map(line => /^\s*/.exec(line)[0].length), Infinity)
+  const cut = Number.isFinite(extra) ? Math.max(0, extra - outer.length) : 0
+  const text = inner.map(line => line.trim().length > 0 ? outer + line.slice(outer.length + cut) : line)
+  const range = new vscode.Range(block.start, 0, block.end, document.lineAt(block.end).text.length)
+  edit.replace(document.uri, range, text.join('\n'))
+  return edit
+}
+
 // ------------------------------------------------------------------ activation
 
 function activate (context) {
@@ -696,6 +790,8 @@ function activate (context) {
   context.subscriptions.push(output, diagnostics,
     vscode.commands.registerCommand('geoanim.preview', openPreview),
     vscode.commands.registerCommand('geoanim.restart', restart),
+    vscode.commands.registerCommand('geoanim.surroundTogether', surroundTogether),
+    vscode.languages.registerCodeActionsProvider('geo', { provideCodeActions }, { providedCodeActionKinds: [vscode.CodeActionKind.RefactorRewrite] }),
     vscode.languages.registerHoverProvider('geo', { provideHover: hover }),
     vscode.languages.registerDefinitionProvider('geo', { provideDefinition: definitionLocation }),
     vscode.languages.registerRenameProvider('geo', { prepareRename, provideRenameEdits }),

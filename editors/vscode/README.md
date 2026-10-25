@@ -28,6 +28,9 @@ mklink /J "%USERPROFILE%\.vscode\extensions\geoanim-geo" "%CD%\editors\vscode"
   Schieberegler) oder hält die Wiedergabe an, springt der Cursor auf dessen `step`-Zeile (beim Startbild an den
   Dateianfang) – nicht, wenn er schon in diesem Schritt steht, und nicht während die Animation läuft. Der Fokus bleibt
   in der Vorschau.
+- **together-Blöcke** (Strg+. oder die Glühbirne): Sind Zeilen markiert, schließt „In together … end einschließen“ sie
+  ein (eine Stufe weiter eingerückt; hinter `together` lässt sich gleich eine Dauer wählen, Esc lässt sie weg). Steht der
+  Cursor in einem together-Block, löst „together-Block auflösen“ ihn auf und rückt die Zeilen wieder aus.
 - **Fortsetzungszeilen:** Enter in einer Zeile mit `info`, `description`, `set name = …` oder in einer `|`-Zeile beginnt
   die nächste Zeile mit `| ` (zweimal Rücktaste, wenn du nicht weiterschreiben willst). Nach `title` und `step` nicht.
 - **Fehler** werden rot unterstrichen und stehen unter „Probleme“, Fehler in eingebundenen Dateien dort. In der
