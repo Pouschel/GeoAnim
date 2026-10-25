@@ -310,9 +310,29 @@
     return { x: toX(values.x) + (values.dx || 0) * unit + (values.sx || 0) * scale, bottom: y + bottom }
   }
 
-  // texts in the picture grow with it, but stay readable in a small one (like the description below it)
+  // texts in the picture grow with it, but stay readable in a small one: the smallest one never below MIN_TEXT_SIZE
+  // pixels, a larger one never below a floor that grows with its size (more gently than the size itself), so that a
+  // larger text always stays the larger one without crowding the small picture. Texts given smaller than
+  // MIN_TEXT_SIZE keep their own size as the floor.
   const MIN_TEXT_SIZE = 12
-  const textSize = points => Math.max(Math.min(points, MIN_TEXT_SIZE), points * unit)
+  let smallestText = MIN_TEXT_SIZE
+  const textSize = points => Math.max(points * unit,
+    points < MIN_TEXT_SIZE ? points : MIN_TEXT_SIZE * Math.sqrt(points / smallestText))
+
+  // the smallest size of a text or label in the picture (at least MIN_TEXT_SIZE)
+  function findSmallestText () {
+    let smallest = Infinity
+    for (const primitive of animation.primitives) {
+      if ((primitive.type === 'text' || primitive.type === 'angle') && primitive.tracks.size) {
+        for (const key of primitive.tracks.size) {
+          if (key[1] >= MIN_TEXT_SIZE) {
+            smallest = Math.min(smallest, key[1])
+          }
+        }
+      }
+    }
+    smallestText = Number.isFinite(smallest) ? smallest : MIN_TEXT_SIZE
+  }
 
   // an arrowhead with its tip at (x, y), pointing in the direction (dx, dy); hidden when not wanted
   function arrowHead (element, name, wanted, x, y, dx, dy, length, color) {
@@ -844,6 +864,7 @@
     for (const item of items) {
       itemsById[item.primitive.id] = item
     }
+    findSmallestText()
     // the ghosts above everything; drawn only while highlighted
     ghostLayer = create('g', { id: 'ghosts', 'pointer-events': 'none' }, scene)
     inspected = {}
