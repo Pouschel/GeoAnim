@@ -12,6 +12,12 @@
     "Programming Languages"
   ],
   "contributes": {
+    "configurationDefaults": {
+      "[geo]": {
+        "editor.tabSize": 2,
+        "editor.insertSpaces": true
+      }
+    },
     "languages": [
       {
         "id": "geo",
