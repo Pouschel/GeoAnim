@@ -105,10 +105,10 @@ public static class Keywords
         var steps = new List<AnimationStep>();
         foreach (AnimationStep step in animation.Steps)
         {
+            // only the explanation: the description is a heading (also in the list of steps, itself a navigation)
             var linked = new HashSet<string>(StringComparer.Ordinal);
-            string caption = LinkText(step.Caption, pattern, Address, linked);
             string? info = step.Info == null ? null : LinkText(step.Info, pattern, Address, linked);
-            steps.Add(step with { Caption = caption, Info = info });
+            steps.Add(step with { Info = info });
         }
         return animation.WithSteps(steps);
     }

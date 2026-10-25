@@ -922,6 +922,7 @@ public class ScriptTests
             info Der Punkt $Punkt$ und `Punkt`, [Punkte](x.html), Punktsymmetrie, gerade,
             | ein rechter  Winkel und **Gerade**.
             step Noch ein Punkt
+            info Noch ein Punkt
             """);
         var links = new Dictionary<string, string>
         {
@@ -933,10 +934,12 @@ public class ScriptTests
             ["Winkel"] = "x.html",
         };
         AnimationData linked = Keywords.Link(animation, links);
-        Assert.Equal("[Punkte](p.html) auf einer [Geraden](g.html), ein Punkt mehr", linked.Steps[0].Caption);
-        Assert.Equal("Der Punkt $Punkt$ und `Punkt`, [Punkte](x.html), Punktsymmetrie, gerade, ein [rechter  Winkel](w.html) und **Gerade**.",
+        // only in the explanations: the step descriptions are headings
+        Assert.Equal("Punkte auf einer Geraden, ein Punkt mehr", linked.Steps[0].Caption);
+        Assert.Equal("Der [Punkt](p.html) $Punkt$ und `Punkt`, [Punkte](x.html), Punktsymmetrie, gerade, ein [rechter  Winkel](w.html) und **[Gerade](g.html)**.",
             linked.Steps[0].Info);
-        Assert.Equal("Noch ein [Punkt](p.html)", linked.Steps[1].Caption);
+        Assert.Equal("Noch ein Punkt", linked.Steps[1].Caption);
+        Assert.Equal("Noch ein [Punkt](p.html)", linked.Steps[1].Info);
         Assert.Equal("../Basics/10_Punkte.html", Keywords.RelativeAddress("Mehr/a.html", "Basics/10_Punkte.html"));
         Assert.Equal("b%20%282%29.html", Keywords.RelativeAddress("a.html", "b (2).html"));
     }

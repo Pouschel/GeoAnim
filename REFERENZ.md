@@ -45,7 +45,7 @@ Vor dem ersten `step` (außer `keyword`).
 | `grid` | `grid` · `grid n` | Gitter mit Abstand 1 bzw. n |
 | `axes` | `axes` | Koordinatenachsen mit Zahlen |
 | `speed` | `speed n` | Tempo der ganzen Animation (0.5 halb so schnell, 2 doppelt so schnell) |
-| `keyword` | `keyword Begriff, Begriff …` | Schlüsselwörter der Seite für `exportdir`; Begriffe durch Kommas getrennt, ein Begriff aus einem oder mehreren Wörtern, Endungen nach `/`: `Punkt/e/en`, `rechte/r/n Winkel/s/n`; hinter einer `step`-Zeile verweisen sie auf diesen Schritt; mit `|` fortsetzbar |
+| `keyword` | `keyword Begriff, Begriff …` | Schlüsselwörter der Seite für `exportdir` (verlinkt in den `info`-Texten der anderen Seiten, nicht in Schrittbeschreibungen); Begriffe durch Kommas getrennt, ein Begriff aus einem oder mehreren Wörtern, Endungen nach `/`: `Punkt/e/en`, `rechte/r/n Winkel/s/n`; hinter einer `step`-Zeile verweisen sie auf diesen Schritt; mit `|` fortsetzbar |
 
 ## Texte, Vars, Voreinstellungen
 
@@ -239,4 +239,4 @@ Aktionen stehen in einem Schritt und laufen nacheinander. Die Optionen *Ablauf* 
 
 Diese Wörter können keine Namen sein:
 
-`title` `description` `info` `keyword` `view` `background` `grid` `axes` `speed` `var` `default` `include` `input` `output` `use` `draw` `steps` `copy` `set` `step` `point` `segment` `line` `ray` `circle` `polygon` `angle` `text` `number` `length` `degrees` `area` `perimeter` `show` `hide` `all` `highlight` `unhighlight` `keep` `move` `rotate` `reflect` `along` `around` `across` `in` `by` `pause` `together` `end` `midpoint` `intersect` `center` `through` `radius` `at` `to` `on` `x` `y` `below` `gap` `align` `left` `right` `duration` `color` `width` `fill` `opacity` `size` `labelsize` `labelpos` `label` `nolabel` `hidden` `offset` `shift` `arrow` `start` `both` `straight` `back` `front` `keep` `linear` `ease` `easein` `easeout` `easeinout`
+`title` `description` `info` `keyword` `view` `background` `grid` `axes` `speed` `var` `default` `include` `input` `output` `use` `draw` `steps` `copy` `set` `step` `point` `segment` `line` `ray` `circle` `polygon` `angle` `text` `number` `length` `degrees` `area` `perimeter` `show` `hide` `all` `highlight` `unhighlight` `keep` `move` `rotate` `reflect` `along` `around` `across` `in` `by` `pause` `together` `end` `midpoint` `intersect` `center` `through` `radius` `at` `to` `on` `x` `y` `below` `gap` `align` `left` `right` `duration` `color` `width` `fill` `opacity` `size` `labelsize` `labelpos` `label` `nolabel` `hidden` `offset` `shift` `arrow` `start` `both` `straight` `back` `front` `linear` `ease` `easein` `easeout` `easeinout`
