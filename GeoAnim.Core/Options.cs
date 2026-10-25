@@ -11,8 +11,11 @@ public sealed record Options
     /// <summary>Line width in points (1 pt = 1 pixel in a player 1280 pixels wide; scales with the player).</summary>
     public double? Width { get; init; }
 
-    /// <summary>Fill colour of a polygon.</summary>
+    /// <summary>Fill colour of a polygon, angle or (filled) circle; null: its own colour.</summary>
     public Color? Fill { get; init; }
+
+    /// <summary>"fill" given: a circle becomes a disc (polygons and angles are always filled).</summary>
+    public bool Filled { get; init; }
 
     /// <summary>Opacity of the fill of a polygon (0 to 1).</summary>
     public double? FillOpacity { get; init; }

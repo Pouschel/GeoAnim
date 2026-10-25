@@ -189,8 +189,8 @@ Hinter einer Anweisung, in beliebiger Reihenfolge:
 | `shift 0.3 -0.2` | Punkt, Strecke, Strahl, Gerade, Winkel, Text | verschiebt die Beschriftung (bzw. den Text) in Koordinateneinheiten von dort aus, wo sie ohne Angabe stünde: `shift 0 0` ändert nichts. Während der Animation nachjustieren mit `move label A to 0.3 -0.2` |
 | `offset 0.3 -0.5` | Punkt (Beschriftung), Text, Strecke/Strahl/Gerade (Beschriftung), Winkel (Beschriftung) | *veraltet, besser `shift`:* Lage in Koordinateneinheiten relativ zum Punkt bzw. zur Stelle `labelpos`: dort beginnt die Grundlinie des Textes (bei Text an festen Koordinaten und bei Linien: ihre Mitte); ohne `offset` steht die Beschriftung knapp daneben. Beim Winkel verschiebt `offset` die Beschriftung von ihrem Platz auf der Winkelhalbierenden aus (z. B. bei übereinanderliegenden Winkelbögen); der Bogen bleibt, wo er ist |
 | `align left` / `align center` / `align right` | Text | ein Text an Koordinaten beginnt dort, steht mittig darauf (Standard) bzw. endet dort; mehrzeilige Texte sind entsprechend bündig – gut für Erläuterungen, die untereinander erscheinen (mit `below`) |
-| `fill lightblue` | Vieleck | Füllfarbe (Standard: die Linienfarbe) |
-| `opacity 0.3` | Vieleck | Deckkraft der Füllung (Standard 0.2) |
+| `fill lightblue` / `fill` | Vieleck, Winkel, Kreis | Füllfarbe (Standard und bei `fill` allein: die Linienfarbe); ein Kreis wird nur mit `fill` zur gefüllten Kreisscheibe, deren Füllung beim Zeichnen mit dem Zirkelstrich mitwächst |
+| `opacity 0.3` | Vieleck, Winkel, gefüllter Kreis | Deckkraft der Füllung (Standard 0.2) |
 | `hidden` | Objekte | nur definieren, nicht zeigen |
 | `duration 1200` | Objekte, `show`, `hide`, `move` | Dauer in Millisekunden |
 | `linear`, `ease` (= `easeinout`), `easein`, `easeout` | Objekte, `show`, `hide`, `move` | Verlauf der Animation |

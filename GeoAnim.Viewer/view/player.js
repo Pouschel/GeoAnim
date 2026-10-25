@@ -180,6 +180,23 @@
       element.setAttribute('stroke', v.color)
       element.setAttribute('stroke-width', v.width * unit)
     },
+    // a filled circle: a sector from the centre while it is drawn, then the whole disc
+    disc (element, v) {
+      const cx = toX(v.cx)
+      const cy = toY(v.cy)
+      const r = v.r * scale
+      let d = ''
+      if (r > 0 && v.sweep >= 359.99) {
+        d = `M ${cx + r} ${cy} A ${r} ${r} 0 1 0 ${cx - r} ${cy} A ${r} ${r} 0 1 0 ${cx + r} ${cy} Z`
+      } else if (r > 0 && v.sweep > 0.01) {
+        const arc = arcPath(v.cx, v.cy, v.r, v.start, v.sweep)
+        d = `M ${cx} ${cy} L ${arc.slice(1)} Z`
+      }
+      element.setAttribute('d', d)
+      element.setAttribute('stroke', 'none')
+      element.setAttribute('fill', v.fill)
+      element.setAttribute('fill-opacity', v.fillOpacity)
+    },
     polygon (element, v) {
       const points = []
       for (let i = 0; i + 1 < v.points.length; i += 2) {
@@ -352,7 +369,7 @@
     element[name].setAttribute('fill', color)
   }
 
-  const TAGS = { dot: 'circle', line: 'g', arc: 'path', polygon: 'polygon', text: 'g', angle: 'g' }
+  const TAGS = { dot: 'circle', line: 'g', arc: 'path', disc: 'path', polygon: 'polygon', text: 'g', angle: 'g' }
 
   // ------------------------------------------------------------------ angles
 

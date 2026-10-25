@@ -542,6 +542,7 @@ public static class ScriptCompiler
             "segment" or "ray" => ["color", "width", "label", "labelsize", "labelpos", "offset", "shift", "arrow", "stacking", "halo", "draw"],
             "line" => ["color", "width", "label", "labelsize", "labelpos", "offset", "shift", "stacking", "halo", "draw"],
             "angle" => ["color", "width", "fill", "opacity", "label", "labelsize", "radius", "offset", "shift", "arrow", "stacking", "halo", "draw"],
+            "circle" => ["color", "width", "fill", "opacity", "stacking", "draw"],
             _ => ["color", "width", "stacking", "draw"],
         };
 
@@ -560,6 +561,7 @@ public static class ScriptCompiler
                     Color = caller.Color ?? own.Color,
                     Width = caller.Width ?? own.Width,
                     Fill = caller.Fill ?? own.Fill,
+                    Filled = caller.Filled || own.Filled,
                     FillOpacity = caller.FillOpacity ?? own.FillOpacity,
                     Size = caller.Size ?? own.Size,
                     LabelSize = caller.LabelSize ?? own.LabelSize,
@@ -919,7 +921,7 @@ public static class ScriptCompiler
                     "duration" => options with { Duration = (double)option.Value! },
                     "color" => options with { Color = (Color)option.Value! },
                     "width" => options with { Width = (double)option.Value! },
-                    "fill" => options with { Fill = (Color)option.Value! },
+                    "fill" => options with { Fill = (Color?)option.Value, Filled = true },
                     "opacity" => options with { FillOpacity = (double)option.Value! },
                     "size" => options with { Size = (double)option.Value! },
                     "labelsize" => options with { LabelSize = (double)option.Value! },

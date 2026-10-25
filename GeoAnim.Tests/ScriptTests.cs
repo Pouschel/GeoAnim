@@ -859,6 +859,27 @@ public class ScriptTests
     }
 
     [Fact]
+    public void FillMakesACircleADisc()
+    {
+        AnimationData animation = ScriptCompiler.Compile("""
+            point M = 0 0
+            point P = 2 0
+            circle k = center M through P
+            circle s = center M radius 1 color red fill opacity 0.4
+            circle t = center M radius 3 fill lightblue
+            polygon d = M P M fill
+            """);
+        JsonElement[] primitives = JsonDocument.Parse(animation.ToJson()).RootElement.GetProperty("primitives").EnumerateArray().ToArray();
+        JsonElement[] discs = primitives.Where(p => p.GetProperty("type").GetString() == "disc").ToArray();
+        // only the circles with "fill"; with the fills of polygons (layer 10); "fill" alone: the circle's own colour
+        Assert.Equal(2, discs.Length);
+        Assert.All(discs, d => Assert.Equal(10, d.GetProperty("layer").GetInt32()));
+        Assert.Equal(("#d32f2f", 0.4), (discs[0].GetProperty("tracks").GetProperty("fill")[0][1].GetString(), discs[0].GetProperty("tracks").GetProperty("fillOpacity")[0][1].GetDouble()));
+        Assert.Equal(0.2, discs[1].GetProperty("tracks").GetProperty("fillOpacity")[0][1].GetDouble());
+        Assert.Equal(3, primitives.Count(p => p.GetProperty("type").GetString() == "arc"));
+    }
+
+    [Fact]
     public void ShiftMovesLabelsFromTheirDefaultPlace()
     {
         AnimationData animation = ScriptCompiler.Compile("""

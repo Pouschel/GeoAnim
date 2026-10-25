@@ -857,7 +857,9 @@ internal sealed class Parser
                 "labelsize" => ExpectPositive("the label size"),
                 "labelpos" => ExpectNumber("the position of the label (0 at A, 1 at B)"),
                 "opacity" => ExpectOpacity(),
-                "color" or "fill" => ExpectColor(),
+                "color" => ExpectColor(),
+                // "fill" alone: in the object's own colour
+                "fill" => Current.Kind == TokenKind.Color || (Current.Kind == TokenKind.Name && Color.Names.ContainsKey(Current.Text)) ? ExpectColor() : null,
                 "label" => ExpectText("the label"),
                 "offset" or "shift" => ParseCoordinates(),
                 "align" => Current.Kind == TokenKind.Name && Current.Text is "left" or "center" or "right"

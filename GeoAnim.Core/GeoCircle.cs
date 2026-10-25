@@ -6,6 +6,7 @@ public sealed class GeoCircle : GeoObject
     private readonly GeoPoint? through;
     private readonly double fixedRadius;
     private Primitive? arc;
+    private Primitive? disc;
 
     internal GeoCircle(string name, GeoPoint center, GeoPoint through, Options options)
         : base(name, options, center, through)
@@ -58,7 +59,26 @@ public sealed class GeoCircle : GeoObject
         if (arc == null)
         {
             IsDrawn = true;
+            // "fill": a disc below, with the fills of polygons and angles; it grows with the compass stroke
+            if (Options.Filled)
+            {
+                disc = context.Scene.Create("disc", Layers.Of(Options, Layers.Polygon));
+            }
             arc = context.Scene.Create("arc", Layers.Of(Options, Layers.Curve));
+        }
+        if (disc != null)
+        {
+            disc.Animate("opacity", span, Visibility);
+            if (IsDefined)
+            {
+                disc.Animate("cx", span, Center.Position.X);
+                disc.Animate("cy", span, Center.Position.Y);
+                disc.Animate("r", span, Radius);
+                disc.Animate("start", span, StartAngle);
+            }
+            disc.Animate("sweep", span, 360 * Reveal);
+            disc.Animate("fill", span, FillOr(Defaults.LineColor).ToHex());
+            disc.Animate("fillOpacity", span, FillOpacityOr(Defaults.FillOpacity));
         }
         arc.Animate("opacity", span, Visibility);
         if (IsDefined)

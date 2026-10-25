@@ -101,7 +101,7 @@ Alle Objekte: `art name = Definition Optionen…`. Vor dem ersten `step` gehöre
 | `circle k = center M radius n` | um M mit festem Radius |
 | `circle k = use datei A B …` | Ergebnis einer anderen Datei |
 
-**Optionen:** `color` `width`, *Zeichnen*.
+**Optionen:** `color` `width`, `fill` (gefüllte Kreisscheibe: `fill lightblue` oder `fill` allein in der Linienfarbe) mit `opacity` (Standard 0,2), *Zeichnen*. Die Füllung wächst beim Zeichnen mit dem Zirkelstrich mit und liegt bei den Flächen der Vielecke und Winkel.
 
 ### `polygon` – Vieleck
 
@@ -195,8 +195,8 @@ Aktionen stehen in einem Schritt und laufen nacheinander. Die Optionen *Ablauf* 
 | `color` | Farbe | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | |
 | `width` | n (pt) | | ✓ | ✓ | ✓ | ✓ | ✓ | | |
 | `size` | n (pt): Radius bzw. Schriftgröße | ✓ | | | | | | ✓ | |
-| `fill` | Farbe | | | | | ✓ | ✓ | | |
-| `opacity` | 0 … 1 (Füllung) | | | | | ✓ | ✓ | | |
+| `fill` | Farbe oder – (eigene Farbe) | | | | ✓ | ✓ | ✓ | | |
+| `opacity` | 0 … 1 (Füllung) | | | | ✓ | ✓ | ✓ | | |
 | `label` | `"…"` oder `set`-Name | ✓ | ✓ | ✓ | | | ✓ | | |
 | `nolabel` | – | ✓ | ✓ | ✓ | | | ✓ | | |
 | `labelsize` | n (pt) | ✓ | ✓ | ✓ | | | ✓ | | |
