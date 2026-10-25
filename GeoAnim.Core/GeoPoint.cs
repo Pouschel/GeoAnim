@@ -107,8 +107,6 @@ public sealed class GeoPoint : GeoObject
         if (label == null && LabelUsed)
         {
             label = context.Scene.Create("text", Layers.Label);
-            label.Animate("text", span, LabelText);
-            label.Animate("anchor", span, "start");
         }
         Color color = ColorOr(Defaults.PointColor);
         double visibility = Visibility;
@@ -122,24 +120,32 @@ public sealed class GeoPoint : GeoObject
         dot.Animate("color", span, color.ToHex());
         if (label != null)
         {
-            // an offset is in coordinates; the default distance is in points
-            Vec offset = Options.Offset ?? new Vec(0, 0);
-            Vec distance = Options.Offset == null ? Defaults.LabelOffset : new Vec(0, 0);
+            WriteLabel(label, span);
             label.Animate("opacity", span, visibility * Reveal * LabelOpacity);
-            if (IsDefined)
-            {
-                label.Animate("x", span, position.X + offset.X);
-                label.Animate("y", span, position.Y + offset.Y);
-            }
-            label.Animate("dx", span, distance.X);
-            label.Animate("dy", span, distance.Y);
-            label.Animate("size", span, Options.LabelSize ?? Defaults.LabelSize);
             if (Options.Halo)
             {
                 label.Animate("halo", span, 1.0);
             }
             label.Animate("color", span, color.ToHex());
-            RenderShift(label, span);
         }
+    }
+
+    /// <summary>The label's text and place (also for the ghost of a point in an editor, whose label may not be shown yet).</summary>
+    internal void WriteLabel(Primitive label, Span span)
+    {
+        label.Animate("text", span, LabelText);
+        label.Animate("anchor", span, "start");
+        // an offset is in coordinates; the default distance is in points
+        Vec offset = Options.Offset ?? new Vec(0, 0);
+        Vec distance = Options.Offset == null ? Defaults.LabelOffset : new Vec(0, 0);
+        if (IsDefined)
+        {
+            label.Animate("x", span, position.X + offset.X);
+            label.Animate("y", span, position.Y + offset.Y);
+        }
+        label.Animate("dx", span, distance.X);
+        label.Animate("dy", span, distance.Y);
+        label.Animate("size", span, Options.LabelSize ?? Defaults.LabelSize);
+        RenderShift(label, span);
     }
 }

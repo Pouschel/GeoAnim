@@ -105,13 +105,20 @@ public sealed class GeoStraight : GeoObject
     // named counterclockwise), with an offset at that offset
     private void RenderLabel(RenderContext context, Span span, bool visible)
     {
-        double size = Options.LabelSize ?? Defaults.LabelSize;
-        if (label == null)
-        {
-            label = context.Scene.Create("text", Layers.Label);
-            label.Animate("text", span, Options.Label!);
-        }
+        label ??= context.Scene.Create("text", Layers.Label);
+        WriteLabel(label, span);
         label.Animate("opacity", span, visible ? Opacity * Reveal * LabelOpacity : 0);
+        if (Options.Halo)
+        {
+            label.Animate("halo", span, 1.0);
+        }
+        label.Animate("color", span, ColorOr(Defaults.LineColor).ToHex());
+    }
+
+    /// <summary>The label's text and place (also for the ghost in an editor, whose label may not be shown yet).</summary>
+    internal void WriteLabel(Primitive label, Span span)
+    {
+        label.Animate("text", span, Options.Label!);
         if (IsDefined)
         {
             Vec at = A.Position + (Options.LabelPosition ?? 0.5) * Direction;
@@ -132,12 +139,7 @@ public sealed class GeoStraight : GeoObject
             label.Animate("y", span, at.Y);
             label.Animate("anchor", span, "middle");
         }
-        label.Animate("size", span, size);
-        if (Options.Halo)
-        {
-            label.Animate("halo", span, 1.0);
-        }
-        label.Animate("color", span, ColorOr(Defaults.LineColor).ToHex());
+        label.Animate("size", span, Options.LabelSize ?? Defaults.LabelSize);
         RenderShift(label, span);
     }
 }

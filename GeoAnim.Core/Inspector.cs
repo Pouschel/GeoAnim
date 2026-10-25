@@ -8,9 +8,12 @@ namespace GeoAnim;
 internal sealed class Inspector
 {
     private readonly Dictionary<GeoObject, Primitive> ghosts = new();
+    private readonly Dictionary<GeoObject, Primitive> labels = new();
     private readonly List<(GeoObject Item, Primitive Ghost)> order = new();
 
-    public IReadOnlyList<(GeoObject Item, Primitive Ghost)> Ghosts => order;
+    /// <summary>The ghosts in the order of the objects, each with the ghost of its label (or null).</summary>
+    public IEnumerable<(GeoObject Item, Primitive Ghost, Primitive? Label)> Ghosts =>
+        order.Select(o => (o.Item, o.Ghost, labels.GetValueOrDefault(o.Item)));
 
     /// <summary>Writes the object's state into its ghost, changing during <paramref name="span"/>.</summary>
     public void Record(GeoObject item, ViewWindow view, Span span)
@@ -51,6 +54,16 @@ internal sealed class Inspector
                 }
                 break;
             case GeoArc arc:
+                if (arc.IsSector)
+                {
+                    ghost.Animate("sector", span, 1.0);
+                }
+                if (arc.HasLabel)
+                {
+                    ghost.Animate("text", span, arc.Options.Label!);
+                    ghost.Animate("size", span, arc.Options.LabelSize ?? Defaults.LabelSize);
+                    arc.RenderShift(ghost, span);
+                }
                 if (defined)
                 {
                     ghost.Animate("cx", span, arc.Circle.Center.Position.X);
@@ -75,7 +88,34 @@ internal sealed class Inspector
                     ghost.Animate("sweep", span, angle.Degrees);
                 }
                 ghost.Animate("radius", span, angle.Options.Radius ?? 0);
+                if (angle.HasLabel)
+                {
+                    // the label where it will stand, also while it is hidden
+                    ghost.Animate("text", span, angle.Options.Label!);
+                    ghost.Animate("size", span, angle.Options.LabelSize ?? Defaults.LabelSize);
+                    angle.RenderShift(ghost, span, "ox", "oy");
+                }
                 break;
+            case GeoText { Above: null } text:
+                text.WriteGhost(ghost, span);
+                break;
+        }
+        // the label of a point or line where it will stand (in the ghost's colour), also while it is hidden
+        if (item is GeoPoint or GeoStraight { HasLabel: true })
+        {
+            if (!labels.TryGetValue(item, out Primitive? label))
+            {
+                labels[item] = label = new Primitive(-ghost.Id, "text", 0);
+            }
+            if (item is GeoPoint p)
+            {
+                p.WriteLabel(label, span);
+            }
+            else
+            {
+                ((GeoStraight)item).WriteLabel(label, span);
+            }
+            label.Animate("opacity", span, defined ? 1.0 : 0.0);
         }
         ghost.Animate("opacity", span, defined ? 1.0 : 0.0);
         ghost.Animate("info", span, Describe(item));
@@ -87,7 +127,8 @@ internal sealed class Inspector
         GeoPoint => "dot",
         GeoStraight => "line",
         GeoCircle => "arc",
-        GeoArc => "arc",
+        GeoArc => "part",
+        GeoText { Above: null } => "text",
         GeoPolygon => "polygon",
         GeoAngle => "angle",
         _ => "info",

@@ -355,6 +355,12 @@ public sealed class CliTests : IDisposable
         Assert.Contains("Farbe red", inspect[1].GetProperty("tracks").GetProperty("info")[0][1].GetString());
         Assert.DoesNotContain("\"inspect\"", GeoAnim.Script.ScriptCompiler.Compile("point A = 1 1").ToJson());
 
+        // a hidden point: its label where it will stand (with its shift), and the formula for it
+        JsonElement hidden = Ask(new { id = 12, type = "compile", file = main, text = "point A = 1 1 hidden shift 0.5 0" }).GetProperty("animation");
+        JsonElement label = hidden.GetProperty("inspect")[0].GetProperty("label").GetProperty("tracks");
+        Assert.Equal(("$A$", 0.5), (label.GetProperty("text")[0][1].GetString(), label.GetProperty("sx")[0][1].GetDouble()));
+        Assert.True(hidden.GetProperty("math").TryGetProperty("A", out _));
+
         string html = Ask(new { id = 10, type = "player" }).GetProperty("html").GetString()!;
         Assert.Contains("window.GEO_EMBEDDED = true;", html);
         Assert.DoesNotContain("GEO_ANIMATION =", html);

@@ -95,6 +95,24 @@ public sealed class GeoText : GeoObject
         WriteLayout(span);
     }
 
+    /// <summary>For the ghost in an editor (a text at coordinates or at a point): its text and place.</summary>
+    internal void WriteGhost(Primitive ghost, Span span)
+    {
+        ghost.Animate("text", span, Content);
+        ghost.Animate("anchor", span, Alignment switch { TextAlign.Left => "start", TextAlign.Right => "end", _ => "middle" });
+        ghost.Animate("size", span, Options.Size ?? Defaults.TextSize);
+        RenderShift(ghost, span);
+        Vec offset = Options.Offset ?? new Vec(0, 0);
+        Vec distance = Options.Offset == null && OwnPosition == null ? Defaults.LabelOffset : new Vec(0, 0);
+        if (IsDefined)
+        {
+            ghost.Animate("x", span, Position.X + offset.X);
+            ghost.Animate("y", span, Position.Y + offset.Y);
+        }
+        ghost.Animate("dx", span, distance.X);
+        ghost.Animate("dy", span, distance.Y);
+    }
+
     private void WriteLayout(Span span)
     {
         // an offset is in coordinates; the default distance from a point is in points

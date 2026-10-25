@@ -51,7 +51,7 @@ mklink /J "%USERPROFILE%\.vscode\extensions\geoanim-geo" "%CD%\editors\vscode"
   Vorschaubild (Koordinaten, bei Strecken die Länge, bei Kreisen Mittelpunkt und Radius, bei Winkeln die Größe), ob es
   sichtbar, ausgeblendet oder gar nicht gezeichnet ist (`hidden`), und seine Farbe – bzw. dass es dort noch nicht
   definiert ist. Zugleich erscheint das Objekt in der Vorschau als orange gestrichelter „Geist“, auch wenn es versteckt
-  ist (Hilfspunkte, Hilfsgeraden): für ein paar Sekunden nach dem Tooltip, und solange der Cursor auf seinem Namen steht.
+  ist (Hilfspunkte, Hilfsgeraden): für ein paar Sekunden nach dem Tooltip, und solange der Cursor auf seinem Namen steht. Seine Beschriftung erscheint dabei mit, an der Stelle, an der sie stehen wird (mit `shift`), auch wenn Objekt oder Beschriftung noch verborgen sind – so lässt sich eine Beschriftung platzieren, bevor sie zu sehen ist. Ebenso erscheinen versteckte Texte (außer Texten unter anderen, `below`).
   Der Geist folgt der Animation, auch beim Abspielen.
 - **Umbenennen** (F2): benennt ein Objekt, eine Var, einen Text (`set`) oder eine Zahl in der ganzen Datei um – überall,
   wo der Name als Name steht (in Anweisungen, als Var unter den Optionen, als Text bei `text`/`label`, im Platzhalter

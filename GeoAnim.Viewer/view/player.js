@@ -970,51 +970,71 @@
     }
     const wanted = new Set(highlighted.map(name => inspected[name]).filter(entry => entry && entry.type !== 'info'))
     for (const entry of Object.values(inspected)) {
-      if (entry.ghost && !wanted.has(entry)) {
-        entry.ghost.style.display = 'none'
+      if (!wanted.has(entry)) {
+        for (const element of [entry.ghost, entry.labelGhost]) {
+          if (element) {
+            element.style.display = 'none'
+          }
+        }
       }
     }
-    for (const entry of wanted) {
+    // the values of a ghost's tracks now, or null where it does not exist (yet)
+    const valuesOf = tracks => {
       const values = {}
-      let exists = true
-      for (const name in entry.tracks) {
+      for (const name in tracks) {
         if (name === 'info') {
           continue
         }
-        const value = valueAt(entry.tracks[name], time)
+        const value = valueAt(tracks[name], time)
         if (value === undefined) {
-          exists = false
-          break
+          return null
         }
         values[name] = value
       }
+      return values.opacity > 0.5 ? values : null
+    }
+    for (const entry of wanted) {
+      const values = valuesOf(entry.tracks)
       if (!entry.ghost) {
         entry.ghost = create(TAGS[entry.type], { fill: 'none', 'stroke-linecap': 'round' }, ghostLayer)
       }
       const ghost = entry.ghost
-      if (!exists || !(values.opacity > 0.5)) {
-        ghost.style.display = 'none'
-        continue
+      ghost.style.display = values ? '' : 'none'
+      if (values) {
+        Object.assign(values, { color: GHOST_COLOR, width: 2.5, fill: GHOST_COLOR, fillOpacity: 0.12, reveal: 1, labelOpacity: 1 })
+        values.base = 36
+        values.size = values.size || 24
+        if (entry.type === 'arc' && values.sweep === undefined) {
+          Object.assign(values, { start: 0, sweep: 360 })
+        } else if (entry.type === 'dot') {
+          values.r = 4
+        }
+        RENDERERS[entry.type](ghost, values)
+        ghost.setAttribute('stroke-dasharray', `${7 * unit} ${5 * unit}`)
+        if (entry.type === 'dot') {
+          // a ring around the point
+          ghost.setAttribute('r', 7 * unit)
+          ghost.setAttribute('fill', 'none')
+          ghost.setAttribute('stroke', GHOST_COLOR)
+          ghost.setAttribute('stroke-width', 2.5 * unit)
+          ghost.setAttribute('stroke-dasharray', `${4 * unit} ${3 * unit}`)
+        }
       }
-      ghost.style.display = ''
-      Object.assign(values, { color: GHOST_COLOR, width: 2.5, fill: GHOST_COLOR, fillOpacity: 0.12, reveal: 1, base: 36, size: 24 })
-      if (entry.type === 'arc' && values.sweep === undefined) {
-        Object.assign(values, { start: 0, sweep: 360 })
-      } else if (entry.type === 'dot') {
-        values.r = 4
-      }
-      RENDERERS[entry.type](ghost, values)
-      ghost.setAttribute('stroke-dasharray', `${7 * unit} ${5 * unit}`)
-      if (entry.type === 'dot') {
-        // a ring around the point
-        ghost.setAttribute('r', 7 * unit)
-        ghost.setAttribute('fill', 'none')
-        ghost.setAttribute('stroke', GHOST_COLOR)
-        ghost.setAttribute('stroke-width', 2.5 * unit)
-        ghost.setAttribute('stroke-dasharray', `${4 * unit} ${3 * unit}`)
+      // the label where it will stand, also while it is hidden
+      if (entry.label) {
+        const label = valuesOf(entry.label.tracks)
+        if (!entry.labelGhost) {
+          entry.labelGhost = create('g', {}, ghostLayer)
+        }
+        entry.labelGhost.style.display = label ? '' : 'none'
+        if (label) {
+          label.color = GHOST_COLOR
+          RENDERERS.text(entry.labelGhost, label)
+        }
       }
     }
   }
+
 
   // what the editor's tooltip shows about an object now: its values (Markdown), the step and whether it exists yet
   function describe (name) {

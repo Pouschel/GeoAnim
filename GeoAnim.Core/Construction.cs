@@ -880,7 +880,7 @@ public sealed class Construction
             Description = Description,
             Keywords = keywords.ToList(),
             Inspection = inspector == null ? [] : inspector.Ghosts
-                .Select(g => new InspectedObject(objectsByName.Where(n => n.Value == g.Item).Select(n => n.Key).ToList(), g.Ghost))
+                .Select(g => new InspectedObject(objectsByName.Where(n => n.Value == g.Item).Select(n => n.Key).ToList(), g.Ghost) { Label = g.Label })
                 .Where(g => g.Names.Count > 0)
                 .ToList(),
         };
@@ -892,6 +892,8 @@ public sealed class Construction
         IEnumerable<string> texts = stepList.Select(s => s.Caption)
             .Concat(stepList.Where(s => s.Info != null).Select(s => s.Info!))
             .Concat(scene.Primitives
+                // in an editor also the ghosts' labels (of objects not shown yet)
+                .Concat(inspector == null ? [] : inspector.Ghosts.SelectMany(g => new[] { g.Ghost, g.Label }).OfType<Primitive>())
                 .Where(p => p.Tracks.ContainsKey("text"))
                 .SelectMany(p => p.Tracks["text"].Select(key => (string)key.Value)));
         if (Title != null)
@@ -919,7 +921,11 @@ public sealed class Construction
 }
 
 /// <summary>An object with all its names and its ghost (see <see cref="Construction.Inspect"/>).</summary>
-internal sealed record InspectedObject(IReadOnlyList<string> Names, Primitive Ghost);
+internal sealed record InspectedObject(IReadOnlyList<string> Names, Primitive Ghost)
+{
+    /// <summary>The ghost of its label (a point's or line's), or null.</summary>
+    public Primitive? Label { get; init; }
+}
 
 /// <summary>A word form that links to a page: to its start (step 0) or to the end of a step (1, 2, …).</summary>
 public sealed record PageKeyword(string Form, int Step)

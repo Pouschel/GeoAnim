@@ -188,6 +188,12 @@ public sealed class AnimationData
                     }
                     json.WriteEndArray();
                     WritePrimitive(json, inspected.Ghost);
+                    if (inspected.Label != null)
+                    {
+                        json.WriteStartObject("label");
+                        WritePrimitive(json, inspected.Label);
+                        json.WriteEndObject();
+                    }
                     json.WriteEndObject();
                 }
                 json.WriteEndArray();
