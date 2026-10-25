@@ -32,6 +32,12 @@ mklink /J "%USERPROFILE%\.vscode\extensions\geoanim-geo" "%CD%\editors\vscode"
   die nächste Zeile mit `| ` (zweimal Rücktaste, wenn du nicht weiterschreiben willst). Nach `title` und `step` nicht.
 - **Fehler** werden rot unterstrichen und stehen unter „Probleme“, Fehler in eingebundenen Dateien dort. In der
   Vorschau erscheint der Fehler über der letzten guten Animation.
+- **Schlüsselwörter eines Buchs:** Gehört das Skript zu einem Buch (ein Ordner darüber hat eine `index.yaml`), setzt die
+  Vorschau die Links der Schlüsselwörter wie `geoanim exportdir` – so sieht man schon beim Schreiben, welche Wörter
+  verlinkt werden. Ein Klick öffnet das Skript mit dem Schlüsselwort, bei einem Schlüsselwort hinter einer `step`-Zeile
+  steht der Cursor dann auf diesem Schritt. Die anderen Skripte werden dafür nur gelesen, nicht übersetzt (es zählt ihr
+  gespeicherter Stand). Hat ein anderes Skript dasselbe Schlüsselwort, ist die `keyword`-Zeile gelb unterstrichen, mit der
+  anderen Stelle im Hinweis; wie beim Export behält es das Skript, das im Buch zuerst kommt.
 - **Links** in Titel und Beschreibung: `[Satz 1](Prop1.html)` öffnet `Prop1.geo` im Editor, Links auf Webseiten den
   Browser.
 - **Tooltip und Definition:** Fährt die Maus über den Namen einer Var, eines Textes (`set`) oder eines Objekts, zeigt

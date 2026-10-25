@@ -57,6 +57,42 @@ public static class ScriptCompiler
         }).ToList());
     }
 
+    /// <summary>
+    /// The keywords of a script without compiling it (fast: no formulas, no drawing), for an editor that links them like
+    /// "geoanim exportdir": each form with its step (counted from the script's "step" lines; steps that a used file adds
+    /// with "use … steps" are not counted), its term and its place. Throws <see cref="ScriptError"/> for a script that
+    /// cannot be read.
+    /// </summary>
+    public static List<PageKeyword> KeywordsOf(ScriptSource source)
+    {
+        var keywords = new List<PageKeyword>();
+        int steps = 0;
+        try
+        {
+            foreach (Statement statement in Parser.Parse(source.Text))
+            {
+                if (statement is StepStatement)
+                {
+                    steps++;
+                }
+                else if (statement is KeywordStatement s)
+                {
+                    (string? file, int line) = source.OriginOf(s.Line);
+                    foreach ((string term, List<string> forms) in GeoAnim.Keywords.ParseTerms(s.Text))
+                    {
+                        keywords.AddRange(forms.Where(form => !keywords.Any(k => k.Form == form))
+                            .Select(form => new PageKeyword(form, steps) { Term = term, File = file, Line = line }));
+                    }
+                }
+            }
+        }
+        catch (GeoException e)
+        {
+            throw new ScriptError(1, 1, e.Message);
+        }
+        return keywords;
+    }
+
     /// <summary>The words that cannot be names (for an editor: a new name must not be one).</summary>
     public static IReadOnlyCollection<string> Keywords => Parser.Keywords;
 

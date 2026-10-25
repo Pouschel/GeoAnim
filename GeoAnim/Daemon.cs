@@ -11,7 +11,8 @@ namespace GeoAnim.Cli;
 /// <list type="bullet">
 /// <item>{"id": 1, "type": "compile", "file": "C:\\…\\a.geo", "text": "…"} → {"id": 1, "animation": {…} (with "inspect": every
 /// object over time, for tooltips and ghosts in the preview) or null,
-/// "errors": [{"file": "C:\\…", "line": 3, "column": 7, "message": "…"}], "files": ["C:\\…", …], "definitions":
+/// "errors": [{"file": "C:\\…", "line": 3, "column": 7, "message": "…"}], "warnings": […] (the same; e.g. a keyword of two
+/// scripts of a book), "files": ["C:\\…", …], "definitions":
 /// [{"name": "k", "kind": "var" | "set" | "object", "text": "…", "file": "C:\\…", "line": 4, "column": 5}, …],
 /// "references": [{"name": "k", "file": "C:\\…", "line": 4, "column": 5}, …] (every place a name stands)} – the
 /// text as if it were the file (unsaved changes; includes and uses relative to its folder).</item>
@@ -73,10 +74,17 @@ internal static class Daemon
         ScriptSource? source = null;
         string? animation = null;
         var errors = new List<(string? File, int Line, int Column, string Message)>();
+        var warnings = new List<(string? File, int Line, string Message)>();
         try
         {
             source = Path.IsPathRooted(file) ? ScriptSource.FromFile(file, text) : ScriptSource.FromText(text);
-            animation = ScriptCompiler.Compile(source, inspect: true).ToJson();
+            AnimationData compiled = ScriptCompiler.Compile(source, inspect: true);
+            // a script in a book: the keyword links of the export, to the other scripts
+            if (Path.IsPathRooted(file) && BookKeywords.RootOf(file) is { } root)
+            {
+                compiled = BookKeywords.Link(root, file, source, compiled, warnings);
+            }
+            animation = compiled.ToJson();
         }
         catch (ScriptError e)
         {
@@ -105,6 +113,17 @@ internal static class Daemon
                 json.WriteString("file", errorFile);
                 json.WriteNumber("line", line);
                 json.WriteNumber("column", column);
+                json.WriteString("message", message);
+                json.WriteEndObject();
+            }
+            json.WriteEndArray();
+            json.WriteStartArray("warnings");
+            foreach ((string? warningFile, int line, string message) in warnings)
+            {
+                json.WriteStartObject();
+                json.WriteString("file", warningFile ?? (Path.IsPathRooted(file) ? Path.GetFullPath(file) : null));
+                json.WriteNumber("line", line);
+                json.WriteNumber("column", 1);
                 json.WriteString("message", message);
                 json.WriteEndObject();
             }

@@ -135,11 +135,7 @@ internal static partial class Program
         string root = Path.GetFullPath(folder);
         string target = outputFolder == null ? root : Path.GetFullPath(outputFolder);
         // the scripts in book order: files and subfolders of a folder together by their numbers (by value)
-        List<string> files = Directory.EnumerateFiles(root, "*.geo", SearchOption.AllDirectories)
-            .Select(file => Path.GetRelativePath(root, file).Replace('\\', '/'))
-            .Where(relative => !relative.Split('/').Any(part => part.StartsWith('_')))
-            .Order(BookOrder.Instance)
-            .ToList();
+        List<string> files = BookKeywords.Scripts(root);
         int failed = 0;
         int conflicts = 0;
         var progress = new Progress(files.Count);

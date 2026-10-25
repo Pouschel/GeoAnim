@@ -275,21 +275,24 @@ async function compile (document) {
   }
   lastResults.set(document.uri.toString(), result)
   rememberDefinitions(document, result)
-  report(document, result.errors)
+  report(document, result.errors, result.warnings || [])
   if (document === previewDocument) {
     // while writing: the animation shows the end of the step the cursor is in (its end may have moved)
     sendResult(result, true, cursorStep(document))
   }
 }
 
-// errors as red underlines (and in the problems view), also in included files
-function report (document, errors) {
+// errors as red underlines (and in the problems view), also in included files; warnings (e.g. a keyword of two scripts
+// of a book) yellow
+function report (document, errors, warnings = []) {
   const key = document.uri.toString()
   for (const uri of reported.get(key) || []) {
     diagnostics.delete(uri)
   }
   const byFile = new Map()
-  for (const error of errors) {
+  const all = errors.map(error => [error, vscode.DiagnosticSeverity.Error])
+    .concat(warnings.map(warning => [warning, vscode.DiagnosticSeverity.Warning]))
+  for (const [error, severity] of all) {
     const uri = error.file ? vscode.Uri.file(error.file) : document.uri
     const line = Math.max(0, error.line - 1)
     const column = Math.max(0, error.column - 1)
@@ -298,7 +301,7 @@ function report (document, errors) {
     if (open && line < open.lineCount) {
       range = open.getWordRangeAtPosition(new vscode.Position(line, column), /[^\s]+/) || new vscode.Range(line, column, line, open.lineAt(line).text.length)
     }
-    const diagnostic = new vscode.Diagnostic(range, error.message, vscode.DiagnosticSeverity.Error)
+    const diagnostic = new vscode.Diagnostic(range, error.message, severity)
     diagnostic.source = 'GeoAnim'
     const list = byFile.get(uri.toString()) || { uri, items: [] }
     list.items.push(diagnostic)
@@ -594,6 +597,8 @@ async function openLink (href) {
     return
   }
   const target = path.resolve(path.dirname(previewDocument.uri.fsPath), decodeURIComponent(href.split(/[?#]/)[0]))
+  // a link to a step ("Strecken.geo#2", as the keyword links of a book): the cursor goes to its "step" line
+  const step = /#(\d+)$/.exec(href)
   const script = target.replace(/\.html?$/i, '.geo')
   if (!fs.existsSync(script)) {
     vscode.window.showInformationMessage(`GeoAnim: Zu ${href} gibt es kein Skript (gesucht: ${script}).`)
@@ -607,7 +612,18 @@ async function openLink (href) {
   if (!column || column === previewColumn) {
     column = previewColumn === vscode.ViewColumn.One ? vscode.ViewColumn.Two : vscode.ViewColumn.One
   }
-  await vscode.window.showTextDocument(document, { viewColumn: column, preview: false })
+  const editor = await vscode.window.showTextDocument(document, { viewColumn: column, preview: false })
+  if (step && Number(step[1]) > 0) {
+    for (let i = 0, count = 0; i < document.lineCount; i++) {
+      if (/^\s*step\b/.test(document.lineAt(i).text) && ++count === Number(step[1])) {
+        const line = document.lineAt(i)
+        const position = new vscode.Position(i, line.firstNonWhitespaceCharacterIndex)
+        editor.selection = new vscode.Selection(position, position)
+        editor.revealRange(line.range, vscode.TextEditorRevealType.InCenterIfOutsideViewport)
+        break
+      }
+    }
+  }
   // the preview follows the newly opened script (onDidChangeActiveTextEditor)
 }
 

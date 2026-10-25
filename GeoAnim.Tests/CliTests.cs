@@ -245,6 +245,34 @@ public sealed class CliTests : IDisposable
     }
 
     [Fact]
+    public void DaemonLinksKeywordsOfTheBook()
+    {
+        Directory.CreateDirectory(Path.Combine(folder, "Basics"));
+        Write("index.yaml", "title: Buch");
+        Write(Path.Combine("Basics", "10_Punkte.geo"), "keyword Punkt/e\npoint A = 1 1\nstep Ein Punkt");
+        Write(Path.Combine("Basics", "20_Strecken.geo"), "point A = 1 1\nstep a\nstep b\nkeyword Endpunkt/e");
+        Write("_Hilfe.geo", "keyword Hilfe");
+        string main = Path.Combine(folder, "30_Dreieck.geo");
+        JsonElement Ask(string text) => JsonDocument.Parse(Daemon.Handle(JsonSerializer.Serialize(new { id = 1, type = "compile", file = main, text })))
+            .RootElement;
+
+        // the unsaved text counts; links go to the scripts (a click opens them), to a step with #; no link to "_" files
+        JsonElement answer = Ask("keyword Dreieck\npoint A = 1 1\nstep Punkte\ninfo Punkte, Endpunkte, Hilfe und ein Dreieck");
+        Assert.Equal("[Punkte](Basics/10_Punkte.geo), [Endpunkte](Basics/20_Strecken.geo#2), Hilfe und ein Dreieck",
+            answer.GetProperty("animation").GetProperty("steps")[0].GetProperty("info").GetString());
+        Assert.Equal(0, answer.GetProperty("warnings").GetArrayLength());
+
+        // a keyword of another script: a warning at the keyword line, with the other place
+        JsonElement warning = Ask("point A = 1 1\nkeyword Dreieck, Punkt\nstep a").GetProperty("warnings")[0];
+        Assert.Equal((main, 2), (warning.GetProperty("file").GetString(), warning.GetProperty("line").GetInt32()));
+        Assert.Contains("Basics/10_Punkte.geo:1", warning.GetProperty("message").GetString());
+
+        // outside a book: no links
+        File.Delete(Path.Combine(folder, "index.yaml"));
+        Assert.Equal("Punkte", Ask("point A = 1 1\nstep a\ninfo Punkte").GetProperty("animation").GetProperty("steps")[0].GetProperty("info").GetString());
+    }
+
+    [Fact]
     public async Task LiveScriptNoticesChangedIncludes()
     {
         string styles = Write("styles.geo", "title one");
