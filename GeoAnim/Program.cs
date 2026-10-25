@@ -248,11 +248,6 @@ internal static partial class Program
                     mentions[term] = on = [];
                 }
                 on.Add(page.Page);
-                // a term explained only later in the book: maybe the keyword belongs elsewhere, or the order is not right
-                if (book.IndexOf(term.Page) > book.IndexOf(page.Page) && book.Contains(page.Page))
-                {
-                    progress.Warning($"{page.Source}: \"{term.Term}\" links ahead to {compiled.First(p => p.Page == term.Page).Source}, which comes later in the book.");
-                }
             }
             int position = book.IndexOf(page.Page);
             PageLink? Neighbour(int i) => position >= 0 && i >= 0 && i < book.Count
