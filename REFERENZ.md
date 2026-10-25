@@ -141,6 +141,7 @@ Alle Objekte: `art name = Definition Optionen…`. Vor dem ersten `step` gehöre
 | `number n = area D` · `number n = area k` | Flächeninhalt eines Vielecks bzw. Kreises |
 | `number n = perimeter D` · `number n = perimeter k` | Umfang eines Vielecks bzw. Kreises |
 | `number n = radius k` | Radius eines Kreises |
+| `number n = 5.2` · `number n = a * sqrt(3) / 2` | berechnet aus Zahlen und anderen Zahlen: `+ - * / ^`, Klammern, `sqrt( )`, `abs( )`, `pi`; Leerzeichen beliebig, `#` beginnt einen Kommentar. Nur aus festen Zahlen berechnet: eine **Konstante**, überall verwendbar, wo eine Zahl steht (Koordinaten, Optionen, `move … to`, `rotate … by`, `pause`, …); mit gemessenen Zahlen: folgt ihnen, nur für Texte (`{n}`) |
 
 **Optionen:** keine. Zahlen folgen ihren Objekten; Texte zeigen sie mit `{n}` / `{n:Stellen}` (Standard: Winkel ganze Grad, sonst eine Nachkommastelle; Dezimalkomma).
 

@@ -808,6 +808,57 @@ public class ScriptTests
     }
 
     [Fact]
+    public void ExpressionsFollowTheRulesOfArithmetic()
+    {
+        double Value(string text, double a = 0) => Expression.Parse(text).Evaluate(n => n == "a" ? a : null)!.Value;
+        Assert.Equal(7, Value("1 + 2 * 3"));
+        Assert.Equal(9, Value("(1 + 2) * 3"));
+        Assert.Equal(-4, Value("-2^2"));
+        Assert.Equal(512, Value("2^3^2"));
+        Assert.Equal(0.5, Value("2^-1"));
+        Assert.Equal(1.5, Value("a / 2", 3));
+        Assert.Equal(3 * Math.Sqrt(3), Value("3*sqrt(3)"), 12);
+        Assert.Equal(Math.PI, Value("abs(-pi)"), 12);
+        Assert.Null(Expression.Parse("1 / 0").Evaluate(_ => null));
+        Assert.Null(Expression.Parse("b + 1").Evaluate(_ => null));
+        Assert.Equal([("a", 0), ("b", 4)], Expression.Parse("a + b").Names);
+        Assert.Equal(4, Assert.Throws<ExpressionException>(() => Expression.Parse("2 * (a")).Index - 2);
+    }
+
+    [Fact]
+    public void ConstantsStandForNumbers()
+    {
+        Construction c = ScriptCompiler.CompileConstruction("""
+            number tx = 5.2
+            number ty = 4.5   # a comment
+            number dy = tx - 2 * (ty - 4)
+            point A = tx ty
+            point B = 0 dy size dy
+            text t = "{tx} und {dy}" at tx ty
+            segment s = A B
+            number l = length s
+            number halb = l / 2
+            step s
+              move A to 0 ty duration tx
+              rotate B around A by dy
+            """);
+        Assert.Equal(new Vec(0, 4.5), ((GeoPoint)c.Objects["A"]).Position);
+        var dy = (GeoNumber)c.Objects["dy"];
+        Assert.Equal((4.2, true, 1), (dy.Value, dy.IsConstant, dy.Digits));
+        var halb = (GeoNumber)c.Objects["halb"];
+        Assert.False(halb.IsConstant);
+        Assert.Equal(((GeoNumber)c.Objects["l"]).Value / 2, halb.Value, 12);
+        Assert.Equal(1, halb.Digits);
+        // "duration tx": 5.2 ms for the move, then the rotation
+        Assert.Equal(1005.2, c.Build().Steps[0].End - c.Build().Steps[0].Start, 6);
+        ErrorAt("point A = 0 0\npoint B = 1 0\nsegment s = A B\nnumber l = length s\npoint C = l 0", 5, 11, "follows the drawing");
+        ErrorAt("number a = b + 1", 1, 12, "not a number defined before");
+        ErrorAt("number a = 2 * (3", 1, 18, "\")\" is missing");
+        ErrorAt("number a = 1 / 0", 1, 12, "has no value");
+        ErrorAt("number a = a + 1", 1, 12, "not a number defined before");
+    }
+
+    [Fact]
     public void ShiftMovesLabelsFromTheirDefaultPlace()
     {
         AnimationData animation = ScriptCompiler.Compile("""

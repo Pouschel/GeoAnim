@@ -40,6 +40,9 @@ internal sealed class Parser
 
     // numbers ("number l = …") and the placeholders in texts ("{l}"): every placeholder must name a number of the script
     private readonly HashSet<string> numberNames = new(StringComparer.Ordinal);
+
+    // the numbers with a fixed value ("number tx = 5.2", "number ty = tx / 2"): usable wherever a number is expected
+    private readonly Dictionary<string, double> constants = new(StringComparer.Ordinal);
     private readonly List<(string Name, int Line, int Column)> placeholders = new();
 
     // for an editor: the names defined so far (lines of the source), every place a name stands (also where it is
@@ -157,7 +160,7 @@ internal sealed class Parser
                 statement = new BackgroundStatement(l, c, ExpectColor());
                 break;
             case "grid":
-                statement = new GridStatement(l, c, Current.Kind == TokenKind.Number ? ExpectPositive("the grid distance") : 1);
+                statement = new GridStatement(l, c, IsNumberAt(position) ? ExpectPositive("the grid distance") : 1);
                 break;
             case "axes":
                 statement = new AxesStatement(l, c);
@@ -292,7 +295,7 @@ internal sealed class Parser
                 statement = ParseNumber(word);
                 break;
             case "pause":
-                statement = new PauseStatement(l, c, Current.Kind == TokenKind.Number ? ExpectNonNegative("the pause") : 500);
+                statement = new PauseStatement(l, c, IsNumberAt(position) ? ExpectNonNegative("the pause") : 500);
                 break;
             case "together":
                 if (inTogether)
@@ -467,7 +470,7 @@ internal sealed class Parser
         {
             definition = use;
         }
-        else if (Current.Kind == TokenKind.Number)
+        else if (IsNumberAt(position))
         {
             definition = new CoordinatesDefinition(ParseCoordinates());
         }
@@ -495,6 +498,11 @@ internal sealed class Parser
         }
         else
         {
+            if (Current.Kind == TokenKind.Name && numberNames.Contains(Current.Text))
+            {
+                // a measured number as a coordinate: the message why not
+                ExpectNumber("a coordinate");
+            }
             throw Error(Current, $"Expected coordinates like 2 3, \"midpoint A B\", \"intersect k1 k2\", \"on k at 30\", \"copy P\" or \"use file …\" after \"=\", not {Current.Describe()}.");
         }
         if (names.Count > 1 && definition is not (IntersectDefinition or UseDefinition))
@@ -619,7 +627,7 @@ internal sealed class Parser
             throw Error(Current, $"Expected \"at\" (coordinates or a point) or \"below\" (another text) after the text, not {Current.Describe()}.");
         }
         position++;
-        TextDefinition definition = Current.Kind == TokenKind.Number
+        TextDefinition definition = IsNumberAt(position)
             ? new TextDefinition(content, ParseCoordinates(), null)
             : new TextDefinition(content, null, ExpectName());
         return new DefineStatement(word.Line, word.Column, "text", [name], definition, ParseOptions());
@@ -697,7 +705,7 @@ internal sealed class Parser
         NameRef point = targets[0];
         ExpectWord("to");
         // one number: angle or position on the path; two numbers: coordinates
-        if (Current.Kind == TokenKind.Number && tokens[position + 1].Kind != TokenKind.Number)
+        if (IsNumberAt(position) && !IsNumberAt(position + 1))
         {
             return new MoveStatement(word.Line, word.Column, point, null, ExpectNumber("the target"), ParseOptions());
         }
@@ -707,7 +715,7 @@ internal sealed class Parser
             NameRef targetPoint = ExpectName();
             return new MoveStatement(word.Line, word.Column, point, null, null, ParseOptions(), targetPoint);
         }
-        if (Current.Kind != TokenKind.Number)
+        if (!IsNumberAt(position))
         {
             throw Error(Current, $"Expected coordinates like 2 3, an angle or position like 90, or a point after \"to\", not {Current.Describe()}.");
         }
@@ -719,12 +727,53 @@ internal sealed class Parser
     private NumberStatement ParseNumber(Token word)
     {
         NameRef name = ExpectNewName();
+        if (name.Name == "pi" || Expression.Functions.Contains(name.Name))
+        {
+            throw Error(name, $"{name.Name} is part of calculations (pi, {string.Join(", ", Expression.Functions)}) and cannot be the name of a number.");
+        }
         numberNames.Add(name.Name);
         ExpectSymbol("=");
+        // "number h = a * sqrt(3) / 2": computed from numbers; with constants only, a constant itself
+        if (Current.Kind == TokenKind.Expression)
+        {
+            Token token = Next();
+            // "number l = size A": a word and a name, as with a measure – but not one of them
+            if (System.Text.RegularExpressions.Regex.Match(token.Text, @"^([A-Za-z_]\w*)\s+[A-Za-z_]") is { Success: true } measureLike
+                && !numberNames.Contains(measureLike.Groups[1].Value))
+            {
+                throw Error(token, $"Expected a measure (length, degrees, area, radius, perimeter) or a calculation (2.5, a * 2, …), not \"{measureLike.Groups[1].Value}\".");
+            }
+            Expression expression;
+            try
+            {
+                expression = Expression.Parse(token.Text);
+            }
+            catch (ExpressionException e)
+            {
+                throw new ScriptError(token.Line, token.Column + e.Index, e.Message);
+            }
+            bool constant = true;
+            foreach ((string used, int index) in expression.Names)
+            {
+                if (used == name.Name || !numberNames.Contains(used))
+                {
+                    throw new ScriptError(token.Line, token.Column + index,
+                        $"{used} is not a number defined before (an expression uses numbers, constants and measured ones: number h = a * sqrt(3) / 2).");
+                }
+                Referenced(used, token.Line, token.Column + index);
+                constant &= constants.ContainsKey(used);
+            }
+            if (constant)
+            {
+                constants[name.Name] = expression.Evaluate(used => constants[used])
+                    ?? throw Error(token, $"{token.Text} has no value (a division by 0 or the root of a negative number?).");
+            }
+            return new NumberStatement(word.Line, word.Column, name, "", []) { Expression = expression };
+        }
         Token measure = Current;
         if (measure.Kind != TokenKind.Name || measure.Text is not ("length" or "degrees" or "area" or "radius" or "perimeter"))
         {
-            throw Error(measure, $"Expected a measure (length, degrees, area, radius, perimeter), not {measure.Describe()}.");
+            throw Error(measure, $"Expected a measure (length, degrees, area, radius, perimeter) or a calculation (2.5, a * 2, …), not {measure.Describe()}.");
         }
         position++;
         var arguments = new List<NameRef> { ExpectName() };
@@ -936,9 +985,23 @@ internal sealed class Parser
         return token.Text;
     }
 
+    // a number or the name of a constant
+    private bool IsNumberAt(int index) =>
+        index < tokens.Count && (tokens[index].Kind == TokenKind.Number || (tokens[index].Kind == TokenKind.Name && constants.ContainsKey(tokens[index].Text)));
+
     private double ExpectNumber(string what)
     {
         Token token = Current;
+        if (token.Kind == TokenKind.Name && constants.TryGetValue(token.Text, out double constant))
+        {
+            position++;
+            Referenced(token.Text, token.Line, token.Column);
+            return constant;
+        }
+        if (token.Kind == TokenKind.Name && numberNames.Contains(token.Text))
+        {
+            throw Error(token, $"{token.Text} follows the drawing (it is measured or computed from measured numbers): it can be shown in texts ({{{token.Text}}}), but {what} needs a number or a constant (number c = 2.5).");
+        }
         if (token.Kind != TokenKind.Number)
         {
             throw Error(token, $"Expected {what} (a number), not {token.Describe()}.");

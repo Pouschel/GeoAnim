@@ -342,6 +342,14 @@ public static class ScriptCompiler
                             throw new ScriptError(s.Name.Line, s.Name.Column, $"The name {s.Name.Name} is already used.");
                         }
                         string name = Global(s.Name.Name);
+                        if (s.Expression != null)
+                        {
+                            // the numbers it uses (the parser has checked that they are numbers defined before)
+                            var operands = s.Expression.Names.Select(n => n.Name).Distinct()
+                                .ToDictionary(n => n, n => (GeoNumber)c.Objects[Global(n)], StringComparer.Ordinal);
+                            c.Calculate(name, s.Expression, operands);
+                            break;
+                        }
                         NameRef first = s.Arguments[0];
                         GeoObject item = Resolve(first);
                         T Expect<T>(string what) where T : GeoObject => item as T

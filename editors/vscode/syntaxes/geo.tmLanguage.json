@@ -439,6 +439,35 @@
       ]
     },
     {
+      "begin": "^\\s*(number)\\s+([A-Za-z_][A-Za-z0-9_]*'*)\\s*(=)",
+      "beginCaptures": {
+        "1": {
+          "name": "keyword.control.geo"
+        },
+        "2": {
+          "name": "entity.name.type.object.geo"
+        }
+      },
+      "end": "$",
+      "patterns": [
+        {
+          "include": "#comment"
+        },
+        {
+          "match": "\\b(sqrt|abs|pi)\\b",
+          "name": "support.function.geo"
+        },
+        {
+          "match": "\\d+(?:\\.\\d+)?|\\.\\d+",
+          "name": "constant.numeric.geo"
+        },
+        {
+          "match": "[-+*/^()]",
+          "name": "keyword.operator.geo"
+        }
+      ]
+    },
+    {
       "begin": "^\\s*(move|rotate|reflect)\\b(?=.*\\b(?:along|around|across|in)\\b)",
       "beginCaptures": {
         "1": {

@@ -241,6 +241,13 @@ public sealed class Construction
     /// <summary>A number: the radius of a circle.</summary>
     public GeoNumber RadiusOf(string name, GeoCircle circle) => Define(GeoNumber.RadiusOf(name, circle));
 
+    /// <summary>
+    /// A number computed from other numbers (<paramref name="operands"/>: the expression's variables): constant if they
+    /// are, else it follows them.
+    /// </summary>
+    public GeoNumber Calculate(string name, Expression expression, IReadOnlyDictionary<string, GeoNumber> operands) =>
+        Define(GeoNumber.Calculation(name, expression, operands));
+
     public GeoPolygon Polygon(string name, IReadOnlyList<GeoPoint> vertices, Options? options = null) =>
         Define(new GeoPolygon(name, vertices, options ?? Options.None));
 

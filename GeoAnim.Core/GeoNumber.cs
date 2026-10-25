@@ -69,6 +69,29 @@ public sealed class GeoNumber : GeoObject
     internal static GeoNumber RadiusOf(string name, GeoCircle circle) =>
         new(name, () => circle.IsDefined ? circle.Radius : null, 1, circle);
 
+    /// <summary>
+    /// A number computed from others; it shows as many decimal places as the most precise of them (a constant: as many as
+    /// its value needs, at most 3).
+    /// </summary>
+    internal static GeoNumber Calculation(string name, Expression expression, IReadOnlyDictionary<string, GeoNumber> operands)
+    {
+        double? Value() => expression.Evaluate(n => operands.TryGetValue(n, out GeoNumber? number) && number.IsDefined ? number.Value : null);
+        IEnumerable<GeoNumber> measured = operands.Values.Where(n => !n.IsConstant);
+        int digits = measured.Any() ? measured.Max(n => n.Digits) : DecimalsOf(Value() ?? 0);
+        return new(name, Value, digits, operands.Values.ToArray<GeoObject>()) { IsConstant = !measured.Any() };
+    }
+
+    /// <summary>Whether the value never changes (computed from constants only).</summary>
+    public bool IsConstant { get; private init; }
+
+    // the decimal places a value needs, at most 3
+    private static int DecimalsOf(double value)
+    {
+        string text = Math.Round(value, 3).ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
+        int point = text.IndexOf('.');
+        return point < 0 ? 0 : text.Length - point - 1;
+    }
+
     // the shoelace formula
     private static double SignedArea(GeoPolygon polygon)
     {

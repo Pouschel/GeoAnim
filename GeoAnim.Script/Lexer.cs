@@ -11,6 +11,9 @@ internal enum TokenKind
     String,
     Color,
     Symbol,
+
+    /// <summary>The arithmetic of "number name = …" (not a measure), up to the end of the line or a comment.</summary>
+    Expression,
     NewLine,
     End,
 }
@@ -163,6 +166,23 @@ internal static partial class Lexer
                     i = head.Index + head.Length;
                     tokens.Add(TextWithContinuations());
                 }
+                else if (startsLine && word == "number" && NumberHead().Match(source, i) is { Success: true } calculation)
+                {
+                    // number name = expression (not a measure like "length AB"): the rest of the line up to a comment
+                    tokens.Add(new Token(TokenKind.Name, calculation.Groups[1].Value, line, calculation.Groups[1].Index - lineStart + 1));
+                    tokens.Add(new Token(TokenKind.Symbol, "=", line, calculation.Groups[2].Index - lineStart + 1));
+                    i = calculation.Index + calculation.Length;
+                    int from = i;
+                    while (i < source.Length && source[i] is not ('\n' or '#'))
+                    {
+                        i++;
+                    }
+                    tokens.Add(new Token(TokenKind.Expression, source[from..i].TrimEnd(), line, from - lineStart + 1));
+                    while (i < source.Length && source[i] != '\n')
+                    {
+                        i++;
+                    }
+                }
                 else if (word == "use")
                 {
                     // the file: everything up to the next space ("../Book1/Prop1.geo"), or a path in quotes (with spaces),
@@ -258,6 +278,10 @@ internal static partial class Lexer
 
     [GeneratedRegex(@"\G[ \t]+([A-Za-z_][A-Za-z0-9_]*'*)[ \t]*(=)")]
     private static partial Regex SetHead();
+
+    // "number name =" followed by something other than a measure (length, degrees, area, radius, perimeter)
+    [GeneratedRegex(@"\G[ \t]+([A-Za-z_][A-Za-z0-9_]*'*)[ \t]*(=)[ \t]*(?!(?:length|degrees|area|radius|perimeter)\b)(?=\S)")]
+    private static partial Regex NumberHead();
 
     // the text after "title" or "step": up to the end of the line, without the spaces around it
     private static Token RestOfLine(string source, ref int i, int line, int lineStart)

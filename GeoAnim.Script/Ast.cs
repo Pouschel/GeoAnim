@@ -54,8 +54,15 @@ internal sealed record ShowStatement(int Line, int Column, bool Show, IReadOnlyL
 /// Q is at that moment).
 /// </summary>
 /// <summary>"number l = length s": a number measured from objects (length, degrees, area, radius, perimeter).</summary>
+/// <summary>
+/// "number l = length A B" (a measure of objects) or "number h = a * sqrt(3) / 2" (<see cref="Expression"/>: computed
+/// from other numbers; <paramref name="Measure"/> is then empty).
+/// </summary>
 internal sealed record NumberStatement(int Line, int Column, NameRef Name, string Measure, IReadOnlyList<NameRef> Arguments)
-    : Statement(Line, Column);
+    : Statement(Line, Column)
+{
+    public Expression? Expression { get; init; }
+}
 
 /// <summary>"move label A B to 0.2 -0.3": the labels shifted from their default place.</summary>
 internal sealed record LabelShiftStatement(int Line, int Column, IReadOnlyList<NameRef> Targets, Vec Shift, OptionList Options)
