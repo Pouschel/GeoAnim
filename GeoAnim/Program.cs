@@ -25,7 +25,7 @@ internal static partial class Program
               an index.html linking to all pages. "20_Strecken.geo" becomes "Strecken.html" (the number gives the
               order). Each page has everything inside; with -assets the pages link to the player's files in assets/
               instead (for a web server). With -serve it then serves the book on http://localhost:8080/ (or the port
-              given) and exports again whenever a script changes.
+              given).
           geoanim daemon
               Compiles for an editor (the VS Code extension): JSON requests on standard input, answers on standard output.
         """;
@@ -78,7 +78,7 @@ internal static partial class Program
                 }
             }
             int exported = ExportDirectory(args[1], outputFolder, assets);
-            return servePort == null || !Directory.Exists(args[1]) ? exported : ServeBook(args[1], outputFolder, servePort.Value, assets);
+            return servePort == null || !Directory.Exists(args[1]) ? exported : ServeBook(args[1], outputFolder, servePort.Value);
         }
         string file = args[1];
         if (!File.Exists(file))
@@ -331,49 +331,14 @@ internal static partial class Program
     internal const string AssetsFolder = "assets";
 
     /// <summary>
-    /// After the export: serves the book on http://localhost:port/ (no browser is opened) and exports again whenever a
-    /// script below <paramref name="folder"/> changes, so that a reload in the browser shows the latest state. Ctrl+C ends.
+    /// After the export: serves the book on http://localhost:port/ (no browser is opened), always fresh from disk, so that
+    /// a reload in the browser shows the latest export (exporting again is up to the author). Ctrl+C ends.
     /// </summary>
-    private static int ServeBook(string folder, string? outputFolder, int port, bool assets)
+    private static int ServeBook(string folder, string? outputFolder, int port)
     {
-        string root = Path.GetFullPath(folder);
-        string target = outputFolder == null ? root : Path.GetFullPath(outputFolder);
+        string target = outputFolder == null ? Path.GetFullPath(folder) : Path.GetFullPath(outputFolder);
         using var server = new BookServer(target, LiveServer.FindFreePort(port));
-        Console.WriteLine($"GeoAnim: {server.Url}  (serving {target}, exporting again when a script in {root} changes; Ctrl+C ends)");
-        // the scripts, index.yaml and pictures (an icon); not the export itself
-        using var watcher = new FileSystemWatcher(root) { IncludeSubdirectories = true, EnableRaisingEvents = true };
-        string exportedAssets = Path.Combine(target, AssetsFolder) + Path.DirectorySeparatorChar;
-        bool Matters(string file) => !file.StartsWith(exportedAssets, StringComparison.OrdinalIgnoreCase)
-            && Path.GetExtension(file).ToLowerInvariant() is ".geo" or ".yaml" or ".svg" or ".png" or ".ico";
-        // several changes at once (saving, renaming) give one export; one export at a time
-        var exporting = new object();
-        using var timer = new Timer(_ =>
-        {
-            lock (exporting)
-            {
-                Console.WriteLine();
-                Console.WriteLine($"{DateTime.Now:HH:mm:ss} exporting again …");
-                try
-                {
-                    ExportDirectory(folder, outputFolder, assets);
-                }
-                catch (Exception e) when (e is IOException or UnauthorizedAccessException)
-                {
-                    Console.Error.WriteLine(e.Message);
-                }
-            }
-        });
-        void Changed(object sender, FileSystemEventArgs e)
-        {
-            if (Matters(e.FullPath))
-            {
-                timer.Change(500, Timeout.Infinite);
-            }
-        }
-        watcher.Changed += Changed;
-        watcher.Created += Changed;
-        watcher.Deleted += Changed;
-        watcher.Renamed += (sender, e) => Changed(sender, e);
+        Console.WriteLine($"GeoAnim: {server.Url}  (serving {target}; Ctrl+C ends)");
         Console.CancelKeyPress += (_, e) =>
         {
             e.Cancel = true;
