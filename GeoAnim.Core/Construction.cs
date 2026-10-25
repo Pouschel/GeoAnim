@@ -600,6 +600,35 @@ public sealed class Construction
         RunOrQueue([new GlideAction(point, target, duration ?? 1000, easing ?? Easing.EaseInOut)]);
     }
 
+    /// <summary>
+    /// Highlights objects for a moment (two pulses: coloured, thicker or larger), or until <see cref="Unhighlight"/>
+    /// (<paramref name="keep"/>); <paramref name="color"/>: the colour of the highlighting (default orange).
+    /// </summary>
+    public void Highlight(IEnumerable<GeoObject> items, bool keep = false, Color? color = null, double? duration = null, Easing? easing = null)
+    {
+        RequireStep("highlight");
+        List<GeoObject> targets = HighlightTargets(items);
+        RunOrQueue([new HighlightAction(targets, keep ? HighlightMode.Keep : HighlightMode.Pulse, color,
+            duration ?? (keep ? 400 : Defaults.HighlightDuration), easing ?? (keep ? Easing.EaseInOut : Easing.Linear))]);
+    }
+
+    /// <summary>Ends the highlighting of objects that <see cref="Highlight"/> with keep highlighted.</summary>
+    public void Unhighlight(IEnumerable<GeoObject> items, double? duration = null, Easing? easing = null)
+    {
+        RequireStep("unhighlight");
+        RunOrQueue([new HighlightAction(HighlightTargets(items), HighlightMode.Off, null, duration ?? 400, easing ?? Easing.EaseInOut)]);
+    }
+
+    private static List<GeoObject> HighlightTargets(IEnumerable<GeoObject> items)
+    {
+        List<GeoObject> targets = items.Distinct().ToList();
+        if (targets.FirstOrDefault(t => t is GeoNumber) is { } number)
+        {
+            throw new GeoException($"{number} is not drawn; highlight the text that shows it.");
+        }
+        return targets;
+    }
+
     /// <summary>Waits.</summary>
     public void Pause(double duration = 500)
     {

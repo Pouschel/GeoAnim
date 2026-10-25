@@ -372,6 +372,25 @@ public static class ScriptCompiler
                         c.Rotate(targets, ResolvePoint(s.Center), s.Degrees, options.Duration, options.Easing);
                         break;
                     }
+                case HighlightStatement s:
+                    {
+                        if (OnlyResult)
+                        {
+                            break;
+                        }
+                        List<GeoObject> targets = s.Targets.Select(Resolve).ToList();
+                        if (s.Off)
+                        {
+                            Options options = ToOptions(s.Options, "unhighlight", ["duration", "easing"]);
+                            c.Unhighlight(targets, options.Duration, options.Easing);
+                        }
+                        else
+                        {
+                            Options options = ToOptions(s.Options, "highlight", ["duration", "easing", "color", "keep"]);
+                            c.Highlight(targets, options.Keep, options.Color, options.Duration, options.Easing);
+                        }
+                        break;
+                    }
                 case ReflectStatement s:
                     {
                         if (OnlyResult)
@@ -866,6 +885,7 @@ public static class ScriptCompiler
                     "align" => options with { Align = (string)option.Value! switch { "left" => TextAlign.Left, "right" => TextAlign.Right, _ => TextAlign.Center } },
                     "hidden" => options with { Hidden = true },
                     "straight" => options with { Straight = true },
+                    "keep" => options with { Keep = true },
                     "back" => options with { Stacking = Stacking.Back },
                     "front" => options with { Stacking = Stacking.Front },
                     "linear" => options with { Easing = Easing.Linear },

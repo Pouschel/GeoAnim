@@ -62,6 +62,9 @@ public sealed record Options
     /// <summary>"back": the object lies below all others; "front": above all but texts (its label stays where labels are).</summary>
     public Stacking Stacking { get; init; }
 
+    /// <summary>A highlighting that stays (until "unhighlight") instead of pulsing twice.</summary>
+    public bool Keep { get; init; }
+
     /// <summary>Define the object without showing it (show it later with Show).</summary>
     public bool Hidden { get; init; }
 

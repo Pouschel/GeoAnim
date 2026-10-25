@@ -149,6 +149,8 @@ Koordinaten sind mathematisch: die y-Achse zeigt nach oben. Der Maßstab ist in 
 | `show A k1` | zeigt Objekte (zeichnet versteckte, blendet ausgeblendete ein); was schon zu sehen ist, bleibt, wie es ist |
 | `hide k1 k2` | blendet Objekte aus; was nicht zu sehen ist (schon ausgeblendet oder nie gezeigt), bleibt, wie es ist – hat ein `show`/`hide` nichts zu tun, kostet es keine Zeit |
 | `hide all` / `hide label all` | blendet alles aus, was gerade zu sehen ist (etwa am Anfang eines Schritts, der eine neue Zeichnung beginnt), bzw. alle Beschriftungen; in einer mit `use` benutzten Datei nur deren eigene Objekte |
+| `highlight a b` | hebt Objekte hervor, um auf sie hinzuweisen: zweimal kurz in der Hervorhebungsfarbe (Standard orange, `color …`), Linien dicker, Punkte und Texte größer, Füllungen kräftiger (1200 ms) |
+| `highlight a b keep` / `unhighlight a b` | hebt Objekte hervor, bis `unhighlight` es zurücknimmt (etwa während einer Erklärung „diese Seiten sind gleich lang“); beides in 400 ms. Voreinstellungen mit `default highlight color red duration 1500` |
 | `show label A B s` / `hide label A B s` | blendet nur die Beschriftungen ein bzw. aus (Punkte, sowie Strecken, Strahlen, Geraden und Winkel mit `label`); sie wandern weiter mit ihren Objekten. Auch für mit `nolabel` angelegte Objekte; vor dem Zeichnen gilt es für das spätere Erscheinen |
 | `move A to 4 5` | bewegt einen freien Punkt – oder einen Text an festen Koordinaten (`move t to 4 5`, `move t to P`; ein Text neben einem Punkt wandert mit diesem) |
 | `move P to 150` | bewegt einen Punkt auf seinem Kreis (Winkel) bzw. seiner Strecke (Position) |
@@ -202,7 +204,7 @@ line m = S T rot width 3
 
 Eine Var gilt ab ihrer Zeile (eine spätere `var` mit demselben Namen ersetzt sie für die folgenden Zeilen) und darf andere Vars enthalten. Optionen gelten der Reihe nach, die spätere gewinnt: `rot color blue` ist blau mit allem Übrigen aus `rot`. Was aus einer Var für ein Objekt nicht passt, wird übergangen (ein Punkt mit `hilfs` nimmt die Farbe, ignoriert `width`); direkt geschriebene Optionen, die nicht passen, bleiben ein Fehler. Vars und Objekte haben verschiedene Namen.
 
-**Voreinstellungen:** `default arten… optionen…` legt Optionen für alle folgenden Objekte fest, damit nicht jedes einzelne sie braucht. Arten: `point`, `segment`, `line`, `ray`, `circle`, `polygon`, `angle`, `text`, `show`, `hide`, `move`, `rotate`, `reflect`; ohne Art gilt die Voreinstellung für alle.
+**Voreinstellungen:** `default arten… optionen…` legt Optionen für alle folgenden Objekte fest, damit nicht jedes einzelne sie braucht. Arten: `point`, `segment`, `line`, `ray`, `circle`, `polygon`, `angle`, `text`, `show`, `hide`, `highlight`, `unhighlight`, `move`, `rotate`, `reflect`; ohne Art gilt die Voreinstellung für alle.
 
 ```
 default point size 4 labelsize 20

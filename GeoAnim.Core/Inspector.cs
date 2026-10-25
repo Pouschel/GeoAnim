@@ -108,7 +108,7 @@ internal sealed class Inspector
                 : item.Opacity <= 1e-3 ? "ausgeblendet"
                 : item.Opacity < 1 - 1e-3 ? "halb eingeblendet"
                 : "sichtbar");
-            Color color = item.ColorOr(item is GeoPoint ? Defaults.PointColor : Defaults.LineColor);
+            Color color = item.BaseColorOr(item is GeoPoint ? Defaults.PointColor : Defaults.LineColor);
             string? name = Color.Names.Where(n => n.Value == color).Select(n => n.Key).FirstOrDefault();
             notes.Add("Farbe " + (name ?? color.ToHex()) + (item.Options.Color == null ? " (Standard)" : ""));
         }

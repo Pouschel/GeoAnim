@@ -53,6 +53,21 @@ public readonly record struct Color(byte R, byte G, byte B)
         throw new GeoException($"Unknown colour \"{text}\" (use a name like red or blue, or #rrggbb).");
     }
 
+    /// <summary>The colour <paramref name="t"/> of the way from <paramref name="a"/> to <paramref name="b"/> (0: a, 1: b).</summary>
+    public static Color Mix(Color a, Color b, double t)
+    {
+        if (t <= 0)
+        {
+            return a;
+        }
+        if (t >= 1)
+        {
+            return b;
+        }
+        static byte Part(byte x, byte y, double t) => (byte)Math.Round(x + (y - x) * t);
+        return new Color(Part(a.R, b.R, t), Part(a.G, b.G, t), Part(a.B, b.B, t));
+    }
+
     public string ToHex() => $"#{R:x2}{G:x2}{B:x2}";
 
     public override string ToString() => ToHex();

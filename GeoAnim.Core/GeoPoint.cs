@@ -118,7 +118,7 @@ public sealed class GeoPoint : GeoObject
             dot.Animate("x", span, position.X);
             dot.Animate("y", span, position.Y);
         }
-        dot.Animate("r", span, (Options.Size ?? Defaults.PointSize) * Reveal);
+        dot.Animate("r", span, (Options.Size ?? Defaults.PointSize) * Reveal * (1 + 0.6 * Highlight));
         dot.Animate("color", span, color.ToHex());
         if (label != null)
         {

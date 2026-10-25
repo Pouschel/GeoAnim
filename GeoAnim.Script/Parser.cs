@@ -8,7 +8,7 @@ internal sealed class Parser
     {
         "title", "description", "info", "keyword", "view", "background", "grid", "axes", "speed", "var", "default", "include", "input", "output", "use",
         "draw", "steps", "copy", "set", "step", "point", "segment", "line", "ray", "circle", "polygon", "angle",
-        "text", "number", "length", "degrees", "area", "perimeter", "show", "hide", "all", "move", "rotate", "reflect", "along", "around", "across", "in", "by", "pause", "together", "end", "midpoint", "intersect", "center", "through",
+        "text", "number", "length", "degrees", "area", "perimeter", "show", "hide", "all", "highlight", "unhighlight", "keep", "move", "rotate", "reflect", "along", "around", "across", "in", "by", "pause", "together", "end", "midpoint", "intersect", "center", "through",
         "radius", "at", "to", "on", "x", "y", "below", "gap", "align", "left", "right",
         "duration", "color", "width", "fill", "opacity", "size", "labelsize", "labelpos", "label", "nolabel", "hidden", "offset", "shift",
         "arrow", "start", "both", "straight", "back", "front", "linear", "ease", "easein", "easeout", "easeinout",
@@ -17,13 +17,13 @@ internal sealed class Parser
     private static readonly HashSet<string> OptionNames = new(StringComparer.Ordinal)
     {
         "duration", "color", "width", "fill", "opacity", "size", "radius", "labelsize", "labelpos", "label", "nolabel", "hidden", "offset", "shift",
-        "arrow", "align", "straight", "back", "front", "linear", "ease", "easein", "easeout", "easeinout",
+        "arrow", "align", "straight", "back", "front", "keep", "linear", "ease", "easein", "easeout", "easeinout",
     };
 
     /// <summary>The kinds a "default" can name.</summary>
     private static readonly HashSet<string> DefaultKinds = new(StringComparer.Ordinal)
     {
-        "point", "segment", "line", "ray", "circle", "polygon", "angle", "text", "show", "hide", "move", "rotate", "reflect",
+        "point", "segment", "line", "ray", "circle", "polygon", "angle", "text", "show", "hide", "highlight", "unhighlight", "move", "rotate", "reflect",
     };
 
     private readonly List<Token> tokens;
@@ -274,6 +274,10 @@ internal sealed class Parser
             case "show":
             case "hide":
                 statement = ParseShow(word);
+                break;
+            case "highlight":
+            case "unhighlight":
+                statement = ParseHighlight(word);
                 break;
             case "move":
                 statement = ParseMove(word);
@@ -621,6 +625,21 @@ internal sealed class Parser
         return new DefineStatement(word.Line, word.Column, "text", [name], definition, ParseOptions());
     }
 
+    // "highlight A B [keep] [options]", "unhighlight A B"
+    private HighlightStatement ParseHighlight(Token word)
+    {
+        var targets = new List<NameRef>();
+        while (Current.Kind == TokenKind.Name && !IsOption(Current.Text))
+        {
+            targets.Add(ExpectName());
+        }
+        if (targets.Count == 0)
+        {
+            throw Error(Current, $"\"{word.Text}\" needs the names of objects.");
+        }
+        return new HighlightStatement(word.Line, word.Column, word.Text == "unhighlight", targets, ParseOptions());
+    }
+
     private ShowStatement ParseShow(Token word)
     {
         // "show label A B": only the labels
@@ -797,7 +816,7 @@ internal sealed class Parser
                     : throw Error(Current, $"Expected left, center or right after \"align\", not {Current.Describe()}."),
                 // "arrow" alone: at the end; "arrow start", "arrow end", "arrow both"
                 "arrow" => Current.Kind == TokenKind.Name && Current.Text is "start" or "end" or "both" ? Next().Text : "end",
-                "nolabel" or "hidden" or "straight" or "back" or "front" or "linear" or "ease" or "easein" or "easeout" or "easeinout" => null,
+                "nolabel" or "hidden" or "straight" or "back" or "front" or "keep" or "linear" or "ease" or "easein" or "easeout" or "easeinout" => null,
                 _ => throw Error(option, $"Unknown option or var \"{option.Text}\" (possible options: {string.Join(", ", OptionNames.Order())})."),
             };
             values.Add(new OptionValue(option.Text, value, option.Line, option.Column));

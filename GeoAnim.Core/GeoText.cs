@@ -99,7 +99,7 @@ public sealed class GeoText : GeoObject
     {
         // an offset is in coordinates; the default distance from a point is in points
         RenderShift(text!, span);
-        text!.Animate("size", span, Options.Size ?? Defaults.TextSize);
+        text!.Animate("size", span, (Options.Size ?? Defaults.TextSize) * (1 + 0.25 * Highlight));
         text.Animate("color", span, ColorOr(Defaults.LineColor).ToHex());
         if (Above != null)
         {

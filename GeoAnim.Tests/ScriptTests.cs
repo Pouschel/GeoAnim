@@ -753,6 +753,43 @@ public class ScriptTests
     }
 
     [Fact]
+    public void HighlightPulsesOrStays()
+    {
+        AnimationData animation = ScriptCompiler.Compile("""
+            point A = 0 0
+            point B = 4 0
+            segment s = A B
+            point C = 0 3 color green
+            step pulsieren
+              highlight s duration 800
+            step bleiben
+              highlight C keep color red
+            step zurück
+              unhighlight C
+            """);
+        JsonElement[] primitives = JsonDocument.Parse(animation.ToJson()).RootElement.GetProperty("primitives").EnumerateArray().ToArray();
+        JsonElement Track(string type, int index, string track) => primitives.Where(p => p.GetProperty("type").GetString() == type).ElementAt(index).GetProperty("tracks").GetProperty(track);
+        double At(JsonElement track, double time) => track.EnumerateArray().Last(k => k[0].GetDouble() <= time + 1e-6)[1].ValueKind == JsonValueKind.Number
+            ? track.EnumerateArray().Last(k => k[0].GetDouble() <= time + 1e-6)[1].GetDouble() : double.NaN;
+        string Color(JsonElement track, double time) => track.EnumerateArray().Last(k => k[0].GetDouble() <= time + 1e-6)[1].GetString()!;
+        // the segment: twice thicker and orange (at 200 and 600 ms), in between and afterwards as before
+        JsonElement width = Track("line", 0, "width");
+        Assert.Equal(2.5 * 1.8, width.EnumerateArray().Max(k => k[1].GetDouble()), 6);
+        Assert.Equal(2.5, width[width.GetArrayLength() - 1][1].GetDouble(), 6);
+        Assert.Equal("#ef6c00", Color(Track("line", 0, "color"), 200));
+        Assert.Equal("#ef6c00", Color(Track("line", 0, "color"), 600));
+        Assert.Equal("#222222", Color(Track("line", 0, "color"), 800));
+        // C: red and larger from the second step on, green again after the third
+        JsonElement color = Track("dot", 2, "color");
+        Assert.Equal("#d32f2f", Color(color, 1200));
+        Assert.Equal(5 * 1.6, At(Track("dot", 2, "r"), 1200), 6);
+        Assert.Equal("#2e7d32", color[color.GetArrayLength() - 1][1].GetString());
+        Assert.Equal(1600, animation.Duration, 6);
+        ErrorAt("point A = 0 0\nhighlight A", 2, 1, "only possible inside a step");
+        ErrorAt("point A = 0 0\nstep s\n  highlight keep", 3, 13, "needs the names");
+    }
+
+    [Fact]
     public void ShiftMovesLabelsFromTheirDefaultPlace()
     {
         AnimationData animation = ScriptCompiler.Compile("""

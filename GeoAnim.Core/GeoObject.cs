@@ -84,9 +84,30 @@ public abstract class GeoObject
 
     internal double Visibility => IsDefined ? Opacity : 0;
 
-    internal Color ColorOr(Color fallback) => Options.Color ?? fallback;
+    /// <summary>How much the object is highlighted ("highlight"): 0 not at all, 1 fully (coloured, thicker, larger).</summary>
+    internal double Highlight { get; set; }
 
-    internal double WidthOr(double fallback) => Options.Width ?? fallback;
+    /// <summary>The colour of the highlighting.</summary>
+    internal Color HighlightColor { get; set; } = Defaults.HighlightColor;
+
+    /// <summary>The object's colour, on the way to the highlight colour while it is highlighted.</summary>
+    internal Color ColorOr(Color fallback) => Color.Mix(BaseColorOr(fallback), HighlightColor, Highlight);
+
+    /// <summary>The object's own colour (without highlighting).</summary>
+    internal Color BaseColorOr(Color fallback) => Options.Color ?? fallback;
+
+    /// <summary>The fill colour of a polygon or angle (its own or its line colour), highlighted like the lines.</summary>
+    internal Color FillOr(Color fallback) => Color.Mix(Options.Fill ?? BaseColorOr(fallback), HighlightColor, Highlight);
+
+    /// <summary>The fill's opacity: highlighted at least 0.4.</summary>
+    internal double FillOpacityOr(double fallback)
+    {
+        double opacity = Options.FillOpacity ?? fallback;
+        return opacity + (Math.Max(opacity, 0.4) - opacity) * Highlight;
+    }
+
+    /// <summary>The line width, highlighted up to 1.8 times as thick.</summary>
+    internal double WidthOr(double fallback) => (Options.Width ?? fallback) * (1 + 0.8 * Highlight);
 
     /// <summary>Computes the object from its parents (they are computed first).</summary>
     internal abstract void Compute();
@@ -110,6 +131,8 @@ internal static class Defaults
 {
     public static readonly Color PointColor = Color.Names["blue"];
     public static readonly Color LineColor = Color.Names["black"];
+    public static readonly Color HighlightColor = Color.Names["orange"];
+    public const double HighlightDuration = 1200;
     public const double LineWidth = 2.5;
     public const double PointSize = 5;
     public const double LabelSize = 24;

@@ -40,7 +40,7 @@ public sealed class GeoPolygon : GeoObject
         Color color = ColorOr(Defaults.LineColor);
         polygon.Animate("color", span, color.ToHex());
         polygon.Animate("width", span, WidthOr(Defaults.LineWidth));
-        polygon.Animate("fill", span, (Options.Fill ?? color).ToHex());
-        polygon.Animate("fillOpacity", span, Options.FillOpacity ?? Defaults.FillOpacity);
+        polygon.Animate("fill", span, FillOr(Defaults.LineColor).ToHex());
+        polygon.Animate("fillOpacity", span, FillOpacityOr(Defaults.FillOpacity));
     }
 }

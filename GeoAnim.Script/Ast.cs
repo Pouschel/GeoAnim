@@ -76,6 +76,10 @@ internal sealed record RotateStatement(int Line, int Column, IReadOnlyList<NameR
 internal sealed record ReflectStatement(int Line, int Column, IReadOnlyList<NameRef> Targets, NameRef Axis, NameRef? Second, bool InPoint, OptionList Options)
     : Statement(Line, Column);
 
+/// <summary>"highlight A B [keep]" or "unhighlight A B" (<paramref name="Off"/>).</summary>
+internal sealed record HighlightStatement(int Line, int Column, bool Off, IReadOnlyList<NameRef> Targets, OptionList Options)
+    : Statement(Line, Column);
+
 internal sealed record MoveStatement(int Line, int Column, NameRef Point, Vec? Target, double? Parameter, OptionList Options, NameRef? TargetPoint = null)
     : Statement(Line, Column);
 

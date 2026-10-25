@@ -12,7 +12,7 @@ internal abstract class TimelineAction(double duration, Easing easing)
 
     public Easing Easing { get; } = easing;
 
-    /// <summary>Whether the action changes positions (then the block is computed in small time steps).</summary>
+    /// <summary>Whether the action changes positions or pulses (then the block is computed in small time steps).</summary>
     public virtual bool MovesPoints => false;
 
     /// <summary>The objects whose drawing the action changes.</summary>
@@ -296,6 +296,59 @@ internal sealed class PointReflectAction(IReadOnlyList<GeoPoint> points, GeoPoin
         for (int i = 0; i < points.Count; i++)
         {
             points[i].MoveTo(pivot + (1 - 2 * progress) * (starts[i] - pivot));
+        }
+    }
+}
+
+/// <summary>How "highlight" changes objects.</summary>
+internal enum HighlightMode
+{
+    /// <summary>Two pulses, then as before.</summary>
+    Pulse,
+
+    /// <summary>Highlighted until "unhighlight".</summary>
+    Keep,
+
+    /// <summary>Back to normal ("unhighlight").</summary>
+    Off,
+}
+
+/// <summary>Highlights objects: coloured, thicker or larger, with a fill that lights up; computed in small time steps.</summary>
+internal sealed class HighlightAction(IReadOnlyList<GeoObject> targets, HighlightMode mode, Color? color, double duration, Easing easing)
+    : TimelineAction(duration, easing)
+{
+    private double[] starts = [];
+
+    public override bool MovesPoints => true;
+
+    public override IEnumerable<GeoObject> Objects => targets;
+
+    public override void Begin(RenderContext context, double time)
+    {
+        starts = targets.Select(t => t.Highlight).ToArray();
+        if (color is Color c)
+        {
+            foreach (GeoObject target in targets)
+            {
+                target.HighlightColor = c;
+            }
+        }
+    }
+
+    public override void End(RenderContext context, Span span) => throw new InvalidOperationException("A highlighting is always sampled.");
+
+    public override void Apply(double progress)
+    {
+        for (int i = 0; i < targets.Count; i++)
+        {
+            double pulse = Math.Sin(2 * Math.PI * progress);
+            targets[i].Highlight = mode switch
+            {
+                // two humps from 0 to 1 and back; a kept highlighting stays at least
+                HighlightMode.Pulse => Math.Max(starts[i], pulse * pulse),
+                HighlightMode.Keep => starts[i] + (1 - starts[i]) * progress,
+                _ => starts[i] * (1 - progress),
+            };
         }
     }
 }

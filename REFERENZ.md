@@ -11,7 +11,7 @@ Alle Befehle mit allen Schreibweisen und den Optionen, die jeweils erlaubt sind.
 - [Texte, Vars, Voreinstellungen](#texte-vars-voreinstellungen): `set`, `var`, `default`
 - [Objekte](#objekte): `point`, `segment`, `line`, `ray`, `circle`, `polygon`, `angle`, `text`
 - [Zahlen](#zahlen): `number`
-- [Schritte und Aktionen](#schritte-und-aktionen): `step`, `info`, `show`, `hide`, `move`, `rotate`, `reflect`, `pause`, `together`
+- [Schritte und Aktionen](#schritte-und-aktionen): `step`, `info`, `show`, `hide`, `highlight`, `unhighlight`, `move`, `rotate`, `reflect`, `pause`, `together`
 - [Dateien](#dateien): `include`, `use`, `input`, `output`
 - [Optionen](#optionen) – welche Option für welchen Befehl
 - [Farben](#farben), [Standardwerte](#standardwerte), [Schlüsselwörter](#schlüsselwörter)
@@ -53,7 +53,7 @@ Vor dem ersten `step` (außer `keyword`).
 |---|---|---|
 | `set` | `set name = Text …` | benannter Text für `text` und `label`; mit `|` fortsetzbar; gilt ab seiner Zeile |
 | `var` | `var name Optionen…` | Optionen mit Namen; darf andere Vars enthalten; gilt ab seiner Zeile, eine spätere gleichnamige ersetzt sie; was für ein Objekt nicht passt, wird übergangen |
-| `default` | `default [Arten…] Optionen…` | Voreinstellung für alle folgenden Objekte der Arten `point` `segment` `line` `ray` `circle` `polygon` `angle` `text` `show` `hide` `move` `rotate` `reflect`; ohne Art für alle; was nicht passt, wird übergangen |
+| `default` | `default [Arten…] Optionen…` | Voreinstellung für alle folgenden Objekte der Arten `point` `segment` `line` `ray` `circle` `polygon` `angle` `text` `show` `hide` `highlight` `unhighlight` `move` `rotate` `reflect`; ohne Art für alle; was nicht passt, wird übergangen |
 
 Reihenfolge der Optionen eines Objekts: Voreinstellungen ohne Art, dann die der Art, dann die eigenen – die spätere gewinnt.
 
@@ -158,6 +158,9 @@ Aktionen stehen in einem Schritt und laufen nacheinander. Die Optionen *Ablauf* 
 | | `hide label A B …` | *Ablauf* | blendet nur Beschriftungen aus |
 | | `hide all` | *Ablauf* | blendet alles aus, was gerade zu sehen ist (etwa am Anfang eines Schritts mit neuer Zeichnung) |
 | | `hide label all` | *Ablauf* | blendet alle Beschriftungen aus |
+| `highlight` | `highlight A B …` | *Ablauf*, `color` | hebt Objekte hervor: zweimal kurz farbig (Standard orange) und dicker bzw. größer, Füllungen leuchten auf |
+| | `highlight A B … keep` | *Ablauf*, `color` | ebenso, bleibt aber hervorgehoben bis `unhighlight` |
+| `unhighlight` | `unhighlight A B …` | *Ablauf* | nimmt ein `highlight … keep` zurück |
 | `move` | `move A to x y` | *Ablauf* | freier Punkt zu Koordinaten |
 | | `move A to P` | *Ablauf* | freier Punkt dorthin, wo P gerade ist |
 | | `move t to x y` · `move t to P` | *Ablauf* | Text an festen Koordinaten (ein Text neben einem Punkt wandert mit dem Punkt) |
@@ -202,11 +205,12 @@ Aktionen stehen in einem Schritt und laufen nacheinander. Die Optionen *Ablauf* 
 | `radius` | n (Einheiten) | | | | | | ✓ | | |
 | `align` | `left` · `center` · `right` | | | | | | | ✓ | |
 | `arrow` | – · `start` · `end` · `both` | | ✓ | | | | ✓ | | |
+| `keep` | – | | | | | | | | `highlight` |
 | `back` · `front` | – (ganz nach hinten, unter alle Füllungen · ganz nach vorn, über alles außer Texten) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | |
 | `hidden` | – | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | |
 | `straight` | – | | | | | | | | `reflect` |
-| `duration` | n (ms) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | `show` `hide` `move` `rotate` `reflect` `together` |
-| `linear` `ease` `easein` `easeout` `easeinout` | – | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | `show` `hide` `move` `rotate` `reflect` |
+| `duration` | n (ms) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | `show` `hide` `highlight` `unhighlight` `move` `rotate` `reflect` `together` |
+| `linear` `ease` `easein` `easeout` `easeinout` | – | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | `show` `hide` `highlight` `unhighlight` `move` `rotate` `reflect` |
 
 `ease` ist dasselbe wie `easeinout`. Ein Punkt (pt) ist ein Pixel bei 1280 Pixel Bildbreite. Hinter `use` gelten die Optionen der Ergebnisse. Eine direkt geschriebene Option, die nicht passt, ist ein Fehler; aus einer Var oder Voreinstellung wird sie übergangen.
 
@@ -225,6 +229,8 @@ Aktionen stehen in einem Schritt und laufen nacheinander. Die Optionen *Ablauf* 
 | Winkel | schwarz, Füllung 0,2 | 1,5 pt, Radius passend zur Beschriftung | 600 ms, `easeout` |
 | Text | schwarz | 26 pt | 400 ms, `easeout` |
 | `show`, `hide` | | | 400 ms, `easeout` |
+| `highlight` | orange | | 1200 ms, `linear` (mit `keep` 400 ms, `ease`) |
+| `unhighlight` | | | 400 ms, `ease` |
 | `move`, `rotate`, `reflect` | | | 1000 ms, `ease` |
 | `pause` | | | 500 ms |
 | Schritt ohne Aktion | | | 500 ms |
@@ -233,4 +239,4 @@ Aktionen stehen in einem Schritt und laufen nacheinander. Die Optionen *Ablauf* 
 
 Diese Wörter können keine Namen sein:
 
-`title` `description` `info` `keyword` `view` `background` `grid` `axes` `speed` `var` `default` `include` `input` `output` `use` `draw` `steps` `copy` `set` `step` `point` `segment` `line` `ray` `circle` `polygon` `angle` `text` `number` `length` `degrees` `area` `perimeter` `show` `hide` `all` `move` `rotate` `reflect` `along` `around` `across` `in` `by` `pause` `together` `end` `midpoint` `intersect` `center` `through` `radius` `at` `to` `on` `x` `y` `below` `gap` `align` `left` `right` `duration` `color` `width` `fill` `opacity` `size` `labelsize` `labelpos` `label` `nolabel` `hidden` `offset` `shift` `arrow` `start` `both` `straight` `back` `front` `linear` `ease` `easein` `easeout` `easeinout`
+`title` `description` `info` `keyword` `view` `background` `grid` `axes` `speed` `var` `default` `include` `input` `output` `use` `draw` `steps` `copy` `set` `step` `point` `segment` `line` `ray` `circle` `polygon` `angle` `text` `number` `length` `degrees` `area` `perimeter` `show` `hide` `all` `highlight` `unhighlight` `keep` `move` `rotate` `reflect` `along` `around` `across` `in` `by` `pause` `together` `end` `midpoint` `intersect` `center` `through` `radius` `at` `to` `on` `x` `y` `below` `gap` `align` `left` `right` `duration` `color` `width` `fill` `opacity` `size` `labelsize` `labelpos` `label` `nolabel` `hidden` `offset` `shift` `arrow` `start` `both` `straight` `back` `front` `keep` `linear` `ease` `easein` `easeout` `easeinout`
