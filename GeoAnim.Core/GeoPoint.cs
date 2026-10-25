@@ -102,7 +102,7 @@ public sealed class GeoPoint : GeoObject
         if (dot == null)
         {
             IsDrawn = true;
-            dot = context.Scene.Create("dot", Layers.Point);
+            dot = context.Scene.Create("dot", Layers.Of(Options, Layers.Point));
         }
         if (label == null && LabelUsed)
         {

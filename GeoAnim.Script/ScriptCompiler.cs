@@ -470,13 +470,13 @@ public static class ScriptCompiler
 
         private static string[] AllowedOptions(string kind) => kind switch
         {
-            "point" => ["color", "size", "labelsize", "label", "offset", "shift", "draw"],
-            "polygon" => ["color", "width", "fill", "opacity", "draw"],
-            "text" => ["color", "size", "offset", "shift", "align", "draw"],
-            "segment" or "ray" => ["color", "width", "label", "labelsize", "labelpos", "offset", "shift", "arrow", "draw"],
-            "line" => ["color", "width", "label", "labelsize", "labelpos", "offset", "shift", "draw"],
-            "angle" => ["color", "width", "fill", "opacity", "label", "labelsize", "radius", "offset", "shift", "arrow", "draw"],
-            _ => ["color", "width", "draw"],
+            "point" => ["color", "size", "labelsize", "label", "offset", "shift", "stacking", "draw"],
+            "polygon" => ["color", "width", "fill", "opacity", "stacking", "draw"],
+            "text" => ["color", "size", "offset", "shift", "align", "stacking", "draw"],
+            "segment" or "ray" => ["color", "width", "label", "labelsize", "labelpos", "offset", "shift", "arrow", "stacking", "draw"],
+            "line" => ["color", "width", "label", "labelsize", "labelpos", "offset", "shift", "stacking", "draw"],
+            "angle" => ["color", "width", "fill", "opacity", "label", "labelsize", "radius", "offset", "shift", "arrow", "stacking", "draw"],
+            _ => ["color", "width", "stacking", "draw"],
         };
 
         /// <summary>The options of an object of this file: an output gets the caller's options on top; with "use … " (only the result) the rest is hidden.</summary>
@@ -502,6 +502,7 @@ public static class ScriptCompiler
                     Label = kind == "point" ? caller.Label : caller.Label ?? own.Label,
                     NoLabel = caller.NoLabel || (own.NoLabel && caller.Label == null),
                     Offset = caller.Offset ?? own.Offset,
+                    Stacking = caller.Stacking != Stacking.Normal ? caller.Stacking : own.Stacking,
                     Hidden = caller.Hidden || (own.Hidden && module.Mode != UseMode.Result),
                     Duration = caller.Duration ?? own.Duration,
                     Easing = caller.Easing ?? own.Easing,
@@ -834,6 +835,7 @@ public static class ScriptCompiler
                     "hidden" => "draw",
                     "linear" or "ease" or "easein" or "easeout" or "easeinout" => allowed.Contains("draw") ? "draw" : "easing",
                     "nolabel" => "label",
+                    "back" or "front" => "stacking",
                     _ => option.Name,
                 };
                 if (!allowed.Contains(group))
@@ -864,6 +866,8 @@ public static class ScriptCompiler
                     "align" => options with { Align = (string)option.Value! switch { "left" => TextAlign.Left, "right" => TextAlign.Right, _ => TextAlign.Center } },
                     "hidden" => options with { Hidden = true },
                     "straight" => options with { Straight = true },
+                    "back" => options with { Stacking = Stacking.Back },
+                    "front" => options with { Stacking = Stacking.Front },
                     "linear" => options with { Easing = Easing.Linear },
                     "easein" => options with { Easing = Easing.EaseIn },
                     "easeout" => options with { Easing = Easing.EaseOut },

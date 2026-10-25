@@ -69,7 +69,7 @@ public sealed class GeoStraight : GeoObject
         if (line == null)
         {
             IsDrawn = true;
-            line = context.Scene.Create("line", Layers.Curve);
+            line = context.Scene.Create("line", Layers.Of(Options, Layers.Curve));
         }
         var part = IsDefined ? VisiblePart(context.View) : null;
         line.Animate("opacity", span, part == null ? 0 : Opacity);

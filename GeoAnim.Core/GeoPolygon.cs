@@ -30,7 +30,7 @@ public sealed class GeoPolygon : GeoObject
         if (polygon == null)
         {
             IsDrawn = true;
-            polygon = context.Scene.Create("polygon", Layers.Polygon);
+            polygon = context.Scene.Create("polygon", Layers.Of(Options, Layers.Polygon));
         }
         polygon.Animate("opacity", span, Visibility * Reveal);
         if (IsDefined)

@@ -59,6 +59,9 @@ public sealed record Options
     /// <summary>A reflection with the points running straight across (instead of folding over, or turning around a point).</summary>
     public bool Straight { get; init; }
 
+    /// <summary>"back": the object lies below all others; "front": above all but texts (its label stays where labels are).</summary>
+    public Stacking Stacking { get; init; }
+
     /// <summary>Define the object without showing it (show it later with Show).</summary>
     public bool Hidden { get; init; }
 

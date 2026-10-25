@@ -732,6 +732,27 @@ public class ScriptTests
     }
 
     [Fact]
+    public void BackAndFrontChangeTheStacking()
+    {
+        AnimationData animation = ScriptCompiler.Compile("""
+            default segment back
+            point A = 0 0
+            point B = 4 0 front
+            point C = 0 3
+            polygon d = A B C fill lightgreen
+            segment v = A B arrow label "$v$"
+            text t = "Hallo" at 1 1 front
+            circle k = center A through C front
+            """);
+        int[] layers = JsonDocument.Parse(animation.ToJson()).RootElement.GetProperty("primitives").EnumerateArray()
+            .Select(p => p.GetProperty("layer").GetInt32()).ToArray();
+        // A, its label, B (front), its label, C, its label, the polygon, the segment (back), its label (where labels are),
+        // the text (front: still on top), the circle (front)
+        Assert.Equal([30, 40, 45, 40, 30, 40, 10, 0, 40, 50, 45], layers);
+        ErrorAt("point A = 0 0\nstep s\n  show A back", 3, 10, "not possible for show");
+    }
+
+    [Fact]
     public void ShiftMovesLabelsFromTheirDefaultPlace()
     {
         AnimationData animation = ScriptCompiler.Compile("""

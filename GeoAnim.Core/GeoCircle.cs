@@ -58,7 +58,7 @@ public sealed class GeoCircle : GeoObject
         if (arc == null)
         {
             IsDrawn = true;
-            arc = context.Scene.Create("arc", Layers.Curve);
+            arc = context.Scene.Create("arc", Layers.Of(Options, Layers.Curve));
         }
         arc.Animate("opacity", span, Visibility);
         if (IsDefined)

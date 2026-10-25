@@ -11,13 +11,13 @@ internal sealed class Parser
         "text", "number", "length", "degrees", "area", "perimeter", "show", "hide", "all", "move", "rotate", "reflect", "along", "around", "across", "in", "by", "pause", "together", "end", "midpoint", "intersect", "center", "through",
         "radius", "at", "to", "on", "x", "y", "below", "gap", "align", "left", "right",
         "duration", "color", "width", "fill", "opacity", "size", "labelsize", "labelpos", "label", "nolabel", "hidden", "offset", "shift",
-        "arrow", "start", "both", "straight", "linear", "ease", "easein", "easeout", "easeinout",
+        "arrow", "start", "both", "straight", "back", "front", "linear", "ease", "easein", "easeout", "easeinout",
     };
 
     private static readonly HashSet<string> OptionNames = new(StringComparer.Ordinal)
     {
         "duration", "color", "width", "fill", "opacity", "size", "radius", "labelsize", "labelpos", "label", "nolabel", "hidden", "offset", "shift",
-        "arrow", "align", "straight", "linear", "ease", "easein", "easeout", "easeinout",
+        "arrow", "align", "straight", "back", "front", "linear", "ease", "easein", "easeout", "easeinout",
     };
 
     /// <summary>The kinds a "default" can name.</summary>
@@ -797,7 +797,7 @@ internal sealed class Parser
                     : throw Error(Current, $"Expected left, center or right after \"align\", not {Current.Describe()}."),
                 // "arrow" alone: at the end; "arrow start", "arrow end", "arrow both"
                 "arrow" => Current.Kind == TokenKind.Name && Current.Text is "start" or "end" or "both" ? Next().Text : "end",
-                "nolabel" or "hidden" or "straight" or "linear" or "ease" or "easein" or "easeout" or "easeinout" => null,
+                "nolabel" or "hidden" or "straight" or "back" or "front" or "linear" or "ease" or "easein" or "easeout" or "easeinout" => null,
                 _ => throw Error(option, $"Unknown option or var \"{option.Text}\" (possible options: {string.Join(", ", OptionNames.Order())})."),
             };
             values.Add(new OptionValue(option.Text, value, option.Line, option.Column));
