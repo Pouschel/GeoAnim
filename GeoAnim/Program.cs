@@ -19,13 +19,13 @@ internal static partial class Program
               Shows the animation in the browser and updates it whenever the file is saved.
           geoanim export <file.geo> [-o <file.html>]
               Writes the animation as one HTML file that plays without a server (default: next to the script).
-          geoanim exportdir <dir> [-o <output directory>] [-assets] [-serve [port]]
+          geoanim exportdir <dir> [-o <output directory>] [-assets] [-sheet] [-serve [port]]
               Exports directory dir as a book: a page for every .geo file in it and all subdirectories (not for those
               starting with "_"), next to it or with -o in the same folder structure below the output directory, with
               an index.html linking to all pages. "20_Strecken.geo" becomes "Strecken.html" (the number gives the
               order). Each page has everything inside; with -assets the pages link to the player's files in assets/
-              instead (for a web server). With -serve it then serves the book on http://localhost:8080/ (or the port
-              given).
+              instead (for a web server). -sheet also writes kontaktbogen.html: the pictures after every step of all
+              pages at a glance. With -serve it then serves the book on http://localhost:8080/ (or the port given).
           geoanim daemon
               Compiles for an editor (the VS Code extension): JSON requests on standard input, answers on standard output.
         """;
@@ -48,6 +48,7 @@ internal static partial class Program
             string? outputFolder = null;
             int? servePort = null;
             bool assets = false;
+            bool sheet = false;
             for (int i = 2; i < args.Length; i++)
             {
                 if (args[i] is "-o" or "--output" && i + 1 < args.Length)
@@ -66,6 +67,10 @@ internal static partial class Program
                         i++;
                     }
                 }
+                else if (args[i] is "-sheet" or "--sheet")
+                {
+                    sheet = true;
+                }
                 else if (args[i] is "-index" or "--index")
                 {
                     // the overview is always written now
@@ -77,7 +82,7 @@ internal static partial class Program
                     return 1;
                 }
             }
-            int exported = ExportDirectory(args[1], outputFolder, assets);
+            int exported = ExportDirectory(args[1], outputFolder, assets, sheet);
             return servePort == null || !Directory.Exists(args[1]) ? exported : ServeBook(args[1], outputFolder, servePort.Value);
         }
         string file = args[1];
@@ -125,7 +130,7 @@ internal static partial class Program
     /// inside; with <paramref name="assets"/> the pages link to the player's files in assets/ at the root of the book
     /// instead (smaller pages for a web server: the files load once).
     /// </summary>
-    internal static int ExportDirectory(string folder, string? outputFolder = null, bool assets = false)
+    internal static int ExportDirectory(string folder, string? outputFolder = null, bool assets = false, bool sheet = false)
     {
         if (!Directory.Exists(folder))
         {
@@ -294,6 +299,11 @@ internal static partial class Program
             File.WriteAllText(Path.Combine(target, KeywordIndexPage), IndexPage.CreateKeywordIndex(Path.GetFileName(root), entries, "index.html", settings, keywordHead),
                 new UTF8Encoding(false));
         }
+        // for the author: all pictures of the book at a glance (not linked, not in the sitemap)
+        if (sheet)
+        {
+            File.WriteAllText(Path.Combine(target, SheetPage), IndexPage.CreateSheet(Path.GetFileName(root), pages, settings), new UTF8Encoding(false));
+        }
         File.WriteAllText(indexFile, IndexPage.Create(Path.GetFileName(root), pages, settings, indexHead, chapters, keywordIndex), new UTF8Encoding(false));
         // for search engines: all pages with their address on the web
         if (settings.Url != null)
@@ -315,10 +325,13 @@ internal static partial class Program
             File.WriteAllText(sitemap, xml.Append("</urlset>\n").ToString(), new UTF8Encoding(false));
         }
         progress.Finish($"{files.Count - failed} of {files.Count} pages exported to {target} (index.html"
-            + (keywordIndex != null ? ", " + KeywordIndexPage : "")
+            + (keywordIndex != null ? ", " + KeywordIndexPage : "") + (sheet ? ", " + SheetPage : "")
             + (settings.Url != null ? ", sitemap.xml" : "") + (assets ? ", assets/" : "") + ")");
         return failed > 0 || conflicts > 0 ? 1 : 0;
     }
+
+    /// <summary>The contact sheet of an exported book ("-sheet"), next to index.html.</summary>
+    internal const string SheetPage = "kontaktbogen.html";
 
     /// <summary>The keyword index of an exported book, next to index.html.</summary>
     internal const string KeywordIndexPage = "stichwoerter.html";

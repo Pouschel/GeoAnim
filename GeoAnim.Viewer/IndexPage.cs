@@ -187,6 +187,73 @@ public static partial class IndexPage
         return html.ToString();
     }
 
+    /// <summary>
+    /// The contact sheet of an exported book ("geoanim exportdir -sheet"), for the author: for every page in book order
+    /// the starting picture and the end of every step as stills of the real page ("page.html?still#3"), each a link to the
+    /// page at that step; the width of the pictures can be switched (450, 720, 1080 pixels), since texts scale with it.
+    /// </summary>
+    public static string CreateSheet(string folderName, IEnumerable<(string Path, AnimationData Animation)> pages, BookSettings? settings = null)
+    {
+        settings ??= BookSettings.None;
+        string book = settings.Title ?? folderName;
+        var html = new StringBuilder();
+        Begin(html, "Kontaktbogen – " + book, null, settings, null, """
+                  body { max-width: none; }
+                  .sizes { position: sticky; top: 0; z-index: 1; display: flex; gap: 8px; align-items: center; margin: 0 0 12px; padding: 8px 0;
+                           background: #eceef2; font-size: 16px; }
+                  .sizes button { padding: 4px 12px; border: 1px solid #c5cad3; border-radius: 6px; background: #fff; font: inherit; cursor: pointer; }
+                  .sizes button.on { border-color: #1565c0; color: #1565c0; }
+                  section { margin: 0 0 28px; }
+                  h2 { margin: 0 0 8px; color: #222; }
+                  h2 small { color: #6b7280; font-size: 14px; font-weight: normal; }
+                  .stills { display: flex; flex-wrap: wrap; gap: 14px; }
+                  figure { margin: 0; }
+                  .frame { position: relative; display: block; width: var(--w); background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15); }
+                  .frame iframe { display: block; width: 100%; height: 100%; border: 0; pointer-events: none; }
+                  figcaption { width: var(--w); margin: 4px 0 0; color: #4a5160; font-size: 14px; }
+                  figcaption b { color: #6b7280; font-weight: normal; margin-right: 0.4em; }
+            """);
+        html.Append("    <h1>Kontaktbogen</h1>\n");
+        html.Append("    <div class=\"sizes\">Bildbreite: <button data-w=\"450\">450 px</button><button data-w=\"720\">720 px</button><button data-w=\"1080\">1080 px</button></div>\n");
+        foreach ((string path, AnimationData animation) in pages.Where(p => !p.Animation.IsEmpty))
+        {
+            string link = string.Join("/", path.Split('/').Select(Uri.EscapeDataString));
+            string ratio = (animation.View.Width / animation.View.Height).ToString("0.####", CultureInfo.InvariantCulture);
+            html.Append("    <section>\n      <h2>").Append(Encode(TitleOf(path, animation))).Append(" <small>").Append(Encode(path)).Append("</small></h2>\n")
+                .Append("      <div class=\"stills\">\n");
+            var stills = new List<(int Step, string Caption)> { (0, "Start") };
+            stills.AddRange(animation.Steps.Select((step, i) => (i + 1, HtmlExporter.PlainText(step.Caption))));
+            foreach ((int step, string caption) in stills)
+            {
+                html.Append("        <figure><a class=\"frame\" style=\"aspect-ratio: ").Append(ratio).Append("\" href=\"").Append(link).Append('#').Append(step)
+                    .Append("\"><iframe loading=\"lazy\" tabindex=\"-1\" title=\"").Append(Encode(caption)).Append("\" src=\"").Append(link).Append("?still#").Append(step)
+                    .Append("\"></iframe></a><figcaption>").Append(step > 0 ? "<b>" + step + "</b>" : "").Append(Encode(caption)).Append("</figcaption></figure>\n");
+            }
+            html.Append("      </div>\n    </section>\n");
+        }
+        // the width of the pictures: remembered in this browser
+        html.Append("""
+                <script>
+                  (() => {
+                    const key = 'geoanim-sheet-width'
+                    const buttons = [...document.querySelectorAll('.sizes button')]
+                    const set = width => {
+                      document.body.style.setProperty('--w', width + 'px')
+                      buttons.forEach(b => b.classList.toggle('on', b.dataset.w === String(width)))
+                      try { localStorage.setItem(key, width) } catch (error) {}
+                    }
+                    let width = 450
+                    try { width = Number(localStorage.getItem(key)) || 450 } catch (error) {}
+                    set(width)
+                    buttons.forEach(b => b.addEventListener('click', () => set(Number(b.dataset.w))))
+                  })()
+                </script>
+
+            """);
+        html.Append("  </body>\n</html>\n");
+        return html.ToString();
+    }
+
     private static string Anchor(string initial) => initial == "#" ? "andere" : initial;
 
     // the start of a page of the book (overview, keyword index) up to <body>: head, its tags and the common styles

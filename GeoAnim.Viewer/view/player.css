@@ -571,3 +571,17 @@ body.live #scene {
   stroke-linecap: round;
   vector-effect: non-scaling-stroke;
 }
+
+/* "?still": only the picture (a frame of the contact sheet) */
+body.still #header,
+body.still #caption-box,
+body.still #texts,
+body.still #controls,
+body.still #menu-button,
+body.still #menu {
+  display: none !important;
+}
+
+body.still #stage {
+  margin: 0;
+}

@@ -1112,13 +1112,17 @@
     // The texts grow with the picture, so their height depends on its width and the other way round: a few rounds
     // settle it (starting with the full width)
     const content = $('content')
-    let width = Math.max(1, content.clientWidth - 32)
+    // a still (contact sheet): the picture fills the frame
+    const still = document.body.classList.contains('still')
+    const side = still ? 0 : 32
+    const top = still ? 0 : 10
+    let width = Math.max(1, content.clientWidth - side)
     for (let round = 0; round < 3; round++) {
       const before = width
       setTextScale(width / REFERENCE_WIDTH)
       reserveCaptionSpace()
-      const available = Math.max(1, content.clientHeight - 10 - $('caption-box').offsetHeight - $('texts').offsetHeight)
-      width = Math.max(1, Math.min(content.clientWidth - 32, available * ratio))
+      const available = Math.max(1, content.clientHeight - top - $('caption-box').offsetHeight - $('texts').offsetHeight)
+      width = Math.max(1, Math.min(content.clientWidth - side, available * ratio))
       if (Math.abs(width - before) < 2) {
         break
       }
@@ -1722,6 +1726,11 @@
   })
 
   async function start () {
+    // "page.html?still#3": only the picture at the end of step 3, without texts and controls (the contact sheet of
+    // "geoanim exportdir -sheet")
+    if (/[?&]still\b/.test(location.search)) {
+      document.body.classList.add('still')
+    }
     // the fonts first: the labels are measured with them (bold and italic too, which load only when used)
     try {
       await Promise.all(['400 16px', 'italic 400 16px', '700 16px'].map(face => document.fonts.load(face + ' "STIX Two Text"')))

@@ -243,6 +243,14 @@ public sealed class CliTests : IDisposable
         Assert.True(register.IndexOf("id=\"E\"", StringComparison.Ordinal) < register.IndexOf("id=\"P\"", StringComparison.Ordinal));
         Assert.Contains("href=\"stichwoerter.html\">Stichwortverzeichnis</a>", File.ReadAllText(Path.Combine(folder, "index.html")));
 
+        // the contact sheet: only with -sheet, a still of every step (start included), linked to the page at that step
+        Assert.False(File.Exists(Path.Combine(folder, "kontaktbogen.html")));
+        Assert.Equal(0, Program.ExportDirectory(folder, sheet: true));
+        string sheet = File.ReadAllText(Path.Combine(folder, "kontaktbogen.html"));
+        Assert.Contains("href=\"Mehr/Strecken.html#2\"><iframe loading=\"lazy\" tabindex=\"-1\" title=\"b\" src=\"Mehr/Strecken.html?still#2\">", sheet);
+        Assert.Contains("src=\"Basics/Punkte.html?still#0\"", sheet);
+        Assert.DoesNotContain("kontaktbogen", File.ReadAllText(Path.Combine(folder, "index.html")));
+
         // a keyword of two pages
         Write("Doppelt.geo", "keyword Punkt\npoint A = 1 1");
         Assert.Equal(1, Program.ExportDirectory(folder));
