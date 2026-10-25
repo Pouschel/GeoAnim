@@ -238,7 +238,51 @@
       element.setAttribute('transform', `translate(${x} ${y})`)
       element.setAttribute('fill', v.color)
       element.style.color = v.color
+      applyHalo(element, v.halo ? animation.background : null, size)
     }
+  }
+
+  // "halo": a copy of the laid-out text behind it with a rim in the colour of what lies below (lines stop short of the
+  // letters); made again when the layout changes
+  function applyHalo (group, color, size) {
+    if (!color) {
+      if (group.halo) {
+        group.halo.remove()
+        group.halo = null
+      }
+      return
+    }
+    if (!group.halo || !group.halo.parentNode || group.haloKey !== group.layoutKey) {
+      if (group.halo) {
+        group.halo.remove()
+      }
+      const halo = document.createElementNS(SVG, 'g')
+      halo.setAttribute('class', 'halo')
+      for (const child of [...group.childNodes]) {
+        halo.appendChild(child.cloneNode(true))
+      }
+      group.insertBefore(halo, group.firstChild)
+      group.halo = halo
+      group.haloKey = group.layoutKey
+    }
+    group.halo.style.setProperty('--halo', color)
+    group.halo.style.setProperty('--halo-width', (0.22 * size) + 'px')
+  }
+
+  // a colour as [r, g, b] ("#rrggbb" or "rgb(r,g,b)", as tracks give it)
+  function rgbOf (color) {
+    if (typeof color === 'string' && color.startsWith('rgb')) {
+      return color.slice(color.indexOf('(') + 1, color.indexOf(')')).split(',').map(Number)
+    }
+    return parseColor(color)
+  }
+
+  // the colour of a fill with the opacity over the background
+  function fillOver (fill, opacity) {
+    const [r, g, b] = rgbOf(animation.background)
+    const [fr, fg, fb] = rgbOf(fill)
+    const mix = (x, y) => Math.round(x + (y - x) * opacity)
+    return `rgb(${mix(r, fr)},${mix(g, fg)},${mix(b, fb)})`
   }
 
   // the place of a text (where it stands across, its bottom) for a text below it: as drawn last; a text not drawn yet
@@ -406,6 +450,7 @@
       parts.label.setAttribute('fill', v.color)
       parts.label.style.color = v.color
       parts.label.setAttribute('opacity', reveal * (v.labelOpacity === undefined ? 1 : v.labelOpacity))
+      applyHalo(parts.label, v.halo ? fillOver(v.fill, v.fillOpacity) : null, size)
     }
   }
 

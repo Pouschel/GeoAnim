@@ -89,10 +89,13 @@ public sealed class AnimationData
     public AnimationData WithSteps(IReadOnlyList<AnimationStep> steps) => WithTexts(Title, steps);
 
     /// <summary>The same animation with another title and other step texts (their formulas must stay the same).</summary>
-    public AnimationData WithTexts(string? title, IReadOnlyList<AnimationStep> steps) =>
+    public AnimationData WithTexts(string? title, IReadOnlyList<AnimationStep> steps) => WithTexts(title, Description, steps);
+
+    /// <summary>The same animation with another title, description and other step texts (their formulas must stay the same).</summary>
+    public AnimationData WithTexts(string? title, string? description, IReadOnlyList<AnimationStep> steps) =>
         new(title, View, Background, GridStep, Axes, Duration, steps, primitives, timeScale, Formulas)
         {
-            Description = Description,
+            Description = description,
             Keywords = Keywords,
             Inspection = Inspection,
         };

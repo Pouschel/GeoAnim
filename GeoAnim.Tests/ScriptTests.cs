@@ -790,6 +790,24 @@ public class ScriptTests
     }
 
     [Fact]
+    public void HaloGoesToLabelsAndTexts()
+    {
+        AnimationData animation = ScriptCompiler.Compile("""
+            point A = 0 0 halo
+            point B = 4 0
+            point C = 0 3
+            segment s = A B label "$s$" halo
+            angle w = B A C label "$w$" halo
+            text t = "x" at 1 1 halo
+            """);
+        JsonElement[] primitives = JsonDocument.Parse(animation.ToJson()).RootElement.GetProperty("primitives").EnumerateArray().ToArray();
+        string[] withHalo = primitives.Where(p => p.GetProperty("tracks").TryGetProperty("halo", out _))
+            .Select(p => p.GetProperty("type").GetString() + ":" + (p.GetProperty("tracks").TryGetProperty("text", out JsonElement text) ? text[0][1].GetString() : "")).ToArray();
+        Assert.Equal(["text:$A$", "text:$s$", "angle:$w$", "text:x"], withHalo);
+        ErrorAt("point A = 0 0\npoint B = 1 0\npoint C = 0 1\npolygon d = A B C halo", 4, 19, "not possible for polygon");
+    }
+
+    [Fact]
     public void ShiftMovesLabelsFromTheirDefaultPlace()
     {
         AnimationData animation = ScriptCompiler.Compile("""

@@ -528,12 +528,12 @@ public static class ScriptCompiler
 
         private static string[] AllowedOptions(string kind) => kind switch
         {
-            "point" => ["color", "size", "labelsize", "label", "offset", "shift", "stacking", "draw"],
+            "point" => ["color", "size", "labelsize", "label", "offset", "shift", "stacking", "halo", "draw"],
             "polygon" => ["color", "width", "fill", "opacity", "stacking", "draw"],
-            "text" => ["color", "size", "offset", "shift", "align", "stacking", "draw"],
-            "segment" or "ray" => ["color", "width", "label", "labelsize", "labelpos", "offset", "shift", "arrow", "stacking", "draw"],
-            "line" => ["color", "width", "label", "labelsize", "labelpos", "offset", "shift", "stacking", "draw"],
-            "angle" => ["color", "width", "fill", "opacity", "label", "labelsize", "radius", "offset", "shift", "arrow", "stacking", "draw"],
+            "text" => ["color", "size", "offset", "shift", "align", "stacking", "halo", "draw"],
+            "segment" or "ray" => ["color", "width", "label", "labelsize", "labelpos", "offset", "shift", "arrow", "stacking", "halo", "draw"],
+            "line" => ["color", "width", "label", "labelsize", "labelpos", "offset", "shift", "stacking", "halo", "draw"],
+            "angle" => ["color", "width", "fill", "opacity", "label", "labelsize", "radius", "offset", "shift", "arrow", "stacking", "halo", "draw"],
             _ => ["color", "width", "stacking", "draw"],
         };
 
@@ -561,6 +561,7 @@ public static class ScriptCompiler
                     NoLabel = caller.NoLabel || (own.NoLabel && caller.Label == null),
                     Offset = caller.Offset ?? own.Offset,
                     Stacking = caller.Stacking != Stacking.Normal ? caller.Stacking : own.Stacking,
+                    Halo = caller.Halo || own.Halo,
                     Hidden = caller.Hidden || (own.Hidden && module.Mode != UseMode.Result),
                     Duration = caller.Duration ?? own.Duration,
                     Easing = caller.Easing ?? own.Easing,
@@ -925,6 +926,7 @@ public static class ScriptCompiler
                     "hidden" => options with { Hidden = true },
                     "straight" => options with { Straight = true },
                     "keep" => options with { Keep = true },
+                    "halo" => options with { Halo = true },
                     "back" => options with { Stacking = Stacking.Back },
                     "front" => options with { Stacking = Stacking.Front },
                     "linear" => options with { Easing = Easing.Linear },

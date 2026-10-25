@@ -134,6 +134,10 @@ public sealed class GeoPoint : GeoObject
             label.Animate("dx", span, distance.X);
             label.Animate("dy", span, distance.Y);
             label.Animate("size", span, Options.LabelSize ?? Defaults.LabelSize);
+            if (Options.Halo)
+            {
+                label.Animate("halo", span, 1.0);
+            }
             label.Animate("color", span, color.ToHex());
             RenderShift(label, span);
         }

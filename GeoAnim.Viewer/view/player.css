@@ -560,3 +560,14 @@ body.live #scene {
   color: #1565c0;
   font-weight: 700;
 }
+
+/* "halo": the copy behind a label, thicker and in the colour of what lies below it (formulas included) */
+.halo,
+.halo * {
+  fill: var(--halo) !important;
+  stroke: var(--halo) !important;
+  stroke-width: var(--halo-width) !important;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}

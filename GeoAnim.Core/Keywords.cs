@@ -80,8 +80,8 @@ public static class Keywords
     }
 
     /// <summary>
-    /// The animation with links in its step descriptions and explanations: the first occurrence of a word form in a step
-    /// (description and info together) links to its page (<paramref name="links"/>: form → address). Only whole words
+    /// The animation with links in its explanations ("info") and its description (below the starting picture): the first
+    /// occurrence of a word form in each of them links to its page (<paramref name="links"/>: form → address). Only whole words
     /// count, with the case as given, the longest form first; formulas, code and existing links stay as they are.
     /// </summary>
     /// <param name="used">Gets every form that occurs (also beyond the first occurrence in a step).</param>
@@ -102,6 +102,8 @@ public static class Keywords
             return links[form];
         }
 
+        // the description: shown below the starting picture like an explanation
+        string? description = animation.Description == null ? null : LinkText(animation.Description, pattern, Address, new HashSet<string>(StringComparer.Ordinal));
         var steps = new List<AnimationStep>();
         foreach (AnimationStep step in animation.Steps)
         {
@@ -110,7 +112,7 @@ public static class Keywords
             string? info = step.Info == null ? null : LinkText(step.Info, pattern, Address, linked);
             steps.Add(step with { Info = info });
         }
-        return animation.WithSteps(steps);
+        return animation.WithTexts(animation.Title, description, steps);
     }
 
     /// <summary>

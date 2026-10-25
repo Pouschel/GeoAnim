@@ -126,6 +126,11 @@ public sealed class GeoAngle : GeoObject
         sector.Animate("fill", span, FillOr(Defaults.LineColor).ToHex());
         sector.Animate("fillOpacity", span, FillOpacityOr(Defaults.FillOpacity));
         sector.Animate("size", span, Options.LabelSize ?? Defaults.LabelSize);
+        if (Options.Halo)
+        {
+            // the player gives the label a rim in the colour of the sector's fill
+            sector.Animate("halo", span, 1.0);
+        }
         // the label moved from its place on the bisector (in units): "shift", or "offset" as before
         RenderShift(sector, span, "ox", "oy");
         if (Options.Arrow != Arrow.None)

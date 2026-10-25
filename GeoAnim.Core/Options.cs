@@ -62,6 +62,12 @@ public sealed record Options
     /// <summary>"back": the object lies below all others; "front": above all but texts (its label stays where labels are).</summary>
     public Stacking Stacking { get; init; }
 
+    /// <summary>
+    /// "halo": the label (or the text) gets a narrow rim in the colour of the background (of an angle: of its sector), so
+    /// that lines running under it stop short of its letters.
+    /// </summary>
+    public bool Halo { get; init; }
+
     /// <summary>A highlighting that stays (until "unhighlight") instead of pulsing twice.</summary>
     public bool Keep { get; init; }
 

@@ -101,6 +101,10 @@ public sealed class GeoText : GeoObject
         RenderShift(text!, span);
         text!.Animate("size", span, (Options.Size ?? Defaults.TextSize) * (1 + 0.25 * Highlight));
         text.Animate("color", span, ColorOr(Defaults.LineColor).ToHex());
+        if (Options.Halo)
+        {
+            text.Animate("halo", span, 1.0);
+        }
         if (Above != null)
         {
             // the player places it below the text above

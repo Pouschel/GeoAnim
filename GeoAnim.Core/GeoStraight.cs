@@ -133,6 +133,10 @@ public sealed class GeoStraight : GeoObject
             label.Animate("anchor", span, "middle");
         }
         label.Animate("size", span, size);
+        if (Options.Halo)
+        {
+            label.Animate("halo", span, 1.0);
+        }
         label.Animate("color", span, ColorOr(Defaults.LineColor).ToHex());
         RenderShift(label, span);
     }

@@ -220,7 +220,7 @@ public sealed class CliTests : IDisposable
         Directory.CreateDirectory(Path.Combine(folder, "Mehr"));
         Write(Path.Combine("Basics", "10_Punkte.geo"), "keyword Punkt/e\npoint A = 1 1\nstep Ein Punkt");
         Write(Path.Combine("Mehr", "Strecken.geo"), "keyword Strecke/n\npoint A = 1 1\nstep Zwei Punkte\ninfo Zwei Punkte und eine Strecke\nstep b\nkeyword Endpunkt/e");
-        Write("Dreieck.geo", "point A = 1 1\nstep Drei Strecken\ninfo Drei Strecken, ihre Endpunkte");
+        Write("Dreieck.geo", "description Ein Dreieck aus Strecken\npoint A = 1 1\nstep Drei Strecken\ninfo Drei Strecken, ihre Endpunkte");
         Assert.Equal(0, Program.ExportDirectory(folder));
         string strecken = File.ReadAllText(Path.Combine(folder, "Mehr", "Strecken.html"));
         Assert.Contains("[Punkte](../Basics/Punkte.html)", strecken);
@@ -228,6 +228,10 @@ public sealed class CliTests : IDisposable
         string dreieck = File.ReadAllText(Path.Combine(folder, "Dreieck.html"));
         Assert.Contains("[Strecken](Mehr/Strecken.html), ihre [Endpunkte](Mehr/Strecken.html#2)", dreieck);
         Assert.Contains("\"caption\":\"Drei Strecken\"", dreieck);
+        // the description below the starting picture too; as plain text for search engines and the overview
+        Assert.Contains("\"description\":\"Ein Dreieck aus [Strecken](Mehr/Strecken.html)\"", dreieck);
+        Assert.Contains("<meta name=\"description\" content=\"Ein Dreieck aus Strecken\">", dreieck);
+        Assert.Contains("<p>Ein Dreieck aus Strecken</p>", File.ReadAllText(Path.Combine(folder, "index.html")));
         Assert.DoesNotContain("](", File.ReadAllText(Path.Combine(folder, "Basics", "Punkte.html")).Split("GEO_ANIMATION")[1].Split("</script>")[0]);
 
         // the keyword index: each term (not each form) with its page and the pages that mention it, linked from the overview
