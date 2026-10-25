@@ -202,20 +202,26 @@ internal static partial class Program
             compiled.Add((relative, page, animation));
             pageOfSource[Path.ChangeExtension(relative, ".html")] = page;
         }
-        // keyword → its page; a keyword of two pages is an error (the first one keeps it)
-        var keywordPages = new Dictionary<string, (string Page, string Source, int Step)>(StringComparer.Ordinal);
+        // keyword → its page; a keyword of two pages is an error (the first one keeps it). Places as "file:line" (relative
+        // to the book's folder), so that both can be opened with a click in a terminal
+        string Place(string source, PageKeyword keyword)
+        {
+            string file = keyword.File == null ? source : Path.GetRelativePath(root, keyword.File).Replace('\\', '/');
+            return keyword.Line > 0 ? file + ":" + keyword.Line : file;
+        }
+        var keywordPages = new Dictionary<string, (string Page, string Source, int Step, PageKeyword Keyword)>(StringComparer.Ordinal);
         foreach (var page in compiled)
         {
             foreach (PageKeyword keyword in page.Animation.Keywords)
             {
                 if (keywordPages.TryGetValue(keyword.Form, out var other))
                 {
-                    progress.Error($"{page.Source}: the keyword {keyword.Form} is already the keyword of {other.Source}.");
+                    progress.Error($"{Place(page.Source, keyword)}: the keyword {keyword.Form} is already the keyword of {Place(other.Source, other.Keyword)}.");
                     conflicts++;
                 }
                 else
                 {
-                    keywordPages[keyword.Form] = (page.Page, page.Source, keyword.Step);
+                    keywordPages[keyword.Form] = (page.Page, page.Source, keyword.Step, keyword);
                 }
             }
         }
@@ -223,6 +229,8 @@ internal static partial class Program
         List<string> book = compiled.Where(p => !p.Animation.IsEmpty).Select(p => p.Page).ToList();
         var titles = compiled.ToDictionary(p => p.Page, p => IndexPage.TitleOf(p.Page, p.Animation));
         var pages = new List<(string Path, AnimationData Animation)>();
+        // for the keyword index: the pages that mention each term (page and term of the keyword line)
+        var mentions = new Dictionary<(string Page, string Term), List<string>>();
         foreach (var page in compiled)
         {
             // links written with the scripts' names ("20_Strecken.html#2") → the pages' names
@@ -231,7 +239,21 @@ internal static partial class Program
             var links = keywordPages.Where(k => k.Value.Page != page.Page)
                 .ToDictionary(k => k.Key, k => Keywords.RelativeAddress(page.Page, k.Value.Page) + (k.Value.Step > 0 ? "#" + k.Value.Step : ""),
                     StringComparer.Ordinal);
-            animation = Keywords.Link(animation, links);
+            var used = new HashSet<string>(StringComparer.Ordinal);
+            animation = Keywords.Link(animation, links, used);
+            foreach (var term in used.Select(form => keywordPages[form]).Select(k => (k.Page, k.Keyword.Term)).Distinct())
+            {
+                if (!mentions.TryGetValue(term, out List<string>? on))
+                {
+                    mentions[term] = on = [];
+                }
+                on.Add(page.Page);
+                // a term explained only later in the book: maybe the keyword belongs elsewhere, or the order is not right
+                if (book.IndexOf(term.Page) > book.IndexOf(page.Page) && book.Contains(page.Page))
+                {
+                    progress.Warning($"{page.Source}: \"{term.Term}\" links ahead to {compiled.First(p => p.Page == term.Page).Source}, which comes later in the book.");
+                }
+            }
             int position = book.IndexOf(page.Page);
             PageLink? Neighbour(int i) => position >= 0 && i >= 0 && i < book.Count
                 ? new PageLink(titles[book[i]], Keywords.RelativeAddress(page.Page, book[i]))
@@ -266,7 +288,22 @@ internal static partial class Program
                 chapters[PageName(string.Join("/", parts[..i]), folder: true)] = DisplayName(parts[i - 1]);
             }
         }
-        File.WriteAllText(indexFile, IndexPage.Create(Path.GetFileName(root), pages, settings, indexHead, chapters), new UTF8Encoding(false));
+        // the keyword index: every term once per page that explains it, with the pages that mention it in book order
+        var entries = keywordPages.Values
+            .GroupBy(k => (k.Page, k.Keyword.Term))
+            .Select(g => g.First())
+            .Select(k => new KeywordEntry(k.Keyword.Term,
+                new PageLink(titles[k.Page], k.Page + (k.Step > 0 ? "#" + k.Step : "")),
+                (mentions.GetValueOrDefault((k.Page, k.Keyword.Term)) ?? []).OrderBy(book.IndexOf).Select(p => new PageLink(titles[p], p)).ToList()))
+            .ToList();
+        string? keywordIndex = entries.Count > 0 ? KeywordIndexPage : null;
+        if (keywordIndex != null)
+        {
+            var keywordHead = new PageHead(settings.Language, indexHead.Icon, settings.AddressOf(KeywordIndexPage), settings.Title);
+            File.WriteAllText(Path.Combine(target, KeywordIndexPage), IndexPage.CreateKeywordIndex(Path.GetFileName(root), entries, "index.html", settings, keywordHead),
+                new UTF8Encoding(false));
+        }
+        File.WriteAllText(indexFile, IndexPage.Create(Path.GetFileName(root), pages, settings, indexHead, chapters, keywordIndex), new UTF8Encoding(false));
         // for search engines: all pages with their address on the web
         if (settings.Url != null)
         {
@@ -276,6 +313,10 @@ internal static partial class Program
                 .Append("</loc><lastmod>").Append(changed.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)).Append("</lastmod></url>\n");
             var changes = compiled.Where(p => book.Contains(p.Page)).Select(p => (p.Page, Changed: File.GetLastWriteTime(Path.Combine(root, p.Source)))).ToList();
             Entry("index.html", changes.Count > 0 ? changes.Max(c => c.Changed) : DateTime.Now);
+            if (keywordIndex != null)
+            {
+                Entry(KeywordIndexPage, changes.Count > 0 ? changes.Max(c => c.Changed) : DateTime.Now);
+            }
             foreach ((string page, DateTime changed) in changes)
             {
                 Entry(page, changed);
@@ -283,9 +324,13 @@ internal static partial class Program
             File.WriteAllText(sitemap, xml.Append("</urlset>\n").ToString(), new UTF8Encoding(false));
         }
         progress.Finish($"{files.Count - failed} of {files.Count} pages exported to {target} (index.html"
+            + (keywordIndex != null ? ", " + KeywordIndexPage : "")
             + (settings.Url != null ? ", sitemap.xml" : "") + (assets ? ", assets/" : "") + ")");
         return failed > 0 || conflicts > 0 ? 1 : 0;
     }
+
+    /// <summary>The keyword index of an exported book, next to index.html.</summary>
+    internal const string KeywordIndexPage = "stichwoerter.html";
 
     /// <summary>The folder of an exported book with the player's files (script, stylesheets, fonts).</summary>
     internal const string AssetsFolder = "assets";

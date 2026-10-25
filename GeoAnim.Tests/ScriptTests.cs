@@ -909,7 +909,8 @@ public class ScriptTests
         Assert.All(page.Keywords, k => Assert.Equal(0, k.Step));
         // inside a step: that step (counted from 1)
         AnimationData steps = ScriptCompiler.Compile("keyword Punkt\npoint A = 0 0\nstep a\nstep b\nkeyword Endpunkt/e\n  pause");
-        Assert.Equal([new PageKeyword("Punkt", 0), new PageKeyword("Endpunkt", 2), new PageKeyword("Endpunkte", 2)], steps.Keywords);
+        Assert.Equal([("Punkt", 0, "Punkt", 1), ("Endpunkt", 2, "Endpunkt", 5), ("Endpunkte", 2, "Endpunkt", 5)],
+            steps.Keywords.Select(k => (k.Form, k.Step, k.Term, k.Line)));
         ErrorAt("keyword Punkt//e", 1, 1, "an ending after /");
         ErrorAt("keyword \"rechter Winkel\"", 1, 1, "separated by commas");
         ErrorAt("keyword Punkt,, Strecke", 1, 1, "empty keyword");

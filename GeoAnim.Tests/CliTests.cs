@@ -229,6 +229,15 @@ public sealed class CliTests : IDisposable
         Assert.Contains("[Strecken](Mehr/Strecken.html), ihre [Endpunkte](Mehr/Strecken.html#2)", dreieck);
         Assert.DoesNotContain("](", File.ReadAllText(Path.Combine(folder, "Basics", "Punkte.html")).Split("GEO_ANIMATION")[1].Split("</script>")[0]);
 
+        // the keyword index: each term (not each form) with its page and the pages that mention it, linked from the overview
+        string register = File.ReadAllText(Path.Combine(folder, "stichwoerter.html"));
+        Assert.Contains("<a class=\"term\" href=\"Mehr/Strecken.html#2\">Endpunkt</a>", register);
+        Assert.Contains("<p class=\"used\">erwähnt in: <a href=\"Dreieck.html\">Dreieck</a></p>", register);
+        Assert.Contains("<a class=\"term\" href=\"Basics/Punkte.html\">Punkt</a>", register);
+        Assert.DoesNotContain(">Endpunkte<", register);
+        Assert.True(register.IndexOf("id=\"E\"", StringComparison.Ordinal) < register.IndexOf("id=\"P\"", StringComparison.Ordinal));
+        Assert.Contains("href=\"stichwoerter.html\">Stichwortverzeichnis</a>", File.ReadAllText(Path.Combine(folder, "index.html")));
+
         // a keyword of two pages
         Write("Doppelt.geo", "keyword Punkt\npoint A = 1 1");
         Assert.Equal(1, Program.ExportDirectory(folder));

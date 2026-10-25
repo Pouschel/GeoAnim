@@ -64,14 +64,19 @@ public sealed class Construction
     /// occurrence in each step of the other pages to this one; before the first step to the page, inside a step to the
     /// end of that step.
     /// </summary>
-    public void Keyword(string text)
+    /// <param name="file">The file of the keyword line (for messages), null for the script itself.</param>
+    /// <param name="line">The line of the keyword line in <paramref name="file"/>.</param>
+    public void Keyword(string text, string? file = null, int line = 0)
     {
         int step = currentStep == null ? 0 : steps.Count + 1;
-        foreach (string form in GeoAnim.Keywords.Parse(text))
+        foreach ((string term, List<string> forms) in GeoAnim.Keywords.ParseTerms(text))
         {
-            if (!keywords.Any(k => k.Form == form))
+            foreach (string form in forms)
             {
-                keywords.Add(new PageKeyword(form, step));
+                if (!keywords.Any(k => k.Form == form))
+                {
+                    keywords.Add(new PageKeyword(form, step) { Term = term, File = file, Line = line });
+                }
             }
         }
     }
@@ -896,7 +901,17 @@ public sealed class Construction
 internal sealed record InspectedObject(IReadOnlyList<string> Names, Primitive Ghost);
 
 /// <summary>A word form that links to a page: to its start (step 0) or to the end of a step (1, 2, …).</summary>
-public sealed record PageKeyword(string Form, int Step);
+public sealed record PageKeyword(string Form, int Step)
+{
+    /// <summary>The term the form belongs to, as the keyword index names it ("Punkt" for Punkte).</summary>
+    public string Term { get; init; } = Form;
+
+    /// <summary>The file of its keyword line (full path), or null if not known.</summary>
+    public string? File { get; init; }
+
+    /// <summary>The line of its keyword line in <see cref="File"/> (0: not known).</summary>
+    public int Line { get; init; }
+}
 
 /// <summary>A step of the animation: its description and its time span in milliseconds.</summary>
 public sealed record AnimationStep(string Caption, double Start, double End)

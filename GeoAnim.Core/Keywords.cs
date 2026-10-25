@@ -14,13 +14,19 @@ public static class Keywords
     /// after "/" ("Punkt/e/en": Punkt, Punkte, Punkten), and a term stands for all combinations of its words' forms
     /// ("rechte/r/n Winkel/s": rechte Winkel, rechte Winkels, rechter Winkel, …, rechten Winkels).
     /// </summary>
-    public static List<string> Parse(string text)
+    public static List<string> Parse(string text) => ParseTerms(text).SelectMany(t => t.Forms).ToList();
+
+    /// <summary>
+    /// The terms of a keyword line, each with its word forms (see <see cref="Parse"/>) and its name in the keyword index:
+    /// the words without endings ("Satz/es des Pythagoras" → "Satz des Pythagoras").
+    /// </summary>
+    public static List<(string Term, List<string> Forms)> ParseTerms(string text)
     {
         if (text.Contains('"'))
         {
             throw new GeoException("Keywords are separated by commas, without quotes: keyword Satz/es des Pythagoras, Punkt/e/en.");
         }
-        var forms = new List<string>();
+        var result = new List<(string Term, List<string> Forms)>();
         List<string> terms = text.Split(',').ToList();
         // a comma at the end (a list continued with "|") is allowed
         if (terms.Count > 1 && terms[^1].Trim().Length == 0)
@@ -47,9 +53,9 @@ public static class Keywords
                     throw new GeoException($"\"{term.Trim()}\" has too many combinations of endings.");
                 }
             }
-            forms.AddRange(combinations);
+            result.Add((combinations[0], combinations));
         }
-        return forms;
+        return result;
     }
 
     // "Punkt/e/en" → Punkt, Punkte, Punkten
@@ -78,7 +84,8 @@ public static class Keywords
     /// (description and info together) links to its page (<paramref name="links"/>: form → address). Only whole words
     /// count, with the case as given, the longest form first; formulas, code and existing links stay as they are.
     /// </summary>
-    public static AnimationData Link(AnimationData animation, IReadOnlyDictionary<string, string> links)
+    /// <param name="used">Gets every form that occurs (also beyond the first occurrence in a step).</param>
+    public static AnimationData Link(AnimationData animation, IReadOnlyDictionary<string, string> links, ISet<string>? used = null)
     {
         if (links.Count == 0)
         {
@@ -88,7 +95,12 @@ public static class Keywords
         string alternatives = string.Join("|", links.Keys.OrderByDescending(f => f.Length).ThenBy(f => f, StringComparer.Ordinal)
             .Select(f => Regex.Escape(f).Replace("\\ ", " +")));
         var pattern = new Regex(@"\G(?<![\p{L}\p{N}])(?:" + alternatives + @")(?![\p{L}\p{N}])", RegexOptions.CultureInvariant);
-        string Address(string match) => links[Regex.Replace(match, " +", " ")];
+        string Address(string match)
+        {
+            string form = Regex.Replace(match, " +", " ");
+            used?.Add(form);
+            return links[form];
+        }
 
         var steps = new List<AnimationStep>();
         foreach (AnimationStep step in animation.Steps)

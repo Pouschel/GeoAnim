@@ -1,8 +1,12 @@
+using System.Globalization;
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 
 namespace GeoAnim.Viewer;
+
+/// <summary>A term of the keyword index: the page (and step) that explains it, the pages that mention it.</summary>
+public sealed record KeywordEntry(string Term, PageLink Page, IReadOnlyList<PageLink> UsedOn);
 
 /// <summary>
 /// The overview of an exported book ("geoanim exportdir"): links to the pages in the order given (the pages of the folder
@@ -12,64 +16,16 @@ public static partial class IndexPage
 {
     /// <summary>
     /// The index for the pages in book order (paths relative to the index, with "/"); its title, description, way back
-    /// home and footer from <paramref name="settings"/> (else the folder's name), its icon and address from <paramref name="head"/>.
+    /// home and footer from <paramref name="settings"/> (else the folder's name), its icon and address from <paramref name="head"/>;
+    /// <paramref name="keywordIndex"/>: the address of the keyword index, linked below the description.
     /// </summary>
     public static string Create(string folderName, IEnumerable<(string Path, AnimationData Animation)> pages, BookSettings? settings = null, PageHead? head = null,
-        IReadOnlyDictionary<string, string>? chapters = null)
+        IReadOnlyDictionary<string, string>? chapters = null, string? keywordIndex = null)
     {
         settings ??= BookSettings.None;
         string title = settings.Title ?? folderName;
         var html = new StringBuilder();
-        html.Append("<!doctype html>\n<html lang=\"").Append(Encode(settings.Language ?? "de")).Append("\">\n");
-        html.Append("""
-              <head>
-                <meta charset="utf-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1">
-
-            """);
-        html.Append("    <title>").Append(Encode(title)).Append("</title>\n");
-        if (settings.Description != null)
-        {
-            html.Append("    <meta name=\"description\" content=\"").Append(Encode(settings.Description)).Append("\">\n");
-        }
-        if (head != null)
-        {
-            html.Append(HtmlExporter.HeadTags(head, title, settings.Description ?? title).TrimStart('\n')).Append('\n');
-        }
-        html.Append("""
-                <style>
-                  body { max-width: 760px; margin: 0 auto; padding: 24px 16px 48px; background: #eceef2; color: #222;
-                         font-family: 'STIX Two Text', Georgia, 'Times New Roman', serif; line-height: 1.4; }
-                  h1 { font-size: 30px; margin: 0 0 18px; }
-                  h2 { font-size: 21px; margin: 30px 0 8px; color: #4a5160; }
-                  details { margin: 0 0 10px; border-radius: 8px; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
-                  summary { display: flex; align-items: baseline; gap: 12px; padding: 14px 18px; cursor: pointer; list-style: none; user-select: none; }
-                  summary::-webkit-details-marker { display: none; }
-                  summary::before { content: '▸'; color: #6b7280; transition: transform 0.15s; }
-                  details[open] > summary::before { transform: rotate(90deg); }
-                  summary:hover h2 { color: #1565c0; }
-                  summary h2 { flex: 1; margin: 0; color: #222; }
-                  .count { color: #6b7280; font-size: 15px; white-space: nowrap; }
-                  details ol { padding: 0 14px 14px; }
-                  details li { background: #f6f7f9; box-shadow: none; }
-                  details details { margin: 0 14px 10px; background: #f6f7f9; box-shadow: none; }
-                  details details summary { padding: 10px 14px; }
-                  summary h3 { flex: 1; margin: 0; color: #222; font-size: 18px; }
-                  summary:hover h3 { color: #1565c0; }
-                  details details li { background: #fff; }
-                  ol { margin: 0; padding: 0; list-style: none; }
-                  li { margin: 0 0 8px; padding: 10px 14px; border-radius: 6px; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
-                  a { color: #1565c0; font-size: 19px; text-decoration: none; }
-                  a:hover { text-decoration: underline; }
-                  p { margin: 4px 0 0; color: #5c6370; font-size: 15px; }
-                  .home { display: inline-block; margin: 0 0 10px; font-size: 16px; }
-                  .intro { margin: 0 0 18px; color: #333; font-size: 18px; }
-                  footer { margin: 36px 0 0; color: #6b7280; font-size: 14px; text-align: center; }
-                  footer a { font-size: 14px; }
-                </style>
-              </head>
-              <body>
-            """);
+        Begin(html, title, settings.Description, settings, head, "");
         if (settings.Home != null)
         {
             html.Append("    <a class=\"home\" href=\"").Append(Encode(settings.Home.Href)).Append("\">← ").Append(Encode(settings.Home.Title)).Append("</a>\n");
@@ -78,6 +34,10 @@ public static partial class IndexPage
         if (settings.Description != null)
         {
             html.Append("    <p class=\"intro\">").Append(Inline(settings.Description)).Append("</p>\n");
+        }
+        if (keywordIndex != null)
+        {
+            html.Append("    <a class=\"register\" href=\"").Append(Encode(keywordIndex)).Append("\">Stichwortverzeichnis</a>\n");
         }
         // a chapter (folder) opens with a click, so that a long book stays clear, and holds its pages and its own chapters
         // in book order; the pages of the book's folder itself stand open
@@ -164,6 +124,124 @@ public static partial class IndexPage
         html.Append("  </body>\n</html>\n");
         return html.ToString();
     }
+
+    /// <summary>
+    /// The keyword index of an exported book: the terms in alphabetical order under their initials, each with the page
+    /// (and step) that explains it and the pages that mention it (addresses relative to the index).
+    /// </summary>
+    public static string CreateKeywordIndex(string folderName, IEnumerable<KeywordEntry> entries, string overview, BookSettings? settings = null, PageHead? head = null)
+    {
+        settings ??= BookSettings.None;
+        string book = settings.Title ?? folderName;
+        const string title = "Stichwortverzeichnis";
+        var html = new StringBuilder();
+        Begin(html, title + " – " + book, "Alle Begriffe aus „" + book + "“ mit der Seite, die sie erklärt.", settings, head, """
+                  .letters { display: flex; flex-wrap: wrap; gap: 4px 10px; margin: 0 0 8px; }
+                  .letters a { font-size: 17px; }
+                  .entries li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 12px; }
+                  .term { font-size: 19px; font-weight: 600; }
+                  .page { font-size: 16px; }
+                  .used { flex-basis: 100%; margin: 2px 0 0; color: #5c6370; font-size: 15px; }
+                  .used a { font-size: 15px; }
+            """);
+        html.Append("    <a class=\"home\" href=\"").Append(Encode(overview)).Append("\">← ").Append(Encode(book)).Append("</a>\n");
+        html.Append("    <h1>").Append(title).Append("</h1>\n");
+        CompareInfo compare = CultureInfo.GetCultureInfo(settings.Language ?? "de").CompareInfo;
+        List<KeywordEntry> sorted = entries.OrderBy(e => e.Term, StringComparer.Create(CultureInfo.GetCultureInfo(settings.Language ?? "de"), CompareOptions.IgnoreCase))
+            .ThenBy(e => e.Page.Title, StringComparer.Ordinal).ToList();
+        // by initial: umlauts and accents with their letter (Ä with A), digits and the rest under #
+        static string Initial(string term)
+        {
+            char first = term.Normalize(NormalizationForm.FormD)[0];
+            return char.IsLetter(first) ? char.ToUpperInvariant(first).ToString() : "#";
+        }
+        List<IGrouping<string, KeywordEntry>> groups = sorted.GroupBy(e => Initial(e.Term)).ToList();
+        html.Append("    <nav class=\"letters\">");
+        foreach (IGrouping<string, KeywordEntry> group in groups)
+        {
+            html.Append("<a href=\"#").Append(Encode(Anchor(group.Key))).Append("\">").Append(Encode(group.Key)).Append("</a>");
+        }
+        html.Append("</nav>\n");
+        foreach (IGrouping<string, KeywordEntry> group in groups)
+        {
+            html.Append("    <h2 id=\"").Append(Encode(Anchor(group.Key))).Append("\">").Append(Encode(group.Key)).Append("</h2>\n    <ol class=\"entries\">\n");
+            foreach (KeywordEntry entry in group)
+            {
+                html.Append("      <li><a class=\"term\" href=\"").Append(Encode(entry.Page.Href)).Append("\">").Append(Encode(entry.Term)).Append("</a>")
+                    .Append("<span class=\"page\">").Append(Encode(entry.Page.Title)).Append("</span>");
+                if (entry.UsedOn.Count > 0)
+                {
+                    html.Append("<p class=\"used\">erwähnt in: ")
+                        .Append(string.Join(" · ", entry.UsedOn.Select(u => "<a href=\"" + Encode(u.Href) + "\">" + Encode(u.Title) + "</a>")))
+                        .Append("</p>");
+                }
+                html.Append("</li>\n");
+            }
+            html.Append("    </ol>\n");
+        }
+        if (settings.Footer != null)
+        {
+            html.Append("    <footer>").Append(Inline(settings.Footer)).Append("</footer>\n");
+        }
+        html.Append("  </body>\n</html>\n");
+        return html.ToString();
+    }
+
+    private static string Anchor(string initial) => initial == "#" ? "andere" : initial;
+
+    // the start of a page of the book (overview, keyword index) up to <body>: head, its tags and the common styles
+    private static void Begin(StringBuilder html, string title, string? description, BookSettings settings, PageHead? head, string css)
+    {
+        html.Append("<!doctype html>\n<html lang=\"").Append(Encode(settings.Language ?? "de")).Append("\">\n");
+        html.Append("""
+              <head>
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+
+            """);
+        html.Append("    <title>").Append(Encode(title)).Append("</title>\n");
+        if (description != null)
+        {
+            html.Append("    <meta name=\"description\" content=\"").Append(Encode(description)).Append("\">\n");
+        }
+        if (head != null)
+        {
+            html.Append(HtmlExporter.HeadTags(head, title, description ?? title).TrimStart('\n')).Append('\n');
+        }
+        html.Append("    <style>\n").Append(Style).Append(css).Append("    </style>\n  </head>\n  <body>\n");
+    }
+
+    private const string Style = """
+                  body { max-width: 760px; margin: 0 auto; padding: 24px 16px 48px; background: #eceef2; color: #222;
+                         font-family: 'STIX Two Text', Georgia, 'Times New Roman', serif; line-height: 1.4; }
+                  h1 { font-size: 30px; margin: 0 0 18px; }
+                  h2 { font-size: 21px; margin: 30px 0 8px; color: #4a5160; }
+                  details { margin: 0 0 10px; border-radius: 8px; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+                  summary { display: flex; align-items: baseline; gap: 12px; padding: 14px 18px; cursor: pointer; list-style: none; user-select: none; }
+                  summary::-webkit-details-marker { display: none; }
+                  summary::before { content: '▸'; color: #6b7280; transition: transform 0.15s; }
+                  details[open] > summary::before { transform: rotate(90deg); }
+                  summary:hover h2 { color: #1565c0; }
+                  summary h2 { flex: 1; margin: 0; color: #222; }
+                  .count { color: #6b7280; font-size: 15px; white-space: nowrap; }
+                  details ol { padding: 0 14px 14px; }
+                  details li { background: #f6f7f9; box-shadow: none; }
+                  details details { margin: 0 14px 10px; background: #f6f7f9; box-shadow: none; }
+                  details details summary { padding: 10px 14px; }
+                  summary h3 { flex: 1; margin: 0; color: #222; font-size: 18px; }
+                  summary:hover h3 { color: #1565c0; }
+                  details details li { background: #fff; }
+                  ol { margin: 0; padding: 0; list-style: none; }
+                  li { margin: 0 0 8px; padding: 10px 14px; border-radius: 6px; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+                  a { color: #1565c0; font-size: 19px; text-decoration: none; }
+                  a:hover { text-decoration: underline; }
+                  p { margin: 4px 0 0; color: #5c6370; font-size: 15px; }
+                  .register { display: inline-block; margin: 0 0 18px; font-size: 17px; }
+                  .home { display: inline-block; margin: 0 0 10px; font-size: 16px; }
+                  .intro { margin: 0 0 18px; color: #333; font-size: 18px; }
+                  footer { margin: 36px 0 0; color: #6b7280; font-size: 14px; text-align: center; }
+                  footer a { font-size: 14px; }
+            """;
 
     // only what HTML needs (umlauts and © stay as they are: the page is UTF-8)
     private static string Encode(string text) =>

@@ -144,8 +144,11 @@ public static class ScriptCompiler
                     c.Description = s.Description;
                     break;
                 case KeywordStatement s:
-                    c.Keyword(s.Text);
-                    break;
+                    {
+                        (string? file, int line) = source.OriginOf(s.Line);
+                        c.Keyword(s.Text, file, line);
+                        break;
+                    }
                 case ViewStatement s:
                     if (hadObject)
                     {
