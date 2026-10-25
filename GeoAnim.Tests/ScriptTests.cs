@@ -923,6 +923,8 @@ public class ScriptTests
             | ein rechter  Winkel und **Gerade**.
             step Noch ein Punkt
             info Noch ein Punkt
+            step Ohne Link
+            info Auf der einen \Seite kein \Punkt, dann ein Punkt
             """);
         var links = new Dictionary<string, string>
         {
@@ -932,6 +934,7 @@ public class ScriptTests
             ["Geraden"] = "g.html",
             ["rechter Winkel"] = "w.html",
             ["Winkel"] = "x.html",
+            ["Seite"] = "s.html",
         };
         AnimationData linked = Keywords.Link(animation, links);
         // only in the explanations: the step descriptions are headings
@@ -940,6 +943,8 @@ public class ScriptTests
             linked.Steps[0].Info);
         Assert.Equal("Noch ein Punkt", linked.Steps[1].Caption);
         Assert.Equal("Noch ein [Punkt](p.html)", linked.Steps[1].Info);
+        // a backslash before a word: no link there (the player does not show the backslash)
+        Assert.Equal("Auf der einen \\Seite kein \\Punkt, dann ein [Punkt](p.html)", linked.Steps[2].Info);
         Assert.Equal("../Basics/10_Punkte.html", Keywords.RelativeAddress("Mehr/a.html", "Basics/10_Punkte.html"));
         Assert.Equal("b%20%282%29.html", Keywords.RelativeAddress("a.html", "b (2).html"));
     }

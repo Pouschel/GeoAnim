@@ -77,8 +77,12 @@ public static partial class HtmlExporter
 
     /// <summary>A title or description as plain text (for the page's title).</summary>
     internal static string PlainText(string text) =>
-        MarkdownPattern().Replace(text, m => m.Groups[1].Success ? m.Groups[1].Value : m.Groups[2].Success ? m.Groups[2].Value : m.Groups[3].Value)
+        NoLink().Replace(MarkdownPattern().Replace(text, m => m.Groups[1].Success ? m.Groups[1].Value : m.Groups[2].Success ? m.Groups[2].Value : m.Groups[3].Value), "")
             .Replace('\n', ' ');
+
+    // a backslash before a letter ("\Seite": no keyword link there) is not shown
+    [GeneratedRegex(@"\\(?=\p{L})")]
+    private static partial Regex NoLink();
 
     /// <summary>
     /// The page for <paramref name="animation"/>; in an exported book with the way to the other pages. Without

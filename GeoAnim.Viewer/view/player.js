@@ -595,6 +595,11 @@
         i += 2
         continue
       }
+      // before a letter: "no keyword link here" (exportdir leaves "\\Seite" alone); the backslash is not shown
+      if (c === '\\' && typeof items[i + 1] === 'string' && /\p{L}/u.test(items[i + 1])) {
+        i++
+        continue
+      }
       let found = null
       if (doubleStar) {
         found = wrapped(items, i, '**', 'strong')
