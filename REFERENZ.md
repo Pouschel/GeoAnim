@@ -9,7 +9,7 @@ Alle Befehle mit allen Schreibweisen und den Optionen, die jeweils erlaubt sind.
 - [Grundregeln](#grundregeln)
 - [Einstellungen](#einstellungen): `title`, `description`, `view`, `background`, `grid`, `axes`, `speed`, `keyword`
 - [Texte, Vars, Voreinstellungen](#texte-vars-voreinstellungen): `set`, `var`, `default`
-- [Objekte](#objekte): `point`, `segment`, `line`, `ray`, `circle`, `polygon`, `angle`, `text`
+- [Objekte](#objekte): `point`, `segment`, `line`, `ray`, `circle`, `arc`, `sector`, `polygon`, `angle`, `text`
 - [Zahlen](#zahlen): `number`
 - [Schritte und Aktionen](#schritte-und-aktionen): `step`, `info`, `show`, `hide`, `highlight`, `unhighlight`, `move`, `rotate`, `reflect`, `pause`, `together`
 - [Dateien](#dateien): `include`, `use`, `input`, `output`
@@ -53,7 +53,7 @@ Vor dem ersten `step` (außer `keyword`).
 |---|---|---|
 | `set` | `set name = Text …` | benannter Text für `text` und `label`; mit `|` fortsetzbar; gilt ab seiner Zeile |
 | `var` | `var name Optionen…` | Optionen mit Namen; darf andere Vars enthalten; gilt ab seiner Zeile, eine spätere gleichnamige ersetzt sie; was für ein Objekt nicht passt, wird übergangen |
-| `default` | `default [Arten…] Optionen…` | Voreinstellung für alle folgenden Objekte der Arten `point` `segment` `line` `ray` `circle` `polygon` `angle` `text` `show` `hide` `highlight` `unhighlight` `move` `rotate` `reflect`; ohne Art für alle; was nicht passt, wird übergangen |
+| `default` | `default [Arten…] Optionen…` | Voreinstellung für alle folgenden Objekte der Arten `point` `segment` `line` `ray` `circle` `arc` `sector` `polygon` `angle` `text` `show` `hide` `highlight` `unhighlight` `move` `rotate` `reflect`; ohne Art für alle; was nicht passt, wird übergangen |
 
 Reihenfolge der Optionen eines Objekts: Voreinstellungen ohne Art, dann die der Art, dann die eigenen – die spätere gewinnt.
 
@@ -112,6 +112,15 @@ Alle Objekte: `art name = Definition Optionen…`. Vor dem ersten `step` gehöre
 
 **Optionen:** `color` `width` `fill` `opacity`, *Zeichnen*.
 
+### `arc`, `sector` – Kreisbogen, Kreissektor
+
+| Schreibweise | Objekt |
+|---|---|
+| `arc b = k from A to B` | Bogen des Kreises k gegen den Uhrzeigersinn von A bis B (den anderen Bogen: `from B to A`); A und B geben nur die Richtungen vom Mittelpunkt an |
+| `sector s = k from A to B` | Kreissektor: die beiden Radien und der Bogen dazwischen, gefüllt |
+
+**Optionen:** `arc`: `color` `width` `label` (außen an der Bogenmitte) `labelsize` `shift` `arrow` · `arrow start` · `arrow both` `halo`, *Zeichnen*. `sector`: `color` `width` `fill` (Standard: Linienfarbe) `opacity` (Standard 0,2) `label` (innen auf der Winkelhalbierenden) `labelsize` `shift` `halo`, *Zeichnen*. Beide wachsen beim Zeichnen von A nach B und bleiben auf dem Kreis, wenn er sich ändert.
+
 ### `angle` – Winkel
 
 | Schreibweise | Winkel |
@@ -135,11 +144,11 @@ Alle Objekte: `art name = Definition Optionen…`. Vor dem ersten `step` gehöre
 
 | Schreibweise | Zahl |
 |---|---|
-| `number n = length s` | Länge einer Strecke |
+| `number n = length s` | Länge einer Strecke (eines Bogens: Bogenlänge) |
 | `number n = length A B` | Abstand zweier Punkte |
-| `number n = degrees w` | Größe eines Winkels in Grad |
-| `number n = area D` · `number n = area k` | Flächeninhalt eines Vielecks bzw. Kreises |
-| `number n = perimeter D` · `number n = perimeter k` | Umfang eines Vielecks bzw. Kreises |
+| `number n = degrees w` | Größe eines Winkels in Grad (eines Bogens oder Sektors: Mittelpunktswinkel) |
+| `number n = area D` · `number n = area k` | Flächeninhalt eines Vielecks, Kreises oder Sektors |
+| `number n = perimeter D` · `number n = perimeter k` | Umfang eines Vielecks, Kreises oder Sektors |
 | `number n = radius k` | Radius eines Kreises |
 | `number n = 5.2` · `number n = a * sqrt(3) / 2` | berechnet aus Zahlen und anderen Zahlen: `+ - * / ^`, Klammern, `sqrt( )`, `abs( )`, `pi`; Leerzeichen beliebig, `#` beginnt einen Kommentar. Nur aus festen Zahlen berechnet: eine **Konstante**, überall verwendbar, wo eine Zahl steht (Koordinaten, Optionen, `move … to`, `rotate … by`, `pause`, …); mit gemessenen Zahlen: folgt ihnen, nur für Texte (`{n}`) |
 
@@ -241,4 +250,4 @@ Aktionen stehen in einem Schritt und laufen nacheinander. Die Optionen *Ablauf* 
 
 Diese Wörter können keine Namen sein:
 
-`title` `description` `info` `keyword` `view` `background` `grid` `axes` `speed` `var` `default` `include` `input` `output` `use` `draw` `steps` `copy` `set` `step` `point` `segment` `line` `ray` `circle` `polygon` `angle` `text` `number` `length` `degrees` `area` `perimeter` `show` `hide` `all` `highlight` `unhighlight` `keep` `move` `rotate` `reflect` `along` `around` `across` `in` `by` `pause` `together` `end` `midpoint` `intersect` `center` `through` `radius` `at` `to` `on` `x` `y` `below` `gap` `align` `left` `right` `duration` `color` `width` `fill` `opacity` `size` `labelsize` `labelpos` `label` `nolabel` `hidden` `offset` `shift` `arrow` `start` `both` `straight` `back` `front` `halo` `linear` `ease` `easein` `easeout` `easeinout`
+`title` `description` `info` `keyword` `view` `background` `grid` `axes` `speed` `var` `default` `include` `input` `output` `use` `draw` `steps` `copy` `set` `step` `point` `segment` `line` `ray` `circle` `arc` `sector` `polygon` `angle` `text` `number` `length` `degrees` `area` `perimeter` `show` `hide` `all` `highlight` `unhighlight` `keep` `move` `rotate` `reflect` `along` `around` `across` `in` `by` `pause` `together` `end` `midpoint` `intersect` `center` `through` `radius` `at` `from` `to` `on` `x` `y` `below` `gap` `align` `left` `right` `duration` `color` `width` `fill` `opacity` `size` `labelsize` `labelpos` `label` `nolabel` `hidden` `offset` `shift` `arrow` `start` `both` `straight` `back` `front` `halo` `linear` `ease` `easein` `easeout` `easeinout`

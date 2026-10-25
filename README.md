@@ -129,6 +129,8 @@ Koordinaten sind mathematisch: die y-Achse zeigt nach oben. Der Maßstab ist in 
 | `ray r = A B` | Strahl ab A durch B |
 | `circle k = center M through P` | Kreis um M durch P |
 | `circle k = center M radius 2.5` | Kreis mit festem Radius |
+| `arc b = k from A to B` | Kreisbogen auf k gegen den Uhrzeigersinn von A bis B (A, B geben die Richtungen vom Mittelpunkt an; der Bogen bleibt auf dem Kreis, wenn er sich ändert); Optionen wie bei einer Strecke, auch `arrow` |
+| `sector s = k from A to B` | Kreissektor: die beiden Radien und der Bogen dazwischen, gefüllt wie ein Vieleck (`fill`, `opacity`), Beschriftung innen |
 | `polygon D = A B C` | gefülltes Vieleck (mindestens 3 Punkte) |
 | `text t = "Hallo" at 5 6` | Text an festen Koordinaten (zentriert) |
 | `text t = "90°" at P` | Text neben einem Punkt, wandert mit ihm |

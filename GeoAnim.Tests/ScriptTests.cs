@@ -880,6 +880,39 @@ public class ScriptTests
     }
 
     [Fact]
+    public void ArcsAndSectorsLieOnTheirCircle()
+    {
+        Construction c = ScriptCompiler.CompileConstruction("""
+            point M = 0 0
+            point P = 2 0
+            point A = 1 0
+            point B = 0 5
+            circle k = center M through P
+            arc b = k from A to B label "$b$" arrow
+            sector s = k from B to A fill violet
+            number l = length b
+            number f = area s
+            number w = degrees s
+            step größer
+              move P to 4 0
+            """);
+        var b = (GeoArc)c.Objects["b"];
+        var s = (GeoArc)c.Objects["s"];
+        // A and B give the directions: a quarter of the circle (radius 4 now), the sector the other three quarters
+        Assert.Equal((0.0, 90.0), (b.Start, b.Degrees));
+        Assert.Equal(270, s.Degrees, 9);
+        Assert.Equal(2 * Math.PI, ((GeoNumber)c.Objects["l"]).Value, 9);
+        Assert.Equal(12 * Math.PI, ((GeoNumber)c.Objects["f"]).Value, 9);
+        Assert.Equal(270, ((GeoNumber)c.Objects["w"]).Value, 9);
+        JsonElement[] primitives = JsonDocument.Parse(c.Build().ToJson()).RootElement.GetProperty("primitives").EnumerateArray().ToArray();
+        Assert.Equal(["part:20", "disc:10", "part:20"], primitives.Where(p => p.GetProperty("type").GetString() is "part" or "disc")
+            .Select(p => p.GetProperty("type").GetString() + ":" + p.GetProperty("layer").GetInt32()));
+        ErrorAt("point M = 0 0\npoint A = 1 0\nsegment g = M A\narc b = g from A to M", 4, 9, "lies on a circle");
+        ErrorAt("point M = 0 0\ncircle k = center M radius 1\narc b = k A to M", 3, 11, "\"from\"");
+        ErrorAt("point M = 0 0\ncircle k = center M radius 1\nsector s = k from M to M arrow", 3, 26, "not possible for sector");
+    }
+
+    [Fact]
     public void ShiftMovesLabelsFromTheirDefaultPlace()
     {
         AnimationData animation = ScriptCompiler.Compile("""

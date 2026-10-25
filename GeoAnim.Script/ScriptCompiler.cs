@@ -359,11 +359,17 @@ public static class ScriptCompiler
                             case "length" when s.Arguments.Count == 2:
                                 c.Distance(name, Expect<GeoPoint>("a segment or the distance of two points"), ResolvePoint(s.Arguments[1]));
                                 break;
+                            case "length" when item is GeoArc arc:
+                                c.Length(name, arc);
+                                break;
                             case "length":
-                                c.Length(name, Expect<GeoStraight>("a segment or the distance of two points"));
+                                c.Length(name, Expect<GeoStraight>("a segment, an arc or the distance of two points"));
+                                break;
+                            case "degrees" when item is GeoArc arc:
+                                c.Degrees(name, arc);
                                 break;
                             case "degrees":
-                                c.Degrees(name, Expect<GeoAngle>("an angle"));
+                                c.Degrees(name, Expect<GeoAngle>("an angle, an arc or a sector"));
                                 break;
                             case "radius":
                                 c.RadiusOf(name, Expect<GeoCircle>("a circle"));
@@ -543,6 +549,8 @@ public static class ScriptCompiler
             "line" => ["color", "width", "label", "labelsize", "labelpos", "offset", "shift", "stacking", "halo", "draw"],
             "angle" => ["color", "width", "fill", "opacity", "label", "labelsize", "radius", "offset", "shift", "arrow", "stacking", "halo", "draw"],
             "circle" => ["color", "width", "fill", "opacity", "stacking", "draw"],
+            "arc" => ["color", "width", "label", "labelsize", "shift", "arrow", "stacking", "halo", "draw"],
+            "sector" => ["color", "width", "fill", "opacity", "label", "labelsize", "shift", "stacking", "halo", "draw"],
             _ => ["color", "width", "stacking", "draw"],
         };
 
@@ -665,6 +673,16 @@ public static class ScriptCompiler
                 case CircleRadiusDefinition d:
                     created = c.Circle(name0, ResolvePoint(d.Center), d.Radius, options);
                     break;
+                case ArcDefinition d:
+                    {
+                        GeoObject circle = Resolve(d.Circle);
+                        GeoCircle k = circle as GeoCircle
+                            ?? throw new ScriptError(d.Circle.Line, d.Circle.Column, $"{d.Circle.Name} is a {circle.Kind}; an {s.Kind} lies on a circle.");
+                        created = s.Kind == "sector"
+                            ? c.Sector(name0, k, ResolvePoint(d.From), ResolvePoint(d.To), options)
+                            : c.Arc(name0, k, ResolvePoint(d.From), ResolvePoint(d.To), options);
+                        break;
+                    }
                 case AngleDefinition d:
                     created = c.Angle(name0, ResolvePoint(d.A), ResolvePoint(d.Vertex), ResolvePoint(d.C), options);
                     break;

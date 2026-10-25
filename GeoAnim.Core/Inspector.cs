@@ -50,6 +50,16 @@ internal sealed class Inspector
                     ghost.Animate("r", span, circle.Radius);
                 }
                 break;
+            case GeoArc arc:
+                if (defined)
+                {
+                    ghost.Animate("cx", span, arc.Circle.Center.Position.X);
+                    ghost.Animate("cy", span, arc.Circle.Center.Position.Y);
+                    ghost.Animate("r", span, arc.Circle.Radius);
+                    ghost.Animate("start", span, arc.Start);
+                    ghost.Animate("sweep", span, arc.Degrees);
+                }
+                break;
             case GeoPolygon polygon:
                 if (defined)
                 {
@@ -77,6 +87,7 @@ internal sealed class Inspector
         GeoPoint => "dot",
         GeoStraight => "line",
         GeoCircle => "arc",
+        GeoArc => "arc",
         GeoPolygon => "polygon",
         GeoAngle => "angle",
         _ => "info",
@@ -92,6 +103,7 @@ internal sealed class Inspector
             GeoStraight s => $"durch {Position(s.A)} und {Position(s.B)}",
             GeoCircle circle => $"Mittelpunkt {Position(circle.Center)}, Radius {F(circle.Radius)}",
             GeoAngle angle => $"Scheitel {Position(angle.Vertex)}, {F(angle.Degrees)}°",
+            GeoArc arc => $"von {Position(arc.From)} bis {Position(arc.To)}, {F(arc.Degrees)}°, " + (arc.IsSector ? $"Fläche {F(arc.Area)}" : $"Länge {F(arc.Length)}"),
             GeoPolygon polygon => "Ecken " + string.Join(", ", polygon.Vertices.Select(Position)),
             GeoNumber number => "Wert " + F(number.Value),
             GeoText text => "„" + text.Content + "“",
@@ -99,7 +111,7 @@ internal sealed class Inspector
         };
         if (!item.IsDefined)
         {
-            values = item is GeoPoint or GeoStraight or GeoCircle or GeoAngle or GeoPolygon ? "existiert hier nicht (zuletzt " + values + ")" : "existiert hier nicht";
+            values = item is GeoPoint or GeoStraight or GeoCircle or GeoArc or GeoAngle or GeoPolygon ? "existiert hier nicht (zuletzt " + values + ")" : "existiert hier nicht";
         }
         var notes = new List<string>();
         if (item is not GeoNumber)

@@ -7,9 +7,9 @@ internal sealed class Parser
     internal static readonly HashSet<string> Keywords = new(StringComparer.Ordinal)
     {
         "title", "description", "info", "keyword", "view", "background", "grid", "axes", "speed", "var", "default", "include", "input", "output", "use",
-        "draw", "steps", "copy", "set", "step", "point", "segment", "line", "ray", "circle", "polygon", "angle",
+        "draw", "steps", "copy", "set", "step", "point", "segment", "line", "ray", "circle", "arc", "sector", "polygon", "angle",
         "text", "number", "length", "degrees", "area", "perimeter", "show", "hide", "all", "highlight", "unhighlight", "keep", "move", "rotate", "reflect", "along", "around", "across", "in", "by", "pause", "together", "end", "midpoint", "intersect", "center", "through",
-        "radius", "at", "to", "on", "x", "y", "below", "gap", "align", "left", "right",
+        "radius", "at", "from", "to", "on", "x", "y", "below", "gap", "align", "left", "right",
         "duration", "color", "width", "fill", "opacity", "size", "labelsize", "labelpos", "label", "nolabel", "hidden", "offset", "shift",
         "arrow", "start", "both", "straight", "back", "front", "halo", "linear", "ease", "easein", "easeout", "easeinout",
     };
@@ -23,7 +23,7 @@ internal sealed class Parser
     /// <summary>The kinds a "default" can name.</summary>
     private static readonly HashSet<string> DefaultKinds = new(StringComparer.Ordinal)
     {
-        "point", "segment", "line", "ray", "circle", "polygon", "angle", "text", "show", "hide", "highlight", "unhighlight", "move", "rotate", "reflect",
+        "point", "segment", "line", "ray", "circle", "arc", "sector", "polygon", "angle", "text", "show", "hide", "highlight", "unhighlight", "move", "rotate", "reflect",
     };
 
     private readonly List<Token> tokens;
@@ -216,6 +216,7 @@ internal sealed class Parser
                         "point" => ParsePoint(Next()),
                         "segment" or "line" or "ray" => ParseStraight(Next()),
                         "circle" => ParseCircle(Next()),
+                        "arc" or "sector" => ParseArc(Next()),
                         "polygon" => ParsePolygon(Next()),
                         "angle" => ParseAngle(Next()),
                         "text" => ParseText(Next()),
@@ -267,6 +268,10 @@ internal sealed class Parser
                 break;
             case "polygon":
                 statement = ParsePolygon(word);
+                break;
+            case "arc":
+            case "sector":
+                statement = ParseArc(word);
                 break;
             case "angle":
                 statement = ParseAngle(word);
@@ -590,6 +595,27 @@ internal sealed class Parser
             throw Error(Current, "A polygon needs at least 3 points.");
         }
         return new DefineStatement(word.Line, word.Column, "polygon", [name], new PolygonDefinition(vertices), ParseOptions());
+    }
+
+    // "arc b = k from A to B", "sector s = k from A to B"
+    private DefineStatement ParseArc(Token word)
+    {
+        NameRef name = ExpectNewName();
+        ExpectSymbol("=");
+        if (TryParseUse() is { } use)
+        {
+            return new DefineStatement(word.Line, word.Column, word.Text, [name], use, ParseOptions());
+        }
+        NameRef circle = ExpectName();
+        if (!Current.Is("from"))
+        {
+            throw Error(Current, $"Expected \"from\" after the circle (\"{word.Text} {name.Name} = k from A to B\"), not {Current.Describe()}.");
+        }
+        position++;
+        NameRef from = ExpectName();
+        ExpectWord("to");
+        NameRef to = ExpectName();
+        return new DefineStatement(word.Line, word.Column, word.Text, [name], new ArcDefinition(circle, from, to), ParseOptions());
     }
 
     private DefineStatement ParseAngle(Token word)

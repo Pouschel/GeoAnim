@@ -180,6 +180,73 @@
       element.setAttribute('stroke', v.color)
       element.setAttribute('stroke-width', v.width * unit)
     },
+    // an arc or the border of a sector ("sector": with the two radii), with arrowheads and a label (an arc's outside its
+    // middle, a sector's inside on its bisector)
+    part (element, v) {
+      if (!element.parts) {
+        element.parts = {
+          line: create('path', { fill: 'none', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, element),
+          label: create('g', {}, element)
+        }
+      }
+      const parts = element.parts
+      const cx = toX(v.cx)
+      const cy = toY(v.cy)
+      const r = v.r * scale
+      const sweep = Math.max(0, Math.min(v.sweep, 360))
+      const atEnd = (v.arrow === 'end' || v.arrow === 'both') && sweep > 0.01
+      const atStart = (v.arrow === 'start' || v.arrow === 'both') && sweep > 0.01
+      // the heads grow with the line width; on a short arc they shrink with it; the arc ends inside them
+      const head = Math.min((4 * v.width + 6) * unit, r * sweep * Math.PI / 180 / (atEnd && atStart ? 2 : 1))
+      const cut = r > 0 ? head * 0.8 / r * 180 / Math.PI : 0
+      const from = v.start + (atStart ? cut : 0)
+      const to = v.start + sweep - (atEnd ? cut : 0)
+      const point = degrees => [cx + r * Math.cos(degrees * Math.PI / 180), cy - r * Math.sin(degrees * Math.PI / 180)]
+      let d = ''
+      if (r > 0 && sweep > 0.01) {
+        const arc = sweep >= 359.99 && !v.sector ? arcPath(v.cx, v.cy, v.r, 0, 360) : arcPath(v.cx, v.cy, v.r, from, Math.max(0, to - from))
+        d = v.sector ? `M ${cx} ${cy} L ${arc.slice(1)} Z` : arc
+      }
+      parts.line.setAttribute('d', d)
+      parts.line.setAttribute('stroke', v.color)
+      parts.line.setAttribute('stroke-width', v.width * unit)
+      // the tangent counterclockwise on the screen: (−sin, −cos)
+      const endAngle = (v.start + sweep) * Math.PI / 180
+      const startAngle = v.start * Math.PI / 180
+      const [ex, ey] = point(v.start + sweep)
+      const [sx, sy] = point(v.start)
+      arrowHead(element, 'endHead', atEnd, ex, ey, -Math.sin(endAngle), -Math.cos(endAngle), head, v.color)
+      arrowHead(element, 'startHead', atStart, sx, sy, Math.sin(startAngle), Math.cos(startAngle), head, v.color)
+      if (v.text && sweep > 0.01) {
+        const size = textSize(v.size)
+        const text = withNumbers(v.text)
+        const key = text + '\n' + size
+        if (parts.label.layoutKey !== key) {
+          const layout = layoutText(parts.label, text, size, 'middle')
+          parts.label.layoutWidth = layout.width
+          parts.label.layoutLines = layout.lines
+          parts.label.layoutKey = key
+        }
+        const width = parts.label.layoutWidth
+        const height = 0.7 * size + (parts.label.layoutLines - 1) * LINE_HEIGHT * size
+        const bisector = (v.start + sweep / 2) * Math.PI / 180
+        const bx = Math.cos(bisector)
+        const by = Math.sin(bisector)
+        // how far the label's box reaches along the bisector
+        const along = Math.abs(bx) * width / 2 + Math.abs(by) * height / 2
+        const distance = v.sector ? Math.max(0.3 * r, Math.min(0.6 * r, r - along - 6 * unit)) : r + 8 * unit + along
+        const x = cx + bx * distance + (v.sx || 0) * scale - width / 2
+        const y = cy - by * distance - (v.sy || 0) * scale - height / 2 + 0.7 * size
+        parts.label.setAttribute('transform', `translate(${x} ${y})`)
+        parts.label.setAttribute('fill', v.color)
+        parts.label.style.color = v.color
+        parts.label.setAttribute('opacity', v.labelOpacity === undefined ? 1 : v.labelOpacity)
+        parts.label.style.display = ''
+        applyHalo(parts.label, v.halo ? animation.background : null, size)
+      } else {
+        parts.label.style.display = 'none'
+      }
+    },
     // a filled circle: a sector from the centre while it is drawn, then the whole disc
     disc (element, v) {
       const cx = toX(v.cx)
@@ -369,7 +436,7 @@
     element[name].setAttribute('fill', color)
   }
 
-  const TAGS = { dot: 'circle', line: 'g', arc: 'path', disc: 'path', polygon: 'polygon', text: 'g', angle: 'g' }
+  const TAGS = { dot: 'circle', line: 'g', arc: 'path', disc: 'path', part: 'g', polygon: 'polygon', text: 'g', angle: 'g' }
 
   // ------------------------------------------------------------------ angles
 
@@ -931,7 +998,7 @@
       }
       ghost.style.display = ''
       Object.assign(values, { color: GHOST_COLOR, width: 2.5, fill: GHOST_COLOR, fillOpacity: 0.12, reveal: 1, base: 36, size: 24 })
-      if (entry.type === 'arc') {
+      if (entry.type === 'arc' && values.sweep === undefined) {
         Object.assign(values, { start: 0, sweep: 360 })
       } else if (entry.type === 'dot') {
         values.r = 4

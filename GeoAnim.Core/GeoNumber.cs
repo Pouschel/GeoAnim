@@ -39,6 +39,9 @@ public sealed class GeoNumber : GeoObject
         return new(name, () => segment.IsDefined ? segment.Direction.Length : null, 1, segment);
     }
 
+    /// <summary>The length of an arc (or of a sector's arc).</summary>
+    internal static GeoNumber ArcLength(string name, GeoArc arc) => new(name, () => arc.IsDefined ? arc.Length : null, 1, arc);
+
     /// <summary>The distance of two points.</summary>
     internal static GeoNumber Distance(string name, GeoPoint a, GeoPoint b) =>
         new(name, () => a.IsDefined && b.IsDefined ? (b.Position - a.Position).Length : null, 1, a, b);
@@ -47,12 +50,17 @@ public sealed class GeoNumber : GeoObject
     internal static GeoNumber Degrees(string name, GeoAngle angle) =>
         new(name, () => angle.IsDefined ? angle.Degrees : null, 0, angle);
 
+    /// <summary>The angle at the centre of an arc or sector in degrees.</summary>
+    internal static GeoNumber Degrees(string name, GeoArc arc) =>
+        new(name, () => arc.IsDefined ? arc.Degrees : null, 0, arc);
+
     /// <summary>The area of a polygon or circle.</summary>
     internal static GeoNumber Area(string name, GeoObject item) => item switch
     {
         GeoPolygon polygon => new(name, () => polygon.IsDefined ? Math.Abs(SignedArea(polygon)) : null, 1, polygon),
         GeoCircle circle => new(name, () => circle.IsDefined ? Math.PI * circle.Radius * circle.Radius : null, 1, circle),
-        _ => throw new GeoException($"A {item.Kind} has no area; area measures a polygon or a circle."),
+        GeoArc { IsSector: true } sector => new(name, () => sector.IsDefined ? sector.Area : null, 1, sector),
+        _ => throw new GeoException($"A {item.Kind} has no area; area measures a polygon, a circle or a sector."),
     };
 
     /// <summary>The perimeter of a polygon or the circumference of a circle.</summary>
@@ -62,7 +70,8 @@ public sealed class GeoNumber : GeoObject
             ? polygon.Vertices.Select((v, i) => (polygon.Vertices[(i + 1) % polygon.Vertices.Count].Position - v.Position).Length).Sum()
             : null, 1, polygon),
         GeoCircle circle => new(name, () => circle.IsDefined ? 2 * Math.PI * circle.Radius : null, 1, circle),
-        _ => throw new GeoException($"A {item.Kind} has no perimeter; perimeter measures a polygon or a circle."),
+        GeoArc { IsSector: true } sector => new(name, () => sector.IsDefined ? 2 * sector.Circle.Radius + sector.Length : null, 1, sector),
+        _ => throw new GeoException($"A {item.Kind} has no perimeter; perimeter measures a polygon, a circle or a sector."),
     };
 
     /// <summary>The radius of a circle.</summary>

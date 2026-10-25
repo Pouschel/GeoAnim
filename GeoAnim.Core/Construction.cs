@@ -223,6 +223,14 @@ public sealed class Construction
     public GeoAngle Angle(string name, GeoPoint a, GeoPoint vertex, GeoPoint c, Options? options = null) =>
         Define(new GeoAngle(name, a, vertex, c, options ?? Options.None));
 
+    /// <summary>An arc of <paramref name="circle"/> from the direction of <paramref name="from"/> to that of <paramref name="to"/> (counterclockwise).</summary>
+    public GeoArc Arc(string name, GeoCircle circle, GeoPoint from, GeoPoint to, Options? options = null) =>
+        Define(new GeoArc(name, circle, from, to, isSector: false, options ?? Options.None));
+
+    /// <summary>A sector of <paramref name="circle"/>: the radii to the directions of <paramref name="from"/> and <paramref name="to"/> and the arc between (counterclockwise).</summary>
+    public GeoArc Sector(string name, GeoCircle circle, GeoPoint from, GeoPoint to, Options? options = null) =>
+        Define(new GeoArc(name, circle, from, to, isSector: true, options ?? Options.None));
+
     /// <summary>A number: the length of a segment (it follows the segment when it changes).</summary>
     public GeoNumber Length(string name, GeoStraight segment) => Define(GeoNumber.Length(name, segment));
 
@@ -231,6 +239,12 @@ public sealed class Construction
 
     /// <summary>A number: the size of an angle in degrees.</summary>
     public GeoNumber Degrees(string name, GeoAngle angle) => Define(GeoNumber.Degrees(name, angle));
+
+    /// <summary>A number: the length of an arc (or of a sector's arc).</summary>
+    public GeoNumber Length(string name, GeoArc arc) => Define(GeoNumber.ArcLength(name, arc));
+
+    /// <summary>A number: the angle at the centre of an arc or sector in degrees.</summary>
+    public GeoNumber Degrees(string name, GeoArc arc) => Define(GeoNumber.Degrees(name, arc));
 
     /// <summary>A number: the area of a polygon or circle.</summary>
     public GeoNumber Area(string name, GeoObject item) => Define(GeoNumber.Area(name, item));
@@ -528,7 +542,7 @@ public sealed class Construction
         RequireStep("reflect");
         List<GeoPoint> points = FreePointsOf(items);
         // what is reflected as a whole changes its sense of rotation
-        List<GeoObject> turned = objects.Where(o => o is GeoAngle or GeoStraight)
+        List<GeoObject> turned = objects.Where(o => o is GeoAngle or GeoStraight or GeoArc)
             .Where(o => FreePoints(o) is { Count: > 0 } own && own.All(points.Contains))
             .ToList();
         RunOrQueue([new ReflectAction(points, a, b, straight, turned, duration ?? 1000, easing ?? Easing.EaseInOut)]);

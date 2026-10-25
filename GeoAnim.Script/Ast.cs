@@ -117,6 +117,9 @@ internal sealed record CircleThroughDefinition(NameRef Center, NameRef Through) 
 
 internal sealed record CircleRadiusDefinition(NameRef Center, double Radius) : Definition;
 
+/// <summary>"arc b = k from A to B" / "sector s = k from A to B".</summary>
+internal sealed record ArcDefinition(NameRef Circle, NameRef From, NameRef To) : Definition;
+
 internal sealed record PolygonDefinition(IReadOnlyList<NameRef> Vertices) : Definition;
 
 /// <summary>"angle w = A B C": at B, counterclockwise from BA to BC.</summary>
