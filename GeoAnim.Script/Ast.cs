@@ -124,8 +124,11 @@ internal sealed record CircleThroughDefinition(NameRef Center, NameRef Through) 
 
 internal sealed record CircleRadiusDefinition(NameRef Center, double Radius) : Definition;
 
-/// <summary>"arc b = k from A to B" / "sector s = k from A to B".</summary>
-internal sealed record ArcDefinition(NameRef Circle, NameRef From, NameRef To) : Definition;
+/// <summary>"arc b = k from A to B" / "sector s = k from A to B"; an end is a point or a direction in degrees ("from 30 to 120").</summary>
+internal sealed record ArcDefinition(NameRef Circle, ArcEndRef From, ArcEndRef To) : Definition;
+
+/// <summary>An end of an arc: a point or a direction in degrees.</summary>
+internal sealed record ArcEndRef(NameRef? Point, double Degrees);
 
 internal sealed record PolygonDefinition(IReadOnlyList<NameRef> Vertices) : Definition;
 

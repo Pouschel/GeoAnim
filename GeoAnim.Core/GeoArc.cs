@@ -3,7 +3,9 @@ namespace GeoAnim;
 /// <summary>
 /// A part of a circle from A to B (counterclockwise; after a reflection clockwise): an arc ("arc b = k from A to B") or a
 /// sector, bounded by the two radii and the arc ("sector s = k from A to B", filled like a polygon). A and B give only the
-/// directions from the centre, so the arc stays on the circle when it changes. It is drawn from A to B like with a compass.
+/// directions from the centre (or are directions in degrees: "from 30 to 120"), so the arc stays on the circle when it
+/// changes. It is drawn from A to B like with a compass; with "clockwise" it runs clockwise from A to B (internally the
+/// counterclockwise part from B to A, drawn from its end).
 /// </summary>
 public sealed class GeoArc : GeoObject
 {
@@ -11,12 +13,12 @@ public sealed class GeoArc : GeoObject
     private Primitive? part;
     private double? lastStart;
 
-    internal GeoArc(string name, GeoCircle circle, GeoPoint from, GeoPoint to, bool isSector, Options options)
-        : base(name, options, circle, from, to)
+    internal GeoArc(string name, GeoCircle circle, ArcEnd from, ArcEnd to, bool isSector, Options options)
+        : base(name, options, new GeoObject?[] { circle, from.Point, to.Point }.OfType<GeoObject>().ToArray())
     {
         Circle = circle;
-        From = from;
-        To = to;
+        // clockwise from A to B: the counterclockwise part from B to A
+        (From, To) = options.Clockwise ? (to, from) : (from, to);
         IsSector = isSector;
     }
 
@@ -24,9 +26,14 @@ public sealed class GeoArc : GeoObject
 
     public GeoCircle Circle { get; }
 
-    public GeoPoint From { get; }
+    /// <summary>Where the counterclockwise part begins (with "clockwise": the end given in the script).</summary>
+    public ArcEnd From { get; }
 
-    public GeoPoint To { get; }
+    /// <summary>Where the counterclockwise part ends.</summary>
+    public ArcEnd To { get; }
+
+    /// <summary>Whether it is drawn clockwise (from <see cref="To"/> to <see cref="From"/>).</summary>
+    public bool Clockwise => Options.Clockwise;
 
     /// <summary>Whether it is a sector (an area) rather than an arc (a line).</summary>
     public bool IsSector { get; }
@@ -49,16 +56,13 @@ public sealed class GeoArc : GeoObject
 
     internal override void Compute()
     {
-        Vec center = Circle.Center.Position;
-        Vec first = From.Position - center;
-        Vec second = To.Position - center;
-        IsDefined = Circle.IsDefined && From.IsDefined && To.IsDefined && first.Length > 1e-9 && second.Length > 1e-9;
+        IsDefined = Circle.IsDefined && From.Direction(Circle) is not null && To.Direction(Circle) is not null;
         if (!IsDefined)
         {
             return;
         }
-        double start = first.AngleDegrees;
-        double end = second.AngleDegrees;
+        double start = From.Direction(Circle)!.Value;
+        double end = To.Direction(Circle)!.Value;
         if (Mirrored)
         {
             (start, end) = (end, start);
@@ -101,7 +105,8 @@ public sealed class GeoArc : GeoObject
                 primitive.Animate("cx", span, Circle.Center.Position.X);
                 primitive.Animate("cy", span, Circle.Center.Position.Y);
                 primitive.Animate("r", span, Circle.Radius);
-                primitive.Animate("start", span, Start);
+                // clockwise: it grows from its end
+                primitive.Animate("start", span, Clockwise ? Start + Degrees * (1 - Reveal) : Start);
             }
             primitive.Animate("sweep", span, Degrees * Reveal);
         }
@@ -114,7 +119,9 @@ public sealed class GeoArc : GeoObject
         part.Animate("width", span, WidthOr(Defaults.LineWidth));
         if (Options.Arrow != Arrow.None)
         {
-            part.Animate("arrow", span, Options.Arrow.ToString().ToLowerInvariant());
+            // "arrow" points the way it is drawn: clockwise at the counterclockwise start
+            Arrow arrow = !Clockwise ? Options.Arrow : Options.Arrow switch { Arrow.End => Arrow.Start, Arrow.Start => Arrow.End, _ => Options.Arrow };
+            part.Animate("arrow", span, arrow.ToString().ToLowerInvariant());
         }
         if (HasLabel)
         {
@@ -127,4 +134,26 @@ public sealed class GeoArc : GeoObject
             RenderShift(part, span);
         }
     }
+}
+
+/// <summary>An end of an arc or sector: a point (its direction from the centre counts) or a fixed direction in degrees.</summary>
+public readonly record struct ArcEnd(GeoPoint? Point, double Degrees = 0)
+{
+    public static implicit operator ArcEnd(GeoPoint point) => new(point);
+
+    public static implicit operator ArcEnd(double degrees) => new(null, degrees);
+
+    /// <summary>The direction from the circle's centre in degrees, or null where there is none (the point is the centre or does not exist).</summary>
+    internal double? Direction(GeoCircle circle)
+    {
+        if (Point == null)
+        {
+            return Degrees;
+        }
+        Vec d = Point.Position - circle.Center.Position;
+        return Point.IsDefined && d.Length > 1e-9 ? d.AngleDegrees : null;
+    }
+
+    /// <summary>For messages: the point's name or the direction.</summary>
+    public override string ToString() => Point?.Name ?? Degrees.ToString(System.Globalization.CultureInfo.InvariantCulture) + "°";
 }

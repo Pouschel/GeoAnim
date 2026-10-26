@@ -223,12 +223,12 @@ public sealed class Construction
     public GeoAngle Angle(string name, GeoPoint a, GeoPoint vertex, GeoPoint c, Options? options = null) =>
         Define(new GeoAngle(name, a, vertex, c, options ?? Options.None));
 
-    /// <summary>An arc of <paramref name="circle"/> from the direction of <paramref name="from"/> to that of <paramref name="to"/> (counterclockwise).</summary>
-    public GeoArc Arc(string name, GeoCircle circle, GeoPoint from, GeoPoint to, Options? options = null) =>
+    /// <summary>An arc of <paramref name="circle"/> from the direction of <paramref name="from"/> to that of <paramref name="to"/> (points or degrees; counterclockwise, with the option Clockwise clockwise).</summary>
+    public GeoArc Arc(string name, GeoCircle circle, ArcEnd from, ArcEnd to, Options? options = null) =>
         Define(new GeoArc(name, circle, from, to, isSector: false, options ?? Options.None));
 
     /// <summary>A sector of <paramref name="circle"/>: the radii to the directions of <paramref name="from"/> and <paramref name="to"/> and the arc between (counterclockwise).</summary>
-    public GeoArc Sector(string name, GeoCircle circle, GeoPoint from, GeoPoint to, Options? options = null) =>
+    public GeoArc Sector(string name, GeoCircle circle, ArcEnd from, ArcEnd to, Options? options = null) =>
         Define(new GeoArc(name, circle, from, to, isSector: true, options ?? Options.None));
 
     /// <summary>A number: the length of a segment (it follows the segment when it changes).</summary>

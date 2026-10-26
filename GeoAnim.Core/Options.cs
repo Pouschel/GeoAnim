@@ -80,6 +80,9 @@ public sealed record Options
     /// </summary>
     public bool Halo { get; init; }
 
+    /// <summary>"clockwise": an arc or sector runs clockwise from A to B (and is drawn that way).</summary>
+    public bool Clockwise { get; init; }
+
     /// <summary>A highlighting that stays (until "unhighlight") instead of pulsing twice.</summary>
     public bool Keep { get; init; }
 

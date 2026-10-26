@@ -131,6 +131,8 @@ Koordinaten sind mathematisch: die y-Achse zeigt nach oben. Der Maßstab ist in 
 | `circle k = center M radius 2.5` | Kreis mit festem Radius |
 | `arc b = k from A to B` | Kreisbogen auf k gegen den Uhrzeigersinn von A bis B (A, B geben die Richtungen vom Mittelpunkt an; der Bogen bleibt auf dem Kreis, wenn er sich ändert); Optionen wie bei einer Strecke, auch `arrow` |
 | `sector s = k from A to B` | Kreissektor: die beiden Radien und der Bogen dazwischen, gefüllt wie ein Vieleck (`fill`, `opacity`), Beschriftung innen |
+| `arc b = k from 30 to 120` / `… from A to 90` | Bogen bzw. Sektor mit Richtungen in Grad statt Punkten (gegen den Uhrzeigersinn ab Osten; auch Konstanten), gemischt mit Punkten möglich – ohne erst Punkte auf dem Kreis zu konstruieren |
+| `arc b = k from A to B clockwise arrow` | im Uhrzeigersinn von A nach B (also der andere Bogen als ohne `clockwise`), so wird er auch gezeichnet; `arrow` sitzt am Ende und zeigt in Drehrichtung, `arrow start` am Anfang – etwa für eine Drehung im Uhrzeigersinn; ebenso beim Sektor |
 | `polygon D = A B C` | gefülltes Vieleck (mindestens 3 Punkte) |
 | `text t = "Hallo" at 5 6` | Text an festen Koordinaten (zentriert) |
 | `text t = "90°" at P` | Text neben einem Punkt, wandert mit ihm |

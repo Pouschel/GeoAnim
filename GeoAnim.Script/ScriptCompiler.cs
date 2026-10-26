@@ -560,8 +560,8 @@ public static class ScriptCompiler
             "line" => ["color", "width", "label", "labelsize", "labelpos", "offset", "shift", "stacking", "halo", "draw"],
             "angle" => ["color", "width", "fill", "opacity", "label", "labelsize", "radius", "offset", "shift", "arrow", "stacking", "halo", "draw"],
             "circle" => ["color", "width", "fill", "opacity", "stacking", "draw"],
-            "arc" => ["color", "width", "label", "labelsize", "shift", "arrow", "stacking", "halo", "draw"],
-            "sector" => ["color", "width", "fill", "opacity", "label", "labelsize", "shift", "stacking", "halo", "draw"],
+            "arc" => ["color", "width", "label", "labelsize", "shift", "arrow", "clockwise", "stacking", "halo", "draw"],
+            "sector" => ["color", "width", "fill", "opacity", "label", "labelsize", "shift", "clockwise", "stacking", "halo", "draw"],
             _ => ["color", "width", "stacking", "draw"],
         };
 
@@ -691,9 +691,10 @@ public static class ScriptCompiler
                         GeoObject circle = Resolve(d.Circle);
                         GeoCircle k = circle as GeoCircle
                             ?? throw new ScriptError(d.Circle.Line, d.Circle.Column, $"{d.Circle.Name} is a {circle.Kind}; an {s.Kind} lies on a circle.");
+                        ArcEnd End(ArcEndRef end) => end.Point != null ? ResolvePoint(end.Point) : end.Degrees;
                         created = s.Kind == "sector"
-                            ? c.Sector(name0, k, ResolvePoint(d.From), ResolvePoint(d.To), options)
-                            : c.Arc(name0, k, ResolvePoint(d.From), ResolvePoint(d.To), options);
+                            ? c.Sector(name0, k, End(d.From), End(d.To), options)
+                            : c.Arc(name0, k, End(d.From), End(d.To), options);
                         break;
                     }
                 case AngleDefinition d:
@@ -970,6 +971,7 @@ public static class ScriptCompiler
                     "straight" => options with { Straight = true },
                     "keep" => options with { Keep = true },
                     "halo" => options with { Halo = true },
+                    "clockwise" => options with { Clockwise = true },
                     "back" => options with { Stacking = Stacking.Back },
                     "front" => options with { Stacking = Stacking.Front },
                     "linear" => options with { Easing = Easing.Linear },

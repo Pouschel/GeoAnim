@@ -11,13 +11,13 @@ internal sealed class Parser
         "text", "number", "length", "degrees", "area", "perimeter", "show", "hide", "all", "highlight", "unhighlight", "keep", "move", "rotate", "reflect", "along", "around", "across", "in", "by", "pause", "together", "end", "midpoint", "intersect", "center", "through",
         "radius", "at", "from", "to", "on", "x", "y", "below", "gap", "align", "left", "right",
         "duration", "color", "width", "fill", "opacity", "size", "labelsize", "labelpos", "labeldir", "labelgap", "label", "nolabel", "hidden", "offset", "shift",
-        "arrow", "start", "both", "straight", "back", "front", "halo", "linear", "ease", "easein", "easeout", "easeinout",
+        "arrow", "start", "both", "straight", "back", "front", "halo", "clockwise", "linear", "ease", "easein", "easeout", "easeinout",
     };
 
     private static readonly HashSet<string> OptionNames = new(StringComparer.Ordinal)
     {
         "duration", "color", "width", "fill", "opacity", "size", "radius", "labelsize", "labelpos", "labeldir", "labelgap", "label", "nolabel", "hidden", "offset", "shift",
-        "arrow", "align", "straight", "back", "front", "keep", "halo", "linear", "ease", "easein", "easeout", "easeinout",
+        "arrow", "align", "straight", "back", "front", "keep", "halo", "clockwise", "linear", "ease", "easein", "easeout", "easeinout",
     };
 
     /// <summary>The kinds a "default" can name.</summary>
@@ -612,11 +612,15 @@ internal sealed class Parser
             throw Error(Current, $"Expected \"from\" after the circle (\"{word.Text} {name.Name} = k from A to B\"), not {Current.Describe()}.");
         }
         position++;
-        NameRef from = ExpectName();
+        ArcEndRef from = ExpectArcEnd();
         ExpectWord("to");
-        NameRef to = ExpectName();
+        ArcEndRef to = ExpectArcEnd();
         return new DefineStatement(word.Line, word.Column, word.Text, [name], new ArcDefinition(circle, from, to), ParseOptions());
     }
+
+    // a point or a direction in degrees (counterclockwise from east)
+    private ArcEndRef ExpectArcEnd() =>
+        IsNumberAt(position) ? new ArcEndRef(null, ExpectNumber("the direction in degrees")) : new ArcEndRef(ExpectName(), 0);
 
     private DefineStatement ParseAngle(Token word)
     {
@@ -907,7 +911,7 @@ internal sealed class Parser
                     : throw Error(Current, $"Expected left, center or right after \"align\", not {Current.Describe()}."),
                 // "arrow" alone: at the end; "arrow start", "arrow end", "arrow both"
                 "arrow" => Current.Kind == TokenKind.Name && Current.Text is "start" or "end" or "both" ? Next().Text : "end",
-                "nolabel" or "hidden" or "straight" or "back" or "front" or "keep" or "halo" or "linear" or "ease" or "easein" or "easeout" or "easeinout" => null,
+                "nolabel" or "hidden" or "straight" or "back" or "front" or "keep" or "halo" or "clockwise" or "linear" or "ease" or "easein" or "easeout" or "easeinout" => null,
                 _ => throw Error(option, $"Unknown option or var \"{option.Text}\" (possible options: {string.Join(", ", OptionNames.Order())})."),
             };
             values.Add(new OptionValue(option.Text, value, option.Line, option.Column));

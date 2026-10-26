@@ -951,6 +951,35 @@ public class ScriptTests
     }
 
     [Fact]
+    public void ArcsTakeDirectionsAndRunClockwise()
+    {
+        Construction c = ScriptCompiler.CompileConstruction("""
+            number w = 120
+            point M = 0 0
+            point A = 2 0
+            circle k = center M radius 2
+            arc b = k from 30 to w
+            sector s = k from 90 to 0 clockwise
+            step zeichnen
+              arc d = k from A to 90 clockwise arrow
+            """);
+        var b = (GeoArc)c.Objects["b"];
+        var d = (GeoArc)c.Objects["d"];
+        var s = (GeoArc)c.Objects["s"];
+        Assert.Equal((30.0, 90.0), (b.Start, b.Degrees));
+        // clockwise from A (0°) to 90°: the counterclockwise part from 90° to 360°
+        Assert.Equal((90.0, 270.0), (d.Start, d.Degrees));
+        Assert.Equal((0.0, 90.0), (s.Start, s.Degrees));
+        JsonElement part = JsonDocument.Parse(c.Build().ToJson()).RootElement.GetProperty("primitives").EnumerateArray()
+            .Last(p => p.GetProperty("type").GetString() == "part");
+        // drawn from its end: the start goes from 360° back to 90° while the sweep grows; the arrow at the counterclockwise start
+        JsonElement start = part.GetProperty("tracks").GetProperty("start");
+        Assert.Equal(360, start[0][1].GetDouble(), 6);
+        Assert.Equal(90, start[start.GetArrayLength() - 1][1].GetDouble(), 6);
+        Assert.Equal("start", part.GetProperty("tracks").GetProperty("arrow")[0][1].GetString());
+    }
+
+    [Fact]
     public void ShiftMovesLabelsFromTheirDefaultPlace()
     {
         AnimationData animation = ScriptCompiler.Compile("""

@@ -118,6 +118,8 @@ Alle Objekte: `art name = Definition Optionen…`. Vor dem ersten `step` gehöre
 |---|---|
 | `arc b = k from A to B` | Bogen des Kreises k gegen den Uhrzeigersinn von A bis B (den anderen Bogen: `from B to A`); A und B geben nur die Richtungen vom Mittelpunkt an |
 | `sector s = k from A to B` | Kreissektor: die beiden Radien und der Bogen dazwischen, gefüllt |
+| `arc b = k from 30 to 120` · `from A to 90` | statt eines Punkts eine Richtung in Grad (gegen den Uhrzeigersinn ab Osten), auch eine Konstante; ebenso beim Sektor |
+| `arc b = k from A to B clockwise` | im Uhrzeigersinn von A nach B (der andere Bogen als ohne `clockwise`), so auch gezeichnet; `arrow` zeigt in Zeichenrichtung; ebenso beim Sektor |
 
 **Optionen:** `arc`: `color` `width` `label` (außen an der Bogenmitte) `labelsize` `shift` `arrow` · `arrow start` · `arrow both` `halo`, *Zeichnen*. `sector`: `color` `width` `fill` (Standard: Linienfarbe) `opacity` (Standard 0,2) `label` (innen auf der Winkelhalbierenden) `labelsize` `shift` `halo`, *Zeichnen*. Beide wachsen beim Zeichnen von A nach B und bleiben auf dem Kreis, wenn er sich ändert.
 
@@ -253,4 +255,4 @@ Aktionen stehen in einem Schritt und laufen nacheinander. Die Optionen *Ablauf* 
 
 Diese Wörter können keine Namen sein:
 
-`title` `description` `info` `keyword` `view` `background` `grid` `axes` `speed` `var` `default` `include` `input` `output` `use` `draw` `steps` `copy` `set` `step` `point` `segment` `line` `ray` `circle` `arc` `sector` `polygon` `angle` `text` `number` `length` `degrees` `area` `perimeter` `show` `hide` `all` `highlight` `unhighlight` `keep` `move` `rotate` `reflect` `along` `around` `across` `in` `by` `pause` `together` `end` `midpoint` `intersect` `center` `through` `radius` `at` `from` `to` `on` `x` `y` `below` `gap` `align` `left` `right` `duration` `color` `width` `fill` `opacity` `size` `labelsize` `labelpos` `labeldir` `labelgap` `label` `nolabel` `hidden` `offset` `shift` `arrow` `start` `both` `straight` `back` `front` `halo` `linear` `ease` `easein` `easeout` `easeinout`
+`title` `description` `info` `keyword` `view` `background` `grid` `axes` `speed` `var` `default` `include` `input` `output` `use` `draw` `steps` `copy` `set` `step` `point` `segment` `line` `ray` `circle` `arc` `sector` `polygon` `angle` `text` `number` `length` `degrees` `area` `perimeter` `show` `hide` `all` `highlight` `unhighlight` `keep` `move` `rotate` `reflect` `along` `around` `across` `in` `by` `pause` `together` `end` `midpoint` `intersect` `center` `through` `radius` `at` `from` `to` `on` `x` `y` `below` `gap` `align` `left` `right` `duration` `color` `width` `fill` `opacity` `size` `labelsize` `labelpos` `labeldir` `labelgap` `label` `nolabel` `hidden` `offset` `shift` `arrow` `start` `both` `straight` `back` `front` `halo` `clockwise` `linear` `ease` `easein` `easeout` `easeinout`

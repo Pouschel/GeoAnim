@@ -144,7 +144,7 @@ internal sealed class Inspector
             GeoStraight s => $"durch {Position(s.A)} und {Position(s.B)}",
             GeoCircle circle => $"Mittelpunkt {Position(circle.Center)}, Radius {F(circle.Radius)}",
             GeoAngle angle => $"Scheitel {Position(angle.Vertex)}, {F(angle.Degrees)}°",
-            GeoArc arc => $"von {Position(arc.From)} bis {Position(arc.To)}, {F(arc.Degrees)}°, " + (arc.IsSector ? $"Fläche {F(arc.Area)}" : $"Länge {F(arc.Length)}"),
+            GeoArc arc => $"von {End(arc.Clockwise ? arc.To : arc.From)} bis {End(arc.Clockwise ? arc.From : arc.To)}{(arc.Clockwise ? " im Uhrzeigersinn" : "")}, {F(arc.Degrees)}°, " + (arc.IsSector ? $"Fläche {F(arc.Area)}" : $"Länge {F(arc.Length)}"),
             GeoPolygon polygon => "Ecken " + string.Join(", ", polygon.Vertices.Select(Position)),
             GeoNumber number => "Wert " + F(number.Value),
             GeoText text => "„" + text.Content + "“",
@@ -167,6 +167,8 @@ internal sealed class Inspector
         }
         return notes.Count == 0 ? values : values + "  \n" + string.Join(" · ", notes);
     }
+
+    private static string End(ArcEnd end) => end.Point is { } point ? Position(point) : F(end.Degrees) + "°";
 
     private static string Position(GeoPoint point) => point.Name + " " + Coordinates(point);
 
