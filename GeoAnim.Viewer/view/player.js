@@ -1197,8 +1197,12 @@
     $('next-page').hidden = !nextShown
     top.style.minHeight = topHeight + 'px'
     box.style.minHeight = height + 'px'
+    reservedHeights = { top: topHeight, texts: height }
     document.body.classList.toggle('textstep', textMode)
   }
+
+  // the heights reserved above and below the picture (the tallest over the steps with a picture)
+  let reservedHeights = { top: 0, texts: 0 }
 
   // title, description and info in points at a picture width of REFERENCE_WIDTH (like the labels in the picture),
   // never smaller than the minimum in pixels, so that they stay readable in a small window
@@ -1236,7 +1240,8 @@
       const before = width
       setTextScale(width / REFERENCE_WIDTH)
       reserveCaptionSpace()
-      const available = Math.max(1, content.clientHeight - top - $('caption-box').offsetHeight - $('texts').offsetHeight)
+      // with the reserved heights, not the texts shown now (a text step's long text does not count)
+      const available = Math.max(1, content.clientHeight - top - reservedHeights.top - reservedHeights.texts)
       width = Math.max(1, Math.min(content.clientWidth - side, available * ratio))
       if (Math.abs(width - before) < 2) {
         break
