@@ -585,3 +585,18 @@ body.still #menu {
 body.still #stage {
   margin: 0;
 }
+
+/* a text step: no picture; the text takes its space (scrolling if it is long) */
+body.textstep #stage {
+  display: none;
+}
+
+body.textstep #texts {
+  flex: 1 1 auto;
+  min-height: 0 !important;
+  overflow-y: auto;
+}
+
+body.textstep #info {
+  padding-top: 16px;
+}

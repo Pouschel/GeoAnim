@@ -11,7 +11,7 @@
       "include": "#comment"
     },
     {
-      "match": "^\\s*(title|step|description|info|keyword)\\b(.*)$",
+      "match": "^\\s*(title|step|textstep|description|info|keyword)\\b(.*)$",
       "captures": {
         "1": {
           "name": "keyword.control.geo"

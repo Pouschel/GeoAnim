@@ -1170,10 +1170,13 @@
     const shownStep = $('caption').captionIndex ?? -1
     const shownInfo = $('info').richText || ''
     const nextShown = !$('next-page').hidden
+    // measured as below a picture (a text step's text then gets the whole space, but does not count here)
+    const textMode = document.body.classList.contains('textstep')
+    document.body.classList.remove('textstep')
     top.style.minHeight = ''
     box.style.minHeight = ''
-    let topHeight = top.offsetHeight
-    let height = box.offsetHeight
+    let topHeight = 0
+    let height = 0
     // the starting picture: the page's description
     setCaption(-1)
     showInfo(withNumbers(animation.description))
@@ -1182,16 +1185,19 @@
     height = Math.max(height, box.offsetHeight)
     steps().forEach((step, index) => {
       setCaption(index)
-      showInfo(withNumbers(step.info))
-      showNextPage(index)
       topHeight = Math.max(topHeight, top.offsetHeight)
-      height = Math.max(height, box.offsetHeight)
+      if (!step.text) {
+        showInfo(withNumbers(step.info))
+        showNextPage(index)
+        height = Math.max(height, box.offsetHeight)
+      }
     })
     setCaption(shownStep)
     showInfo(shownInfo)
     $('next-page').hidden = !nextShown
     top.style.minHeight = topHeight + 'px'
     box.style.minHeight = height + 'px'
+    document.body.classList.toggle('textstep', textMode)
   }
 
   // title, description and info in points at a picture width of REFERENCE_WIDTH (like the labels in the picture),
@@ -1223,6 +1229,9 @@
     const side = still ? 0 : 32
     const top = still ? 0 : 10
     let width = Math.max(1, content.clientWidth - side)
+    // the picture's size as in a step with a picture (in a text step it is hidden, but comes back as it was)
+    const textMode = document.body.classList.contains('textstep')
+    document.body.classList.remove('textstep')
     for (let round = 0; round < 3; round++) {
       const before = width
       setTextScale(width / REFERENCE_WIDTH)
@@ -1233,6 +1242,7 @@
         break
       }
     }
+    document.body.classList.toggle('textstep', textMode)
     const height = width / ratio
     // the stage gets the picture's height, so that the texts above and below stay right at the picture
     stage.style.flex = 'none'
@@ -1362,6 +1372,8 @@
     const list = steps()
     const index = currentStepIndex()
     setCaption(index)
+    // a text step: its text where the picture is (not in a still of the contact sheet)
+    document.body.classList.toggle('textstep', index >= 0 && !!list[index].text && !document.body.classList.contains('still'))
     // the starting picture: what the page is about (the description from the script)
     showInfo(withNumbers(index >= 0 ? list[index].info : animation.description))
     showNextPage(index)

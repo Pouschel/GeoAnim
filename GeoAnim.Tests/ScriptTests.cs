@@ -980,6 +980,29 @@ public class ScriptTests
     }
 
     [Fact]
+    public void TextStepsHaveTextOnly()
+    {
+        AnimationData animation = ScriptCompiler.Compile("""
+            point A = 0 0
+            step zeichnen
+              point B = 1 1
+            textstep Zusammenfassung
+            info eins zwei drei vier
+            number n = 2
+            textstep Mit Pause
+              pause 5000
+            step weiter
+            """);
+        Assert.Equal([false, true, true, false], animation.Steps.Select(s => s.TextOnly));
+        // a reading time: 3 s and a quarter of a second for each of the 5 words; the pause where there is one
+        Assert.Equal(3000 + 250 * 5, animation.Steps[1].End - animation.Steps[1].Start, 6);
+        Assert.Equal(5000, animation.Steps[2].End - animation.Steps[2].Start, 6);
+        Assert.Contains("\"text\":true", animation.ToJson());
+        ErrorAt("point A = 0 0\ntextstep x\nhide A", 3, 1, "only text");
+        ErrorAt("point A = 0 0\ntextstep x\npoint B = 1 1", 3, 1, "only text");
+    }
+
+    [Fact]
     public void ShiftMovesLabelsFromTheirDefaultPlace()
     {
         AnimationData animation = ScriptCompiler.Compile("""

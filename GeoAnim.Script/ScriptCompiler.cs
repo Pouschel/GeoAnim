@@ -222,7 +222,14 @@ public static class ScriptCompiler
                 case StepStatement s:
                     if (module == null || module.Mode == UseMode.Steps)
                     {
-                        c.Step(s.Caption);
+                        if (s.TextOnly)
+                        {
+                            c.TextStep(s.Caption);
+                        }
+                        else
+                        {
+                            c.Step(s.Caption);
+                        }
                     }
                     break;
                 case InfoStatement s:

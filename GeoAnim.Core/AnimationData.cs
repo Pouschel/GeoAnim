@@ -145,6 +145,10 @@ public sealed class AnimationData
                 }
                 json.WriteNumber("start", RoundTime(step.Start));
                 json.WriteNumber("end", RoundTime(step.End));
+                if (step.TextOnly)
+                {
+                    json.WriteBoolean("text", true);
+                }
                 json.WriteEndObject();
             }
             json.WriteEndArray();

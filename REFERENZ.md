@@ -11,7 +11,7 @@ Alle Befehle mit allen Schreibweisen und den Optionen, die jeweils erlaubt sind.
 - [Texte, Vars, Voreinstellungen](#texte-vars-voreinstellungen): `set`, `var`, `default`
 - [Objekte](#objekte): `point`, `segment`, `line`, `ray`, `circle`, `arc`, `sector`, `polygon`, `angle`, `text`
 - [Zahlen](#zahlen): `number`
-- [Schritte und Aktionen](#schritte-und-aktionen): `step`, `info`, `show`, `hide`, `highlight`, `unhighlight`, `move`, `rotate`, `reflect`, `pause`, `together`
+- [Schritte und Aktionen](#schritte-und-aktionen): `step`, `textstep`, `info`, `show`, `hide`, `highlight`, `unhighlight`, `move`, `rotate`, `reflect`, `pause`, `together`
 - [Dateien](#dateien): `include`, `use`, `input`, `output`
 - [Optionen](#optionen) – welche Option für welchen Befehl
 - [Farben](#farben), [Standardwerte](#standardwerte), [Schlüsselwörter](#schlüsselwörter)
@@ -163,6 +163,7 @@ Aktionen stehen in einem Schritt und laufen nacheinander. Die Optionen *Ablauf* 
 | Befehl | Schreibweisen | Optionen | Hinweise |
 |---|---|---|---|
 | `step` | `step Text …` | – | neuer Schritt; mit `|` fortsetzbar |
+| `textstep` | `textstep Text …` | – | Schritt nur mit Text: seine `info`-Texte stehen dort, wo sonst das Bild ist (bei langem Text scrollbar); erlaubt sind nur `info`, `keyword`, `pause` und Zahlen. Das Bild ist im nächsten Schritt wieder da, wie es war. Dauer beim Durchlaufen: eine `pause`, sonst eine Lesezeit (3 s + ¼ s je Wort) |
 | `info` | `info Text …` | – | Erklärung zum Schritt, linksbündig unter der Beschreibung; mit `|` fortsetzbar; ein weiteres `info` wird ein neuer Absatz |
 | `show` | `show A B …` | *Ablauf* | zeigt Objekte (zeichnet versteckte, blendet ausgeblendete ein); schon sichtbare bleiben, wie sie sind |
 | | `show label A B …` | *Ablauf* | blendet nur Beschriftungen ein |
@@ -255,4 +256,4 @@ Aktionen stehen in einem Schritt und laufen nacheinander. Die Optionen *Ablauf* 
 
 Diese Wörter können keine Namen sein:
 
-`title` `description` `info` `keyword` `view` `background` `grid` `axes` `speed` `var` `default` `include` `input` `output` `use` `draw` `steps` `copy` `set` `step` `point` `segment` `line` `ray` `circle` `arc` `sector` `polygon` `angle` `text` `number` `length` `degrees` `area` `perimeter` `show` `hide` `all` `highlight` `unhighlight` `keep` `move` `rotate` `reflect` `along` `around` `across` `in` `by` `pause` `together` `end` `midpoint` `intersect` `center` `through` `radius` `at` `from` `to` `on` `x` `y` `below` `gap` `align` `left` `right` `duration` `color` `width` `fill` `opacity` `size` `labelsize` `labelpos` `labeldir` `labelgap` `label` `nolabel` `hidden` `offset` `shift` `arrow` `start` `both` `straight` `back` `front` `halo` `clockwise` `linear` `ease` `easein` `easeout` `easeinout`
+`title` `description` `info` `keyword` `view` `background` `grid` `axes` `speed` `var` `default` `include` `input` `output` `use` `draw` `steps` `copy` `set` `step` `textstep` `point` `segment` `line` `ray` `circle` `arc` `sector` `polygon` `angle` `text` `number` `length` `degrees` `area` `perimeter` `show` `hide` `all` `highlight` `unhighlight` `keep` `move` `rotate` `reflect` `along` `around` `across` `in` `by` `pause` `together` `end` `midpoint` `intersect` `center` `through` `radius` `at` `from` `to` `on` `x` `y` `below` `gap` `align` `left` `right` `duration` `color` `width` `fill` `opacity` `size` `labelsize` `labelpos` `labeldir` `labelgap` `label` `nolabel` `hidden` `offset` `shift` `arrow` `start` `both` `straight` `back` `front` `halo` `clockwise` `linear` `ease` `easein` `easeout` `easeinout`

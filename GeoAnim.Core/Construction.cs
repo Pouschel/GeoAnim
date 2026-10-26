@@ -306,6 +306,10 @@ public sealed class Construction
         {
             CheckText(item.Options.Label);
         }
+        if (item is not GeoNumber)
+        {
+            RequireDrawing("a new object");
+        }
         item.Compute();
         if (!item.IsDefined)
         {
@@ -745,6 +749,26 @@ public sealed class Construction
         currentStep = new AnimationStep(CheckText(caption), time, time);
     }
 
+    /// <summary>
+    /// Begins a step with text only: the player shows its explanation instead of the picture, which stays as it is for
+    /// the next step. Nothing may be drawn or moved in it (a pause may set how long it lasts; without one it lasts a
+    /// reading time after its length).
+    /// </summary>
+    public void TextStep(string caption)
+    {
+        Step(caption);
+        currentStep = currentStep! with { TextOnly = true };
+    }
+
+    // in a text step: only pauses (and numbers, which are not drawn)
+    private void RequireDrawing(string what)
+    {
+        if (currentStep?.TextOnly == true)
+        {
+            throw new GeoException($"A textstep shows only text: {what} belongs to a step (pause is allowed).");
+        }
+    }
+
     /// <summary>An explanation for the current step, shown below its description; a second one becomes a new paragraph.</summary>
     public void Info(string text)
     {
@@ -766,6 +790,8 @@ public sealed class Construction
 
     private bool IsQueued(GeoObject item) => together?.Any(a => a is DrawAction && a.Objects.Contains(item)) ?? false;
 
+    internal static double ReadingTime(string text) => 3000 + 250 * text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Length;
+
     private void CloseStep()
     {
         if (currentStep == null)
@@ -774,7 +800,8 @@ public sealed class Construction
         }
         if (time - currentStep.Start < 1e-6)
         {
-            Run([new PauseAction(EmptyStepDuration)]);
+            // a text step without a pause: a reading time (3 s and a quarter of a second for each word)
+            Run([new PauseAction(currentStep.TextOnly ? ReadingTime(currentStep.Caption + " " + currentStep.Info) : EmptyStepDuration)]);
         }
         steps.Add(currentStep with { End = time });
     }
@@ -784,6 +811,10 @@ public sealed class Construction
         if (actions.Count == 0)
         {
             return;
+        }
+        if (actions.Any(a => a is not PauseAction && !a.Objects.All(o => o is GeoNumber)))
+        {
+            RequireDrawing("drawing, showing, hiding or moving");
         }
         if (together != null)
         {
@@ -970,4 +1001,7 @@ public sealed record AnimationStep(string Caption, double Start, double End)
 {
     /// <summary>An explanation shown below the description (paragraphs separated by "\n"), or null.</summary>
     public string? Info { get; init; }
+
+    /// <summary>A step with text only ("textstep"): the player shows its explanation where the picture is.</summary>
+    public bool TextOnly { get; init; }
 }

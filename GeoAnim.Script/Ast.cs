@@ -24,7 +24,11 @@ internal sealed record SpeedStatement(int Line, int Column, double Speed) : Stat
 /// <summary>"default point size 4": options for all later objects of the kinds (no kind: all kinds).</summary>
 internal sealed record DefaultStatement(int Line, int Column, IReadOnlyList<string> Kinds, OptionList Options) : Statement(Line, Column);
 
-internal sealed record StepStatement(int Line, int Column, string Caption) : Statement(Line, Column);
+/// <summary>"step …", or "textstep …" (<see cref="TextOnly"/>: text instead of the picture).</summary>
+internal sealed record StepStatement(int Line, int Column, string Caption) : Statement(Line, Column)
+{
+    public bool TextOnly { get; init; }
+}
 
 /// <summary>"info …": an explanation for the current step, below its description.</summary>
 internal sealed record InfoStatement(int Line, int Column, string Text) : Statement(Line, Column);

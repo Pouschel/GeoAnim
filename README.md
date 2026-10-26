@@ -153,6 +153,7 @@ Koordinaten sind mathematisch: die y-Achse zeigt nach oben. Der Maßstab ist in 
 | Anweisung | Bedeutung |
 |---|---|
 | `step Beschreibung bis zum Zeilenende` | neuer Schritt; der Text erscheint mit der Schrittnummer über dem Bild |
+| `textstep Beschreibung` | Schritt nur mit Text, wie eine Buchseite ohne Abbildung: Der Player blendet das Bild aus, die `info`-Texte des Schritts nutzen die ganze Fläche (bei langem Text scrollbar). Erlaubt sind nur `info`, `keyword`, `pause` und `number`; Zeichnen, Ein-/Ausblenden oder Bewegen ist ein Fehler. Im nächsten Schritt ist das Bild wieder da, wie es war; seine Größe ändert sich durch Textschritte nicht. Beim Durchlaufen dauert er so lange wie seine `pause`, ohne sie eine Lesezeit nach Textlänge (3 s + ¼ s je Wort) |
 | `info Erklärung …` | Erklärung zum aktuellen Schritt, unter dem Bild linksbündig (mehrzeilig mit `|`, Absätze, Markdown, Formeln; ein weiteres `info` wird ein neuer Absatz) |
 | `show A k1` | zeigt Objekte (zeichnet versteckte, blendet ausgeblendete ein); was schon zu sehen ist, bleibt, wie es ist |
 | `hide k1 k2` | blendet Objekte aus; was nicht zu sehen ist (schon ausgeblendet oder nie gezeigt), bleibt, wie es ist – hat ein `show`/`hide` nichts zu tun, kostet es keine Zeit |

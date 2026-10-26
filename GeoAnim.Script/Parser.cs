@@ -7,7 +7,7 @@ internal sealed class Parser
     internal static readonly HashSet<string> Keywords = new(StringComparer.Ordinal)
     {
         "title", "description", "info", "keyword", "view", "background", "grid", "axes", "speed", "var", "default", "include", "input", "output", "use",
-        "draw", "steps", "copy", "set", "step", "point", "segment", "line", "ray", "circle", "arc", "sector", "polygon", "angle",
+        "draw", "steps", "copy", "set", "step", "textstep", "point", "segment", "line", "ray", "circle", "arc", "sector", "polygon", "angle",
         "text", "number", "length", "degrees", "area", "perimeter", "show", "hide", "all", "highlight", "unhighlight", "keep", "move", "rotate", "reflect", "along", "around", "across", "in", "by", "pause", "together", "end", "midpoint", "intersect", "center", "through",
         "radius", "at", "from", "to", "on", "x", "y", "below", "gap", "align", "left", "right",
         "duration", "color", "width", "fill", "opacity", "size", "labelsize", "labelpos", "labeldir", "labelgap", "label", "nolabel", "hidden", "offset", "shift",
@@ -249,11 +249,12 @@ internal sealed class Parser
                     break;
                 }
             case "step":
+            case "textstep":
                 if (inTogether)
                 {
                     throw Error(word, "A step cannot begin inside a \"together\" block.");
                 }
-                statement = new StepStatement(l, c, TextOf(Next()));
+                statement = new StepStatement(l, c, TextOf(Next())) { TextOnly = word.Text == "textstep" };
                 break;
             case "point":
                 statement = ParsePoint(word);

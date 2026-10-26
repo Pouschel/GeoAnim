@@ -615,7 +615,7 @@ async function openLink (href) {
   const editor = await vscode.window.showTextDocument(document, { viewColumn: column, preview: false })
   if (step && Number(step[1]) > 0) {
     for (let i = 0, count = 0; i < document.lineCount; i++) {
-      if (/^\s*step\b/.test(document.lineAt(i).text) && ++count === Number(step[1])) {
+      if (/^\s*(?:text)?step\b/.test(document.lineAt(i).text) && ++count === Number(step[1])) {
         const line = document.lineAt(i)
         const position = new vscode.Position(i, line.firstNonWhitespaceCharacterIndex)
         editor.selection = new vscode.Selection(position, position)
@@ -638,7 +638,7 @@ function cursorStep (document) {
   const line = editor.selection.active.line
   let index = -1
   for (let i = 0; i <= line && i < document.lineCount; i++) {
-    if (/^\s*step\b/.test(document.lineAt(i).text)) {
+    if (/^\s*(?:text)?step\b/.test(document.lineAt(i).text)) {
       index++
     }
   }
@@ -657,7 +657,7 @@ function revealStep (index) {
   // a step from an included or used file has no line here: the cursor stays
   let target = index < 0 ? 0 : null
   for (let i = 0, count = -1; target === null && i < document.lineCount; i++) {
-    if (/^\s*step\b/.test(document.lineAt(i).text)) {
+    if (/^\s*(?:text)?step\b/.test(document.lineAt(i).text)) {
       count++
       if (count === index) {
         target = i
