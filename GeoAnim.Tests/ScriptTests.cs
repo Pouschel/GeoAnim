@@ -1138,6 +1138,9 @@ public class ScriptTests
             info Noch ein Punkt
             step Ohne Link
             info Auf der einen \Seite kein \Punkt, dann ein Punkt
+            step Überschrift
+            info ## Der Punkt
+            info Ein Punkt
             """);
         var links = new Dictionary<string, string>
         {
@@ -1158,6 +1161,8 @@ public class ScriptTests
         Assert.Equal("Noch ein [Punkt](p.html)", linked.Steps[1].Info);
         // a backslash before a word: no link there (the player does not show the backslash)
         Assert.Equal("Auf der einen \\Seite kein \\Punkt, dann ein [Punkt](p.html)", linked.Steps[2].Info);
+        // not in a heading ("## …")
+        Assert.Equal("## Der Punkt\nEin [Punkt](p.html)", linked.Steps[3].Info);
         Assert.Equal("../Basics/10_Punkte.html", Keywords.RelativeAddress("Mehr/a.html", "Basics/10_Punkte.html"));
         Assert.Equal("b%20%282%29.html", Keywords.RelativeAddress("a.html", "b (2).html"));
     }

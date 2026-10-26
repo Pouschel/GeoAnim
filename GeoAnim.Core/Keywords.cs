@@ -109,7 +109,7 @@ public static class Keywords
         {
             // only the explanation: the description is a heading (also in the list of steps, itself a navigation)
             var linked = new HashSet<string>(StringComparer.Ordinal);
-            string? info = step.Info == null ? null : LinkText(step.Info, pattern, Address, linked);
+            string? info = step.Info == null ? null : LinkParagraphs(step.Info, pattern, Address, linked);
             steps.Add(step with { Info = info });
         }
         return animation.WithTexts(animation.Title, description, steps);
@@ -132,6 +132,10 @@ public static class Keywords
     }
 
     private static readonly Regex HandLinkPattern = new(@"\[([^\]]*)\]\(([^)\s]+)\)|<([^\s<>]+)>");
+
+    // the paragraphs of an explanation with links, not in its headings ("## …")
+    private static string LinkParagraphs(string text, Regex pattern, Func<string, string> address, HashSet<string> linked) =>
+        string.Join("\n", text.Split('\n').Select(p => p.StartsWith("## ", StringComparison.Ordinal) ? p : LinkText(p, pattern, address, linked)));
 
     // a text with links: what is not plain text (\x, $formula$, `code`, [link](address), <address>) is copied
     private static string LinkText(string text, Regex pattern, Func<string, string> address, HashSet<string> linked)

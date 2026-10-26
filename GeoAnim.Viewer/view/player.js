@@ -1395,10 +1395,38 @@
   }
 
   // the explanation of a step below its description ("info"), left-aligned
+  // the explanation: paragraphs; one beginning with "## " is a heading (in a longer text, above all in a text step)
   function showInfo (text) {
     const info = $('info')
-    setRichText(info, text || '')
     info.hidden = !text
+    if (info.richText === (text || '')) {
+      return
+    }
+    info.richText = text || ''
+    info.textContent = ''
+    if (!text) {
+      return
+    }
+    // paragraphs that follow each other on new lines; a heading is a block of its own
+    let block = null
+    for (const paragraph of text.split('\n')) {
+      const heading = /^##\s+(.*)$/.exec(paragraph)
+      if (heading) {
+        const element = document.createElement('div')
+        element.className = 'heading'
+        renderInline(element, parseMarkdown(heading[1]))
+        info.appendChild(element)
+        block = null
+        continue
+      }
+      if (block) {
+        block.appendChild(document.createElement('br'))
+      } else {
+        block = document.createElement('div')
+        info.appendChild(block)
+      }
+      renderInline(block, parseMarkdown(paragraph))
+    }
   }
 
   // ------------------------------------------------------------------ the way through an exported book

@@ -164,7 +164,7 @@ Aktionen stehen in einem Schritt und laufen nacheinander. Die Optionen *Ablauf* 
 |---|---|---|---|
 | `step` | `step Text …` | – | neuer Schritt; mit `|` fortsetzbar |
 | `textstep` | `textstep Text …` | – | Schritt nur mit Text: seine `info`-Texte stehen dort, wo sonst das Bild ist (bei langem Text scrollbar); erlaubt sind nur `info`, `keyword`, `pause` und Zahlen. Das Bild ist im nächsten Schritt wieder da, wie es war. Dauer beim Durchlaufen: eine `pause`, sonst eine Lesezeit (3 s + ¼ s je Wort) |
-| `info` | `info Text …` | – | Erklärung zum Schritt, linksbündig unter der Beschreibung; mit `|` fortsetzbar; ein weiteres `info` wird ein neuer Absatz |
+| `info` | `info Text …` | – | Erklärung zum Schritt, linksbündig unter der Beschreibung; mit `|` fortsetzbar; ein weiteres `info` wird ein neuer Absatz; `info ## Titel` ist eine Zwischenüberschrift |
 | `show` | `show A B …` | *Ablauf* | zeigt Objekte (zeichnet versteckte, blendet ausgeblendete ein); schon sichtbare bleiben, wie sie sind |
 | | `show label A B …` | *Ablauf* | blendet nur Beschriftungen ein |
 | `hide` | `hide A B …` | *Ablauf* | blendet Objekte aus; nicht sichtbare (schon ausgeblendet oder nie gezeigt) bleiben, wie sie sind |
