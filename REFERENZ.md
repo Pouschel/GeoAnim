@@ -176,6 +176,7 @@ Aktionen stehen in einem Schritt und laufen nacheinander. Die Optionen *Ablauf* 
 | | `move t to x y` · `move t to P` | *Ablauf* | Text an festen Koordinaten (ein Text neben einem Punkt wandert mit dem Punkt) |
 | | `move P to n` | *Ablauf* | Punkt auf seinem Kreis (Grad) bzw. seiner Strecke (Position) |
 | | `move label A B … to x y` | *Ablauf* | verschiebt die Beschriftungen auf den Shift x y (von ihrem gewohnten Platz aus), z. B. wenn sie nach einer Bewegung stören |
+| | `move label A B … to SE` · `to 300` · `… gap n` | *Ablauf* | dreht die Beschriftungen von Punkten auf einem Bogen um den Punkt in eine andere Richtung (`N NE E SE S SW W NW` oder Grad), mit `gap` auch auf einen anderen Abstand |
 | | `move A B … along P Q` | *Ablauf* | verschiebt Objekte um den Vektor PQ (ihre freien Punkte; bei einem Text an festen Koordinaten seine Position) |
 | `rotate` | `rotate A B … around M by n` | *Ablauf* | dreht Objekte um M um n Grad (negativ: im Uhrzeigersinn) |
 | `reflect` | `reflect A B … across g` · `reflect A B … across P Q` | *Ablauf*, `straight` | spiegelt Objekte an der Geraden g (auch Strecke oder Strahl) bzw. PQ: die Figur klappt um wie eine Buchseite; mit `straight` laufen die Punkte gleichmäßig senkrecht hinüber |
@@ -210,6 +211,8 @@ Aktionen stehen in einem Schritt und laufen nacheinander. Die Optionen *Ablauf* 
 | `nolabel` | – | ✓ | ✓ | ✓ | | | ✓ | | |
 | `labelsize` | n (pt) | ✓ | ✓ | ✓ | | | ✓ | | |
 | `labelpos` | n (0 bei A, 1 bei B) | | ✓ | ✓ | | | | | |
+| `labeldir` | `N` `NE` `E` `SE` `S` `SW` `W` `NW` oder Grad (gegen den Uhrzeigersinn ab Osten): Richtung der Beschriftung vom Punkt aus | ✓ | | | | | | | |
+| `labelgap` | n (pt, Standard 4): Zwischenraum zwischen Punkt und Beschriftung bei `labeldir` | ✓ | | | | | | | |
 | `shift` | x y (Koordinateneinheiten) – Verschiebung der Beschriftung von ihrem gewohnten Platz aus | ✓ | ✓ | ✓ | | | ✓ | ✓ | |
 | `offset` | x y – *veraltet*: Lage relativ zum Punkt selbst (ohne den gewohnten Abstand); beim Winkel wie `shift` | ✓ | ✓ | ✓ | | | ✓ | ✓ | |
 | `radius` | n (Einheiten) | | | | | | ✓ | | |
@@ -250,4 +253,4 @@ Aktionen stehen in einem Schritt und laufen nacheinander. Die Optionen *Ablauf* 
 
 Diese Wörter können keine Namen sein:
 
-`title` `description` `info` `keyword` `view` `background` `grid` `axes` `speed` `var` `default` `include` `input` `output` `use` `draw` `steps` `copy` `set` `step` `point` `segment` `line` `ray` `circle` `arc` `sector` `polygon` `angle` `text` `number` `length` `degrees` `area` `perimeter` `show` `hide` `all` `highlight` `unhighlight` `keep` `move` `rotate` `reflect` `along` `around` `across` `in` `by` `pause` `together` `end` `midpoint` `intersect` `center` `through` `radius` `at` `from` `to` `on` `x` `y` `below` `gap` `align` `left` `right` `duration` `color` `width` `fill` `opacity` `size` `labelsize` `labelpos` `label` `nolabel` `hidden` `offset` `shift` `arrow` `start` `both` `straight` `back` `front` `halo` `linear` `ease` `easein` `easeout` `easeinout`
+`title` `description` `info` `keyword` `view` `background` `grid` `axes` `speed` `var` `default` `include` `input` `output` `use` `draw` `steps` `copy` `set` `step` `point` `segment` `line` `ray` `circle` `arc` `sector` `polygon` `angle` `text` `number` `length` `degrees` `area` `perimeter` `show` `hide` `all` `highlight` `unhighlight` `keep` `move` `rotate` `reflect` `along` `around` `across` `in` `by` `pause` `together` `end` `midpoint` `intersect` `center` `through` `radius` `at` `from` `to` `on` `x` `y` `below` `gap` `align` `left` `right` `duration` `color` `width` `fill` `opacity` `size` `labelsize` `labelpos` `labeldir` `labelgap` `label` `nolabel` `hidden` `offset` `shift` `arrow` `start` `both` `straight` `back` `front` `halo` `linear` `ease` `easein` `easeout` `easeinout`

@@ -64,9 +64,16 @@ internal sealed record NumberStatement(int Line, int Column, NameRef Name, strin
     public Expression? Expression { get; init; }
 }
 
-/// <summary>"move label A B to 0.2 -0.3": the labels shifted from their default place.</summary>
-internal sealed record LabelShiftStatement(int Line, int Column, IReadOnlyList<NameRef> Targets, Vec Shift, OptionList Options)
-    : Statement(Line, Column);
+/// <summary>
+/// "move label A B to 0.2 -0.3" (<paramref name="Shift"/>) or "move label A to SE gap 12" (<see cref="Direction"/>, <see cref="Gap"/>).
+/// </summary>
+internal sealed record LabelShiftStatement(int Line, int Column, IReadOnlyList<NameRef> Targets, Vec? Shift, OptionList Options)
+    : Statement(Line, Column)
+{
+    public double? Direction { get; init; }
+
+    public double? Gap { get; init; }
+}
 
 /// <summary>"move A B C along P Q": the objects moved by the vector PQ.</summary>
 internal sealed record TranslateStatement(int Line, int Column, IReadOnlyList<NameRef> Targets, NameRef From, NameRef To, OptionList Options)

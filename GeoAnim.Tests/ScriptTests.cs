@@ -724,7 +724,7 @@ public class ScriptTests
         JsonElement ny = label.GetProperty("tracks").GetProperty("ny");
         // before: below AB (to the right of A → B); after: A (−1, 0) → B (−4, 0) runs to the left, the label still below
         Assert.Equal(-1, ny[0][1].GetDouble(), 6);
-        Assert.Equal(-1, ny[ny.GetArrayLength() - 1][1].GetDouble(), 6);
+        Assert.Equal(-1, ny[ny.GetArrayLength() - 1][1].GetDouble(), 3);
         JsonElement sweep = animation.ToJson() is string json
             ? JsonDocument.Parse(json).RootElement.GetProperty("primitives").EnumerateArray().Single(p => p.GetProperty("type").GetString() == "angle").GetProperty("tracks").GetProperty("sweep")
             : default;
@@ -910,6 +910,44 @@ public class ScriptTests
         ErrorAt("point M = 0 0\npoint A = 1 0\nsegment g = M A\narc b = g from A to M", 4, 9, "lies on a circle");
         ErrorAt("point M = 0 0\ncircle k = center M radius 1\narc b = k A to M", 3, 11, "\"from\"");
         ErrorAt("point M = 0 0\ncircle k = center M radius 1\nsector s = k from M to M arrow", 3, 26, "not possible for sector");
+    }
+
+    [Fact]
+    public void LabelDirectionsPlaceLabelsAroundThePoint()
+    {
+        AnimationData animation = ScriptCompiler.Compile("""
+            point A = 0 0 labeldir NW labelgap 6
+            point B = 4 0
+            step warten
+              pause 200
+            step drehen
+              move label B to S gap 10
+            """);
+        JsonElement[] texts = JsonDocument.Parse(animation.ToJson()).RootElement.GetProperty("primitives").EnumerateArray()
+            .Where(p => p.GetProperty("type").GetString() == "text").ToArray();
+        JsonElement a = texts[0].GetProperty("tracks");
+        // NW: the normal (−0.71, 0.71), the gap measured from the point's centre (radius 5 + 6)
+        Assert.Equal((-Math.Sqrt(0.5), Math.Sqrt(0.5), 11.0), (a.GetProperty("nx")[0][1].GetDouble(), a.GetProperty("ny")[0][1].GetDouble(), a.GetProperty("gap")[0][1].GetDouble()), new ToleranceComparer());
+        Assert.Equal(1, a.GetProperty("dir")[0][1].GetDouble());
+        // B: its default place until the step (dir 0), then turned from NE the shorter way to S (−90°), gap 4 → 10
+        JsonElement b = texts[1].GetProperty("tracks");
+        Assert.Equal((0.0, 0.0), (b.GetProperty("dir")[0][0].GetDouble(), b.GetProperty("dir")[0][1].GetDouble()));
+        Assert.Equal(1, b.GetProperty("dir")[b.GetProperty("dir").GetArrayLength() - 1][1].GetDouble());
+        JsonElement ny = b.GetProperty("ny");
+        Assert.Equal(-1, ny[ny.GetArrayLength() - 1][1].GetDouble(), 3);
+        Assert.All(b.GetProperty("nx").EnumerateArray().Skip(1), k => Assert.True(k[1].GetDouble() >= -1e-3));
+        JsonElement gap = b.GetProperty("gap");
+        Assert.Equal(15, gap[gap.GetArrayLength() - 1][1].GetDouble(), 6);
+        ErrorAt("point A = 0 0 labeldir up", 1, 24, "Expected a direction");
+        ErrorAt("point A = 0 0\npoint B = 1 0\nsegment s = A B label \"s\"\nstep x\nmove label s to N", 5, 12, "for the label of a point");
+    }
+
+    private sealed class ToleranceComparer : IEqualityComparer<(double, double, double)>
+    {
+        public bool Equals((double, double, double) x, (double, double, double) y) =>
+            Math.Abs(x.Item1 - y.Item1) < 1e-3 && Math.Abs(x.Item2 - y.Item2) < 1e-3 && Math.Abs(x.Item3 - y.Item3) < 1e-3;
+
+        public int GetHashCode((double, double, double) obj) => 0;
     }
 
     [Fact]

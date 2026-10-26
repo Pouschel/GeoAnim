@@ -400,7 +400,18 @@ public static class ScriptCompiler
                             }
                         }
                         Options options = ToOptions(s.Options, "move", ["duration", "easing"]);
-                        c.ShiftLabels(targets, s.Shift, options.Duration, options.Easing);
+                        if (s.Direction is double direction)
+                        {
+                            foreach ((NameRef name, GeoObject target) in s.Targets.Zip(targets).Where(t => t.Second is not GeoPoint))
+                            {
+                                throw new ScriptError(name.Line, name.Column, $"A direction (N, NE, …, degrees) is for the label of a point; the label of the {target.Kind} {name.Name} moves by a shift (move label {name.Name} to 0 0.3).");
+                            }
+                            c.DirectLabels(targets, direction, s.Gap, options.Duration, options.Easing);
+                        }
+                        else
+                        {
+                            c.ShiftLabels(targets, s.Shift!.Value, options.Duration, options.Easing);
+                        }
                         break;
                     }
                 case TranslateStatement s:
@@ -542,7 +553,7 @@ public static class ScriptCompiler
 
         private static string[] AllowedOptions(string kind) => kind switch
         {
-            "point" => ["color", "size", "labelsize", "label", "offset", "shift", "stacking", "halo", "draw"],
+            "point" => ["color", "size", "labelsize", "labeldir", "labelgap", "label", "offset", "shift", "stacking", "halo", "draw"],
             "polygon" => ["color", "width", "fill", "opacity", "stacking", "draw"],
             "text" => ["color", "size", "offset", "shift", "align", "stacking", "halo", "draw"],
             "segment" or "ray" => ["color", "width", "label", "labelsize", "labelpos", "offset", "shift", "arrow", "stacking", "halo", "draw"],
@@ -574,6 +585,8 @@ public static class ScriptCompiler
                     Size = caller.Size ?? own.Size,
                     LabelSize = caller.LabelSize ?? own.LabelSize,
                     LabelPosition = caller.LabelPosition ?? own.LabelPosition,
+                    LabelDir = caller.LabelDir ?? own.LabelDir,
+                    LabelGap = caller.LabelGap ?? own.LabelGap,
                     // a point's label follows the caller's name
                     Label = kind == "point" ? caller.Label : caller.Label ?? own.Label,
                     NoLabel = caller.NoLabel || (own.NoLabel && caller.Label == null),
@@ -945,6 +958,8 @@ public static class ScriptCompiler
                     "labelsize" => options with { LabelSize = (double)option.Value! },
                     "radius" => options with { Radius = (double)option.Value! },
                     "labelpos" => options with { LabelPosition = (double)option.Value! },
+                    "labeldir" => options with { LabelDir = (double)option.Value! },
+                    "labelgap" => options with { LabelGap = (double)option.Value! },
                     "label" => options with { Label = (string)option.Value! },
                     "nolabel" => options with { NoLabel = true },
                     "arrow" => options with { Arrow = (string)option.Value! switch { "start" => Arrow.Start, "both" => Arrow.Both, _ => Arrow.End } },

@@ -75,6 +75,19 @@ public abstract class GeoObject
     /// <summary>Reflects the object's sense of rotation (halfway through a reflection).</summary>
     internal void Mirror() => Mirrored = !Mirrored;
 
+    /// <summary>
+    /// Writes a value; a track that starts later than its primitive first gets <paramref name="before"/> from the
+    /// primitive's start (the player draws a primitive only where all its tracks have values).
+    /// </summary>
+    internal static void AnimateFromStart(Primitive primitive, string track, Span span, object value, object before)
+    {
+        if (primitive.Current(track) == null && primitive.FirstTime is double first && first < span.Start)
+        {
+            primitive.Animate(track, Span.At(first), before);
+        }
+        primitive.Animate(track, span, value);
+    }
+
     /// <summary>Whether it has primitives in the animation (it was shown once).</summary>
     internal bool IsDrawn { get; private protected set; }
 
@@ -141,4 +154,5 @@ internal static class Defaults
     public const double AngleSize = 36;
     public const double AngleWidth = 1.5;
     public static readonly Vec LabelOffset = new(7, 7);
+    public const double LabelGap = 4;
 }

@@ -31,6 +31,15 @@ public sealed record Options
     /// <summary>Radius of an angle's sector in units (default: sized to its label).</summary>
     public double? Radius { get; init; }
 
+    /// <summary>
+    /// "labeldir": the direction of a point's label from the point in degrees (counterclockwise from east; N, NE, … in the
+    /// script): the label then stands so far out that its edge keeps <see cref="LabelGap"/> from the point.
+    /// </summary>
+    public double? LabelDir { get; init; }
+
+    /// <summary>"labelgap": the space between a point and its label in points (default 4), with "labeldir".</summary>
+    public double? LabelGap { get; init; }
+
     /// <summary>Font size of the label of a point, segment, ray or line, in points.</summary>
     public double? LabelSize { get; init; }
 

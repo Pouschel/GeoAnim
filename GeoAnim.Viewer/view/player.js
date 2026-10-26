@@ -281,7 +281,9 @@
     // a group with the pieces of the text side by side: text elements and formulas (nested svg elements)
     text (element, v) {
       const size = textSize(v.size)
-      const align = v.nx !== undefined ? 'middle' : v.anchor || 'start'
+      // along a direction: a line's label (moved out along its normal) or a point's with "labeldir" (dir 1)
+      const along = v.nx !== undefined && v.dir !== 0
+      const align = along ? 'middle' : v.anchor || 'start'
       const text = withNumbers(v.text)
       const key = text + '\n' + size + '\n' + align
       if (element.layoutKey !== key) {
@@ -307,8 +309,8 @@
       }
       // where it stands (before the alignment) and how far down it reaches: for a text below this one
       element.box = { x, bottom: y + element.layoutBottom }
-      if (v.nx !== undefined) {
-        // the label of a line: its box moved along the normal (nx, ny) until it is gap points away from the line
+      if (along) {
+        // the label of a line or a point: its box moved along the normal (nx, ny) until it is gap points away from the line
         const width = element.layoutWidth
         const height = 0.7 * size + (element.layoutLines - 1) * LINE_HEIGHT * size
         const reach = Math.abs(v.nx) * width / 2 + Math.abs(v.ny) * height / 2 + v.gap * unit

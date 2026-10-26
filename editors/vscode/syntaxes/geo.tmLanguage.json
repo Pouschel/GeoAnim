@@ -181,7 +181,7 @@
           "include": "#comment"
         },
         {
-          "begin": "(?=\\b(?:duration|color|width|fill|opacity|size|radius|labelsize|labelpos|label|nolabel|hidden|offset|shift|arrow|align|straight|back|front|keep|halo|linear|ease|easein|easeout|easeinout|draw|steps)\\b)",
+          "begin": "(?=\\b(?:duration|color|width|fill|opacity|size|radius|labelsize|labelpos|labeldir|labelgap|label|nolabel|hidden|offset|shift|arrow|align|straight|back|front|keep|halo|linear|ease|easein|easeout|easeinout|draw|steps)\\b)",
           "end": "(?=$)",
           "patterns": [
             {
@@ -396,7 +396,7 @@
           "include": "#comment"
         },
         {
-          "begin": "(?=\\b(?:duration|color|width|fill|opacity|size|radius|labelsize|labelpos|label|nolabel|hidden|offset|shift|arrow|align|straight|back|front|keep|halo|linear|ease|easein|easeout|easeinout|draw|steps)\\b)",
+          "begin": "(?=\\b(?:duration|color|width|fill|opacity|size|radius|labelsize|labelpos|labeldir|labelgap|label|nolabel|hidden|offset|shift|arrow|align|straight|back|front|keep|halo|linear|ease|easein|easeout|easeinout|draw|steps)\\b)",
           "end": "(?=$)",
           "patterns": [
             {
@@ -578,7 +578,7 @@
           "name": "keyword.other.geo"
         },
         {
-          "begin": "(?=\\b(?:duration|color|width|fill|opacity|size|radius|labelsize|labelpos|label|nolabel|hidden|offset|shift|arrow|align|straight|back|front|keep|halo|linear|ease|easein|easeout|easeinout|draw|steps)\\b)",
+          "begin": "(?=\\b(?:duration|color|width|fill|opacity|size|radius|labelsize|labelpos|labeldir|labelgap|label|nolabel|hidden|offset|shift|arrow|align|straight|back|front|keep|halo|linear|ease|easein|easeout|easeinout|draw|steps)\\b)",
           "end": "(?=$)",
           "patterns": [
             {
@@ -667,7 +667,7 @@
           }
         },
         {
-          "match": "\\b(duration|color|width|fill|opacity|size|radius|labelsize|labelpos|label|nolabel|hidden|offset|shift|arrow|start|both|straight|back|front|keep|halo|align|left|right|linear|ease|easein|easeout|easeinout)\\b",
+          "match": "\\b(duration|color|width|fill|opacity|size|radius|labelsize|labelpos|labeldir|labelgap|label|nolabel|hidden|offset|shift|arrow|start|both|straight|back|front|keep|halo|align|left|right|linear|ease|easein|easeout|easeinout)\\b",
           "name": "entity.other.attribute-name.option.geo"
         },
         {

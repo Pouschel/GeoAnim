@@ -13,7 +13,15 @@ public sealed class GeoPoint : GeoObject
     {
         this.compute = compute;
         IsFree = isFree;
+        LabelDirection = options.LabelDir;
+        LabelGap = options.LabelGap ?? Defaults.LabelGap;
     }
+
+    /// <summary>The direction of the label in degrees ("labeldir", "move label A to NE"), or null: its default place.</summary>
+    internal double? LabelDirection { get; set; }
+
+    /// <summary>The space between the point and its label in points, with a direction.</summary>
+    internal double LabelGap { get; set; }
 
     /// <summary>For a point on a circle its angle in degrees, for a point on a straight its parameter (0 = A, 1 = B).</summary>
     internal double Parameter { get; private set; }
@@ -135,16 +143,33 @@ public sealed class GeoPoint : GeoObject
     {
         label.Animate("text", span, LabelText);
         label.Animate("anchor", span, "start");
-        // an offset is in coordinates; the default distance is in points
-        Vec offset = Options.Offset ?? new Vec(0, 0);
-        Vec distance = Options.Offset == null ? Defaults.LabelOffset : new Vec(0, 0);
-        if (IsDefined)
+        if (LabelDirection is double direction)
         {
-            label.Animate("x", span, position.X + offset.X);
-            label.Animate("y", span, position.Y + offset.Y);
+            // the player moves the label's box out in this direction until its edge keeps the gap from the point
+            double radians = direction * Math.PI / 180;
+            if (IsDefined)
+            {
+                label.Animate("x", span, position.X);
+                label.Animate("y", span, position.Y);
+            }
+            AnimateFromStart(label, "dir", Span.At(span.Start), 1.0, 0.0);
+            AnimateFromStart(label, "nx", span, Math.Cos(radians), 0.0);
+            AnimateFromStart(label, "ny", span, Math.Sin(radians), 0.0);
+            AnimateFromStart(label, "gap", span, (Options.Size ?? Defaults.PointSize) + LabelGap, 0.0);
         }
-        label.Animate("dx", span, distance.X);
-        label.Animate("dy", span, distance.Y);
+        else
+        {
+            // an offset is in coordinates; the default distance is in points
+            Vec offset = Options.Offset ?? new Vec(0, 0);
+            Vec distance = Options.Offset == null ? Defaults.LabelOffset : new Vec(0, 0);
+            if (IsDefined)
+            {
+                label.Animate("x", span, position.X + offset.X);
+                label.Animate("y", span, position.Y + offset.Y);
+            }
+            label.Animate("dx", span, distance.X);
+            label.Animate("dy", span, distance.Y);
+        }
         label.Animate("size", span, Options.LabelSize ?? Defaults.LabelSize);
         RenderShift(label, span);
     }

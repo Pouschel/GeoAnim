@@ -443,6 +443,31 @@ public sealed class Construction
     /// Moves the labels of objects to the shift <paramref name="shift"/> from their default place (units), e.g. after a
     /// movement that brought a label too close to something; a label not drawn yet takes it at once.
     /// </summary>
+    /// <summary>
+    /// Turns the labels of points round them to the direction <paramref name="direction"/> (degrees, counterclockwise from
+    /// east), with <paramref name="gap"/> also to another space from the point (points); a label not shown yet just gets it.
+    /// </summary>
+    public void DirectLabels(IEnumerable<GeoObject> items, double direction, double? gap = null, double? duration = null, Easing? easing = null)
+    {
+        RequireStep("move label");
+        var actions = new List<TimelineAction>();
+        foreach (GeoObject item in items)
+        {
+            GeoPoint point = item as GeoPoint
+                ?? throw new GeoException($"A direction is for the label of a point; the label of the {item.Kind} {item.Name} moves by a shift (move label {item.Name} to 0 0.3).");
+            if (point.IsDrawn)
+            {
+                actions.Add(new LabelDirectionAction(point, direction, gap, duration ?? 400, easing ?? Easing.EaseInOut));
+            }
+            else
+            {
+                point.LabelDirection = direction;
+                point.LabelGap = gap ?? point.LabelGap;
+            }
+        }
+        RunOrQueue(actions);
+    }
+
     public void ShiftLabels(IEnumerable<GeoObject> items, Vec shift, double? duration = null, Easing? easing = null)
     {
         RequireStep("move label");

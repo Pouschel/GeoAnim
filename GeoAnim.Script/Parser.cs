@@ -10,13 +10,13 @@ internal sealed class Parser
         "draw", "steps", "copy", "set", "step", "point", "segment", "line", "ray", "circle", "arc", "sector", "polygon", "angle",
         "text", "number", "length", "degrees", "area", "perimeter", "show", "hide", "all", "highlight", "unhighlight", "keep", "move", "rotate", "reflect", "along", "around", "across", "in", "by", "pause", "together", "end", "midpoint", "intersect", "center", "through",
         "radius", "at", "from", "to", "on", "x", "y", "below", "gap", "align", "left", "right",
-        "duration", "color", "width", "fill", "opacity", "size", "labelsize", "labelpos", "label", "nolabel", "hidden", "offset", "shift",
+        "duration", "color", "width", "fill", "opacity", "size", "labelsize", "labelpos", "labeldir", "labelgap", "label", "nolabel", "hidden", "offset", "shift",
         "arrow", "start", "both", "straight", "back", "front", "halo", "linear", "ease", "easein", "easeout", "easeinout",
     };
 
     private static readonly HashSet<string> OptionNames = new(StringComparer.Ordinal)
     {
-        "duration", "color", "width", "fill", "opacity", "size", "radius", "labelsize", "labelpos", "label", "nolabel", "hidden", "offset", "shift",
+        "duration", "color", "width", "fill", "opacity", "size", "radius", "labelsize", "labelpos", "labeldir", "labelgap", "label", "nolabel", "hidden", "offset", "shift",
         "arrow", "align", "straight", "back", "front", "keep", "halo", "linear", "ease", "easein", "easeout", "easeinout",
     };
 
@@ -714,6 +714,18 @@ internal sealed class Parser
             Next();
             List<NameRef> labelled = ParseTargets(word, "to");
             ExpectWord("to");
+            // a direction ("to SE", "to 300", with "gap 12") or a shift ("to 0.2 -0.3")
+            if (IsCompass(Current) || (IsNumberAt(position) && !IsNumberAt(position + 1)))
+            {
+                double direction = ExpectDirection();
+                double? gap = null;
+                if (Current.Is("gap") && Current.Kind == TokenKind.Name)
+                {
+                    position++;
+                    gap = ExpectNonNegative("the gap between point and label");
+                }
+                return new LabelShiftStatement(word.Line, word.Column, labelled, null, ParseOptions()) { Direction = direction, Gap = gap };
+            }
             return new LabelShiftStatement(word.Line, word.Column, labelled, ParseCoordinates(), ParseOptions());
         }
         List<NameRef> targets = ParseTargets(word, "along");
@@ -882,6 +894,8 @@ internal sealed class Parser
                 "radius" => ExpectPositive("the radius"),
                 "labelsize" => ExpectPositive("the label size"),
                 "labelpos" => ExpectNumber("the position of the label (0 at A, 1 at B)"),
+                "labeldir" => ExpectDirection(),
+                "labelgap" => ExpectNonNegative("the gap between point and label"),
                 "opacity" => ExpectOpacity(),
                 "color" => ExpectColor(),
                 // "fill" alone: in the object's own colour
@@ -1057,6 +1071,28 @@ internal sealed class Parser
         Token token = Current;
         double value = ExpectNumber("the opacity");
         return value is >= 0 and <= 1 ? value : throw Error(token, "The opacity must be between 0 and 1.");
+    }
+
+    // the compass directions of a label, in degrees counterclockwise from east
+    private static readonly Dictionary<string, double> Compass = new(StringComparer.Ordinal)
+    {
+        ["E"] = 0, ["NE"] = 45, ["N"] = 90, ["NW"] = 135, ["W"] = 180, ["SW"] = 225, ["S"] = 270, ["SE"] = 315,
+    };
+
+    private static bool IsCompass(Token token) => token.Kind == TokenKind.Name && Compass.ContainsKey(token.Text);
+
+    // N, NE, E, SE, S, SW, W, NW or degrees (counterclockwise from east)
+    private double ExpectDirection()
+    {
+        if (IsCompass(Current))
+        {
+            return Compass[Next().Text];
+        }
+        if (!IsNumberAt(position))
+        {
+            throw Error(Current, $"Expected a direction: N, NE, E, SE, S, SW, W, NW or degrees (counterclockwise from east), not {Current.Describe()}.");
+        }
+        return ExpectNumber("the direction in degrees");
     }
 
     private Color ExpectColor()

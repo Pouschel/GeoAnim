@@ -94,6 +94,40 @@ internal sealed class LabelFadeAction(GeoObject target, double toOpacity, double
     public override void Apply(double progress) => target.LabelOpacity = fromOpacity + (toOpacity - fromOpacity) * progress;
 }
 
+/// <summary>
+/// Turns the label of a drawn point round it to another direction ("move label A to SE", with "gap": also to another
+/// distance), the shorter way round; computed in small time steps, so that it moves on an arc.
+/// </summary>
+internal sealed class LabelDirectionAction(GeoPoint target, double toDirection, double? toGap, double duration, Easing easing)
+    : TimelineAction(duration, easing)
+{
+    private double fromDirection;
+    private double fromGap;
+    private double turn;
+
+    public override bool MovesPoints => true;
+
+    public override IEnumerable<GeoObject> Objects => [target];
+
+    public override void Begin(RenderContext context, double time)
+    {
+        // from its default place (up right) as from NE
+        fromDirection = target.LabelDirection ?? 45;
+        fromGap = target.LabelGap;
+        turn = ((toDirection - fromDirection) % 360 + 540) % 360 - 180;
+        target.LabelDirection = fromDirection;
+        target.Render(context, Span.At(time));
+    }
+
+    public override void End(RenderContext context, Span span) => throw new InvalidOperationException("A label is turned in small steps.");
+
+    public override void Apply(double progress)
+    {
+        target.LabelDirection = fromDirection + turn * progress;
+        target.LabelGap = fromGap + ((toGap ?? fromGap) - fromGap) * progress;
+    }
+}
+
 /// <summary>Moves the label of a drawn object to another shift from its default place ("move label A to 0.2 -0.3").</summary>
 internal sealed class LabelShiftAction(GeoObject target, Vec toShift, double duration, Easing easing) : TimelineAction(duration, easing)
 {
