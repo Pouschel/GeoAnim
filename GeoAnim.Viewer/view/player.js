@@ -1373,7 +1373,15 @@
     const index = currentStepIndex()
     setCaption(index)
     // a text step: its text where the picture is (not in a still of the contact sheet)
-    document.body.classList.toggle('textstep', index >= 0 && !!list[index].text && !document.body.classList.contains('still'))
+    const textMode = index >= 0 && !!list[index].text && !document.body.classList.contains('still')
+    document.body.classList.toggle('textstep', textMode)
+    // an error (VS Code preview, serve) stays in sight: over the picture, in a text step above the text
+    const error = $('error')
+    const errorHost = textMode ? $('texts') : stage
+    if (error.parentNode !== errorHost) {
+      // over the picture: after it; above the text: before it
+      errorHost.insertBefore(error, textMode ? errorHost.firstChild : null)
+    }
     // the starting picture: what the page is about (the description from the script)
     showInfo(withNumbers(index >= 0 ? list[index].info : animation.description))
     showNextPage(index)
