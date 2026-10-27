@@ -29,6 +29,9 @@ const reported = new Map()
 const definitions = new Map()
 const references = new Map()
 let keywords = null
+let colors = null
+// a jump from the preview (Ctrl+click): the preview stays at its step
+let keepPreviewStep = false
 // the objects shown as ghosts in the preview: the one the cursor is on, and for a while the one under the mouse
 let cursorName = null
 let hoverName = null
@@ -234,6 +237,7 @@ function request (message) {
 function restart () {
   // a new build may know other keywords
   keywords = null
+  colors = null
   stopDaemon()
   startDaemon()
   if (preview) {
@@ -563,6 +567,9 @@ function openPreview () {
     if (message && message.type === 'step' && typeof message.index === 'number') {
       revealStep(message.index)
     }
+    if (message && message.type === 'reveal' && Array.isArray(message.names)) {
+      revealDefinition(message.names)
+    }
     if (message && message.type === 'inspected' && inspections.has(message.id)) {
       const answer = inspections.get(message.id)
       inspections.delete(message.id)
@@ -678,7 +685,9 @@ function followCursor (editor) {
     return
   }
   const index = cursorStep(editor.document)
-  if (index !== undefined && index !== previewStep) {
+  if (keepPreviewStep) {
+    keepPreviewStep = false
+  } else if (index !== undefined && index !== previewStep) {
     previewStep = index
     preview.webview.postMessage({ type: 'step', index })
   }
@@ -686,6 +695,177 @@ function followCursor (editor) {
   const found = editor.selection.isEmpty ? definitionAt(editor.document, editor.selection.active) : null
   cursorName = found && found.definition.kind === 'object' ? found.definition.name : null
   sendHighlight()
+}
+
+// ------------------------------------------------------------------ from the preview to the script (Ctrl+click)
+
+// an object clicked in the preview: the cursor goes to the name in its definition (in this file), the preview stays at
+// its step, and the tooltip shows its values
+async function revealDefinition (names) {
+  const document = previewDocument
+  if (!document) {
+    return
+  }
+  const all = definitions.get(document.uri.toString()) || []
+  const definition = all.find(d => names.includes(d.name) && isThisFile(document, d.file)) || all.find(d => names.includes(d.name))
+  if (!definition) {
+    vscode.window.setStatusBarMessage(`GeoAnim: ${names[0]} ist nicht in dieser Datei definiert.`, 4000)
+    return
+  }
+  const target = definition.file && !isThisFile(document, definition.file) ? await vscode.workspace.openTextDocument(definition.file) : document
+  const shown = (vscode.window.visibleTextEditors || []).find(e => e.document === target)
+  const previewColumn = preview ? preview.viewColumn : undefined
+  let column = shown ? shown.viewColumn : undefined
+  if (!column || column === previewColumn) {
+    column = previewColumn === vscode.ViewColumn.One ? vscode.ViewColumn.Two : vscode.ViewColumn.One
+  }
+  keepPreviewStep = target === document
+  const editor = await vscode.window.showTextDocument(target, { viewColumn: column, preserveFocus: false })
+  const start = new vscode.Position(definition.line - 1, Math.max(0, definition.column - 1))
+  editor.selection = new vscode.Selection(start, start)
+  editor.revealRange(new vscode.Range(start, start), vscode.TextEditorRevealType.InCenterIfOutsideViewport)
+  vscode.commands.executeCommand('editor.action.showHover')
+}
+
+// ------------------------------------------------------------------ outline, folding, colour swatches
+
+const STEP_LINE = /^\s*(?:(text)?step)\b\s*(.*)$/
+
+// the kind of a definition from its line ("point A = …" → point; "var …", "set …")
+function definedKind (definition) {
+  if (definition.kind !== 'object') {
+    return definition.kind
+  }
+  const match = /^\s*(?:(?:input|output)\s+)?([a-z]+)\b/.exec(definition.text || '')
+  return match ? match[1] : 'object'
+}
+
+const SYMBOL_KINDS = {
+  point: vscode.SymbolKind.Constant,
+  segment: vscode.SymbolKind.Interface,
+  line: vscode.SymbolKind.Interface,
+  ray: vscode.SymbolKind.Interface,
+  circle: vscode.SymbolKind.Struct,
+  arc: vscode.SymbolKind.Struct,
+  sector: vscode.SymbolKind.Struct,
+  polygon: vscode.SymbolKind.Class,
+  angle: vscode.SymbolKind.Enum,
+  text: vscode.SymbolKind.String,
+  set: vscode.SymbolKind.String,
+  number: vscode.SymbolKind.Number,
+  var: vscode.SymbolKind.Variable
+}
+
+// the outline: the starting picture and the steps, each with the names defined in it
+async function provideDocumentSymbols (document) {
+  // before the first compilation the names are not known yet
+  if (!definitions.has(document.uri.toString())) {
+    await compile(document)
+  }
+  const sections = []
+  let current = { name: 'Startbild', detail: '', line: 0, children: [] }
+  sections.push(current)
+  for (let i = 0; i < document.lineCount; i++) {
+    const match = STEP_LINE.exec(document.lineAt(i).text)
+    if (match) {
+      current.end = i - 1
+      current = { name: `${sections.length} ${match[2].trim() || '(ohne Beschreibung)'}`, detail: match[1] ? 'textstep' : 'step', line: i, children: [] }
+      sections.push(current)
+    }
+  }
+  current.end = document.lineCount - 1
+  const seen = new Set()
+  for (const definition of definitions.get(document.uri.toString()) || []) {
+    if (!isThisFile(document, definition.file) || seen.has(definition.name + ':' + definition.line)) {
+      continue
+    }
+    seen.add(definition.name + ':' + definition.line)
+    const line = definition.line - 1
+    if (line < 0 || line >= document.lineCount) {
+      continue
+    }
+    const section = sections.filter(s => s.line <= line).pop()
+    const kind = definedKind(definition)
+    const nameRange = new vscode.Range(line, Math.max(0, definition.column - 1), line, Math.max(0, definition.column - 1) + definition.name.length)
+    section.children.push(new vscode.DocumentSymbol(definition.name, kind, SYMBOL_KINDS[kind] || vscode.SymbolKind.Object, document.lineAt(line).range, nameRange))
+  }
+  return sections
+    .filter(s => s.line > 0 || s.children.length > 0 || sections.length === 1)
+    .map(s => {
+      const range = new vscode.Range(s.line, 0, Math.max(s.line, s.end), document.lineAt(Math.max(s.line, s.end)).text.length)
+      const symbol = new vscode.DocumentSymbol(s.name, s.detail, vscode.SymbolKind.Namespace, range, document.lineAt(s.line).range)
+      symbol.children = s.children
+      return symbol
+    })
+}
+
+// folding: each step (up to the next one) and each together block
+function provideFoldingRanges (document) {
+  const ranges = []
+  let stepStart = -1
+  const together = []
+  for (let i = 0; i < document.lineCount; i++) {
+    const text = document.lineAt(i).text
+    if (STEP_LINE.test(text)) {
+      if (stepStart >= 0 && i - 1 > stepStart) {
+        ranges.push(new vscode.FoldingRange(stepStart, lastContentLine(document, stepStart, i - 1)))
+      }
+      stepStart = i
+    } else if (/^\s*together\b/.test(text)) {
+      together.push(i)
+    } else if (/^\s*end\b/.test(text) && together.length > 0) {
+      ranges.push(new vscode.FoldingRange(together.pop(), i))
+    }
+  }
+  if (stepStart >= 0 && document.lineCount - 1 > stepStart) {
+    ranges.push(new vscode.FoldingRange(stepStart, lastContentLine(document, stepStart, document.lineCount - 1)))
+  }
+  return ranges
+}
+
+// a step folds up to its last line that is not empty
+function lastContentLine (document, start, end) {
+  while (end > start && document.lineAt(end).text.trim().length === 0) {
+    end--
+  }
+  return end
+}
+
+// colour swatches: after color, fill and background (names and #rgb / #rrggbb), with the colour picker
+async function provideDocumentColors (document) {
+  if (colors === null) {
+    try {
+      colors = (await request({ type: 'keywords' })).colors || {}
+    } catch (error) {
+      colors = {}
+    }
+  }
+  const found = []
+  const pattern = /\b(?:color|fill|background)\s+(#[0-9a-fA-F]{6}\b|#[0-9a-fA-F]{3}\b|[A-Za-z]+\b)/g
+  for (let i = 0; i < document.lineCount; i++) {
+    const text = document.lineAt(i).text.replace(/#(?![0-9a-fA-F]{3}\b|[0-9a-fA-F]{6}\b).*$/, '')
+    for (const match of text.matchAll(pattern)) {
+      const value = match[1]
+      const hex = value.startsWith('#') ? value : colors[value.toLowerCase()]
+      if (!hex) {
+        continue
+      }
+      const full = hex.length === 4 ? '#' + [...hex.slice(1)].map(c => c + c).join('') : hex
+      const n = parseInt(full.slice(1), 16)
+      const start = match.index + match[0].length - value.length
+      found.push(new vscode.ColorInformation(new vscode.Range(i, start, i, start + value.length),
+        new vscode.Color(((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255, 1)))
+    }
+  }
+  return found
+}
+
+// a colour picked: written as #rrggbb (a name stays a name if it is exactly that colour)
+function provideColorPresentations (color) {
+  const part = v => Math.round(v * 255).toString(16).padStart(2, '0')
+  const hex = '#' + part(color.red) + part(color.green) + part(color.blue)
+  const name = Object.keys(colors || {}).find(n => colors[n] === hex)
+  return [new vscode.ColorPresentation(name || hex)]
 }
 
 // ------------------------------------------------------------------ together blocks (Ctrl+.)
@@ -787,6 +967,9 @@ function activate (context) {
     vscode.commands.registerCommand('geoanim.preview', openPreview),
     vscode.commands.registerCommand('geoanim.restart', restart),
     vscode.commands.registerCommand('geoanim.surroundTogether', surroundTogether),
+    vscode.languages.registerDocumentSymbolProvider('geo', { provideDocumentSymbols }, { label: 'GeoAnim' }),
+    vscode.languages.registerFoldingRangeProvider('geo', { provideFoldingRanges }),
+    vscode.languages.registerColorProvider('geo', { provideDocumentColors, provideColorPresentations }),
     vscode.languages.registerCodeActionsProvider('geo', { provideCodeActions }, { providedCodeActionKinds: [vscode.CodeActionKind.RefactorRewrite] }),
     vscode.languages.registerHoverProvider('geo', { provideHover: hover }),
     vscode.languages.registerDefinitionProvider('geo', { provideDefinition: definitionLocation }),

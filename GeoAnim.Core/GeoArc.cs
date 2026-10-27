@@ -85,9 +85,9 @@ public sealed class GeoArc : GeoObject
             // a sector's area below, with the fills of polygons and angles; its border and an arc with the lines
             if (IsSector)
             {
-                disc = context.Scene.Create("disc", Layers.Of(Options, Layers.Polygon));
+                disc = context.Scene.Create(this, "disc", Layers.Of(Options, Layers.Polygon));
             }
-            part = context.Scene.Create("part", Layers.Of(Options, Layers.Curve));
+            part = context.Scene.Create(this, "part", Layers.Of(Options, Layers.Curve));
             if (IsSector)
             {
                 part.Animate("sector", span, 1.0);

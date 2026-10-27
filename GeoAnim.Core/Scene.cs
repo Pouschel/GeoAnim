@@ -7,9 +7,10 @@ internal sealed class Scene
 
     public IReadOnlyList<Primitive> Primitives => primitives;
 
-    public Primitive Create(string type, int layer)
+    /// <summary>A new primitive of <paramref name="owner"/> (for an editor: which object a part of the picture belongs to).</summary>
+    public Primitive Create(GeoObject owner, string type, int layer)
     {
-        var primitive = new Primitive(primitives.Count + 1, type, layer);
+        var primitive = new Primitive(primitives.Count + 1, type, layer) { Owner = owner };
         primitives.Add(primitive);
         return primitive;
     }

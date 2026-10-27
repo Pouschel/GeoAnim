@@ -939,6 +939,12 @@ public sealed class Construction
                 .Select(g => new InspectedObject(objectsByName.Where(n => n.Value == g.Item).Select(n => n.Key).ToList(), g.Ghost) { Label = g.Label })
                 .Where(g => g.Names.Count > 0)
                 .ToList(),
+            // for an editor: the names of the object each primitive belongs to (a click in the preview finds it)
+            Owners = inspector == null ? new Dictionary<int, IReadOnlyList<string>>() : scene.Primitives
+                .Where(p => p.Owner != null)
+                .Select(p => (p.Id, Names: (IReadOnlyList<string>)objectsByName.Where(n => n.Value == p.Owner).Select(n => n.Key).ToList()))
+                .Where(o => o.Names.Count > 0)
+                .ToDictionary(o => o.Id, o => o.Names),
         };
     }
 

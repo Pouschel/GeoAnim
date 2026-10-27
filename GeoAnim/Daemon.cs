@@ -17,7 +17,8 @@ namespace GeoAnim.Cli;
 /// "references": [{"name": "k", "file": "C:\\…", "line": 4, "column": 5}, …] (every place a name stands)} – the
 /// text as if it were the file (unsaved changes; includes and uses relative to its folder).</item>
 /// <item>{"id": 2, "type": "player"} → {"id": 2, "html": "…"} – the player page for the preview.</item>
-/// <item>{"id": 3, "type": "keywords"} → {"id": 3, "keywords": ["angle", …]} – the words that cannot be names.</item>
+/// <item>{"id": 3, "type": "keywords"} → {"id": 3, "keywords": ["angle", …], "colors": {"red": "#d32f2f", …}} – the words that
+/// cannot be names, and the colour names.</item>
 /// </list>
 /// A request that fails completely gets {"id": …, "fatal": "…"}.
 /// </summary>
@@ -58,6 +59,13 @@ internal static class Daemon
                         json.WriteStringValue(keyword);
                     }
                     json.WriteEndArray();
+                    // the colour names with their values (colour swatches in the editor)
+                    json.WriteStartObject("colors");
+                    foreach ((string name, Color color) in Color.Names)
+                    {
+                        json.WriteString(name, color.ToHex());
+                    }
+                    json.WriteEndObject();
                 }),
                 _ => Answer(id, json => json.WriteString("fatal", "Unknown request type \"" + type + "\".")),
             };

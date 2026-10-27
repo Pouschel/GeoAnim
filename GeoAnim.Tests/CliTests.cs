@@ -361,6 +361,11 @@ public sealed class CliTests : IDisposable
         Assert.Equal(("$A$", 0.5), (label.GetProperty("text")[0][1].GetString(), label.GetProperty("sx")[0][1].GetDouble()));
         Assert.True(hidden.GetProperty("math").TryGetProperty("A", out _));
 
+        // which object each primitive belongs to (a click in the preview finds its definition); the colours for swatches
+        JsonElement drawn = Ask(new { id = 13, type = "compile", file = main, text = "point A = 1 1\npoint B = 2 1\nsegment s = A B" }).GetProperty("animation");
+        Assert.Equal(["A", "A", "B", "B", "s"], drawn.GetProperty("owners").EnumerateObject().Select(o => o.Value[0].GetString()));
+        Assert.Equal("#d32f2f", Ask(new { id = 14, type = "keywords" }).GetProperty("colors").GetProperty("red").GetString());
+
         string html = Ask(new { id = 10, type = "player" }).GetProperty("html").GetString()!;
         Assert.Contains("window.GEO_EMBEDDED = true;", html);
         Assert.DoesNotContain("GEO_ANIMATION =", html);

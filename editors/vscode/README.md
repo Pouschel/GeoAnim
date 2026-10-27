@@ -53,6 +53,17 @@ mklink /J "%USERPROFILE%\.vscode\extensions\geoanim-geo" "%CD%\editors\vscode"
   definiert ist. Zugleich erscheint das Objekt in der Vorschau als orange gestrichelter „Geist“, auch wenn es versteckt
   ist (Hilfspunkte, Hilfsgeraden): für ein paar Sekunden nach dem Tooltip, und solange der Cursor auf seinem Namen steht. Seine Beschriftung erscheint dabei mit, an der Stelle, an der sie stehen wird (mit `shift`), auch wenn Objekt oder Beschriftung noch verborgen sind – so lässt sich eine Beschriftung platzieren, bevor sie zu sehen ist. Ebenso erscheinen versteckte Texte (außer Texten unter anderen, `below`).
   Der Geist folgt der Animation, auch beim Abspielen.
+- **Vom Bild zum Skript:** In der Vorschau mit gedrückter `Strg` (macOS: `Cmd`) über die Zeichnung fahren zeigt den Namen
+  des Objekts unter der Maus (auch über seiner Beschriftung); `Strg`+Klick springt zu seiner Definition, zeigt das Tooltip
+  mit den Werten und den Geist – die Vorschau bleibt dabei an ihrem Schritt. Dünne Linien muss man nicht genau treffen;
+  liegen Dinge übereinander, gewinnen Punkte vor Linien vor Flächen.
+- **Gliederung:** Die Ansicht „Gliederung“, die Brotkrumen über dem Editor und `Strg+Umschalt+O` zeigen das Startbild und
+  die Schritte (nummeriert wie im Player, `textstep` gekennzeichnet), darunter jeweils die dort definierten Objekte,
+  Zahlen, Vars und Texte mit Symbolen nach Art; ein Klick springt hin. Mit „Sticky Scroll“ steht oben im Editor, in welchem
+  Schritt man gerade schreibt.
+- **Falten:** Jeder Schritt (bis zum nächsten) und jeder `together`-Block lässt sich einklappen.
+- **Farbfelder:** Hinter `color`, `fill` und `background` steht ein Farbquadrat (Namen und `#rrggbb`); ein Klick öffnet den
+  Farbwähler, die neue Farbe wird als `#rrggbb` eingesetzt (oder als Name, wenn sie genau eine benannte Farbe ist).
 - **Umbenennen** (F2): benennt ein Objekt, eine Var, einen Text (`set`) oder eine Zahl in der ganzen Datei um – überall,
   wo der Name als Name steht (in Anweisungen, als Var unter den Optionen, als Text bei `text`/`label`, im Platzhalter
   `{l}`), nicht aber Wörter in Beschreibungen und Formeln (`$bar(AB)$` bleibt). Der neue Name wird geprüft (kein

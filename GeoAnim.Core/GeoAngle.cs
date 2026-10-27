@@ -97,7 +97,7 @@ public sealed class GeoAngle : GeoObject
         if (sector == null)
         {
             IsDrawn = true;
-            sector = context.Scene.Create("angle", Layers.Of(Options, Layers.Polygon));
+            sector = context.Scene.Create(this, "angle", Layers.Of(Options, Layers.Polygon));
             if (HasLabel)
             {
                 // also a hidden label: it sizes the sector, which then stays the same when the label is shown

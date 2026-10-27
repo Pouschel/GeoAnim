@@ -131,7 +131,7 @@ public sealed class GeoNumber : GeoObject
         if (primitive == null)
         {
             IsDrawn = true;
-            primitive = context.Scene.Create("number", Layers.Label);
+            primitive = context.Scene.Create(this, "number", Layers.Label);
             primitive.Animate("name", span, Name);
             primitive.Animate("digits", span, (double)Digits);
         }

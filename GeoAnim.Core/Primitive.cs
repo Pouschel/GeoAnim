@@ -21,6 +21,9 @@ internal sealed class Primitive(int id, string type, int layer)
 
     public IReadOnlyDictionary<string, List<Key>> Tracks => tracks;
 
+    /// <summary>The object it belongs to (its label too), or null.</summary>
+    public GeoObject? Owner { get; init; }
+
     /// <summary>
     /// Changes <paramref name="property"/> to <paramref name="value"/> during <paramref name="span"/>: it keeps its value
     /// until the start of the span, then changes with the span's easing until its end. A span of length 0 sets the value

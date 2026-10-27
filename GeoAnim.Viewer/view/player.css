@@ -624,3 +624,20 @@ body.textstep #error {
 body.textstep #error[hidden] {
   display: none;
 }
+
+/* VS Code preview, Ctrl held: the name of the object under the mouse */
+#owner {
+  position: fixed;
+  z-index: 30;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: #263238;
+  color: #fff;
+  font-family: Consolas, 'Cascadia Mono', monospace;
+  font-size: 13px;
+  pointer-events: none;
+}
+
+#owner[hidden] {
+  display: none;
+}

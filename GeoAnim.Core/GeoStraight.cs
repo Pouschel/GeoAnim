@@ -69,7 +69,7 @@ public sealed class GeoStraight : GeoObject
         if (line == null)
         {
             IsDrawn = true;
-            line = context.Scene.Create("line", Layers.Of(Options, Layers.Curve));
+            line = context.Scene.Create(this, "line", Layers.Of(Options, Layers.Curve));
         }
         var part = IsDefined ? VisiblePart(context.View) : null;
         line.Animate("opacity", span, part == null ? 0 : Opacity);
@@ -105,7 +105,7 @@ public sealed class GeoStraight : GeoObject
     // named counterclockwise), with an offset at that offset
     private void RenderLabel(RenderContext context, Span span, bool visible)
     {
-        label ??= context.Scene.Create("text", Layers.Label);
+        label ??= context.Scene.Create(this, "text", Layers.Label);
         WriteLabel(label, span);
         label.Animate("opacity", span, visible ? Opacity * Reveal * LabelOpacity : 0);
         if (Options.Halo)

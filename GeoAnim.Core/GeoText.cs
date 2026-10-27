@@ -73,7 +73,7 @@ public sealed class GeoText : GeoObject
         {
             // the text above first: the player lays out a block from the top
             Primitive? above = Above?.PrimitiveFor(context, span);
-            text = context.Scene.Create("text", Layers.Of(Options, Layers.Text));
+            text = context.Scene.Create(this, "text", Layers.Of(Options, Layers.Text));
             text.Animate("text", span, Content);
             text.Animate("anchor", span, Alignment switch { TextAlign.Left => "start", TextAlign.Right => "end", _ => "middle" });
             if (above != null)

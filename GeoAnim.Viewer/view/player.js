@@ -936,7 +936,7 @@
     numbers = animation.primitives.filter(primitive => primitive.type === 'number')
     const sorted = animation.primitives.filter(primitive => primitive.type !== 'number').sort((a, b) => a.layer - b.layer || a.id - b.id)
     items = sorted.map(primitive => {
-      const element = create(TAGS[primitive.type], {}, scene)
+      const element = create(TAGS[primitive.type], { 'data-id': primitive.id }, scene)
       if (primitive.type === 'arc') {
         element.setAttribute('fill', 'none')
         element.setAttribute('stroke-linecap', 'round')
@@ -1646,12 +1646,80 @@
     if (!animation) {
       return
     }
+    // VS Code preview: Ctrl+click on an object goes to its definition
+    if ((event.ctrlKey || event.metaKey) && host) {
+      const names = ownerAt(event.clientX, event.clientY)
+      if (names) {
+        host.postMessage({ type: 'reveal', names })
+      }
+      return
+    }
     if (event.shiftKey && live) {
       copyCoordinates(event)
       return
     }
     togglePlay()
   })
+
+  // ------------------------------------------------------------------ which object is that? (VS Code preview)
+
+  // the names of the object under a place of the screen (its own parts and its label): in the area around it, so that
+  // thin lines are easy to hit, the one in the highest layer (points before lines before areas), then the nearest
+  function ownerAt (x, y) {
+    const owners = animation && animation.owners
+    if (!owners) {
+      return null
+    }
+    let best = null
+    // rings of 1 to 6 pixels around the place, eight directions each
+    const offsets = [[0, 0]]
+    for (let r = 1; r <= 6; r++) {
+      for (let k = 0; k < 8; k++) {
+        offsets.push([Math.round(r * Math.cos(k * Math.PI / 4)), Math.round(r * Math.sin(k * Math.PI / 4))])
+      }
+    }
+    offsets.forEach(([dx, dy], distance) => {
+      for (const element of document.elementsFromPoint(x + dx, y + dy)) {
+        const owned = element.closest && element.closest('[data-id]')
+        const id = owned && scene.contains(owned) ? owned.getAttribute('data-id') : null
+        if (id && owners[id]) {
+          const layer = itemsById[id] ? itemsById[id].primitive.layer : 0
+          if (!best || layer > best.layer || (layer === best.layer && distance < best.distance)) {
+            best = { names: owners[id], layer, distance }
+          }
+          break
+        }
+      }
+    })
+    return best ? best.names : null
+  }
+
+  // with Ctrl (Cmd) held: the name of the object under the mouse, next to it
+  function showOwner (event) {
+    let tag = $('owner')
+    const names = (event.ctrlKey || event.metaKey) && host ? ownerAt(event.clientX, event.clientY) : null
+    if (!names) {
+      if (tag) {
+        tag.hidden = true
+      }
+      scene.style.cursor = ''
+      return
+    }
+    if (!tag) {
+      tag = document.createElement('div')
+      tag.id = 'owner'
+      document.body.appendChild(tag)
+    }
+    tag.textContent = names.join(' = ')
+    tag.style.left = (event.clientX + 12) + 'px'
+    tag.style.top = (event.clientY + 14) + 'px'
+    tag.hidden = false
+    scene.style.cursor = 'pointer'
+  }
+
+  scene.addEventListener('mousemove', showOwner)
+  scene.addEventListener('mouseleave', () => { const tag = $('owner'); if (tag) tag.hidden = true })
+  window.addEventListener('keyup', event => { if (event.key === 'Control' || event.key === 'Meta') { const tag = $('owner'); if (tag) tag.hidden = true; scene.style.cursor = '' } })
 
   // ------------------------------------------------------------------ coordinates ("geoanim serve" only)
 

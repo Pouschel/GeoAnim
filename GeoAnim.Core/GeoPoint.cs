@@ -110,11 +110,11 @@ public sealed class GeoPoint : GeoObject
         if (dot == null)
         {
             IsDrawn = true;
-            dot = context.Scene.Create("dot", Layers.Of(Options, Layers.Point));
+            dot = context.Scene.Create(this, "dot", Layers.Of(Options, Layers.Point));
         }
         if (label == null && LabelUsed)
         {
-            label = context.Scene.Create("text", Layers.Label);
+            label = context.Scene.Create(this, "text", Layers.Label);
         }
         Color color = ColorOr(Defaults.PointColor);
         double visibility = Visibility;

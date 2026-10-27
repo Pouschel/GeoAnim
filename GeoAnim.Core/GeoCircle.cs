@@ -62,9 +62,9 @@ public sealed class GeoCircle : GeoObject
             // "fill": a disc below, with the fills of polygons and angles; it grows with the compass stroke
             if (Options.Filled)
             {
-                disc = context.Scene.Create("disc", Layers.Of(Options, Layers.Polygon));
+                disc = context.Scene.Create(this, "disc", Layers.Of(Options, Layers.Polygon));
             }
-            arc = context.Scene.Create("arc", Layers.Of(Options, Layers.Curve));
+            arc = context.Scene.Create(this, "arc", Layers.Of(Options, Layers.Curve));
         }
         if (disc != null)
         {

@@ -47,6 +47,9 @@ public sealed class AnimationData
     /// </summary>
     internal IReadOnlyList<InspectedObject> Inspection { get; init; } = [];
 
+    /// <summary>For an editor: primitive id → the names of its object (written as "owners").</summary>
+    internal IReadOnlyDictionary<int, IReadOnlyList<string>> Owners { get; init; } = new Dictionary<int, IReadOnlyList<string>>();
+
     public ViewWindow View { get; }
 
     public Color Background { get; }
@@ -98,6 +101,7 @@ public sealed class AnimationData
             Description = description,
             Keywords = Keywords,
             Inspection = Inspection,
+            Owners = Owners,
         };
 
     /// <summary>Whether nothing is drawn (e.g. a file with only defaults and vars).</summary>
@@ -178,6 +182,21 @@ public sealed class AnimationData
                 json.WriteEndObject();
             }
             json.WriteEndArray();
+            if (Owners.Count > 0)
+            {
+                // "owners": { "12": ["A"], … }
+                json.WriteStartObject("owners");
+                foreach ((int id, IReadOnlyList<string> names) in Owners)
+                {
+                    json.WriteStartArray(id.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                    foreach (string name in names)
+                    {
+                        json.WriteStringValue(name);
+                    }
+                    json.WriteEndArray();
+                }
+                json.WriteEndObject();
+            }
             if (Inspection.Count > 0)
             {
                 // "inspect": [{ "names": ["P"], "id": 1, "type": "dot", "layer": 0, "tracks": { …, "info": […] } }, …]
