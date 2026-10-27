@@ -85,6 +85,21 @@ public sealed class GeoPoint : GeoObject
     internal static GeoPoint Midpoint(string name, GeoPoint a, GeoPoint b, Options options) =>
         new(name, options, _ => a.IsDefined && b.IsDefined ? Vec.Lerp(a.position, b.position, 0.5) : null, false, a, b);
 
+    /// <summary>
+    /// The point C + (B − A) for a straight AB ("parallel g through C"), or that vector turned by 90° counterclockwise
+    /// ("perpendicular g through C"); it follows g and C.
+    /// </summary>
+    internal static GeoPoint Offset(string name, GeoPoint c, GeoStraight straight, bool perpendicular, Options options) =>
+        new(name, options, _ =>
+        {
+            if (!c.IsDefined || !straight.IsDefined)
+            {
+                return null;
+            }
+            Vec d = straight.Direction;
+            return c.position + (perpendicular ? new Vec(-d.Y, d.X) : d);
+        }, false, c, straight);
+
     internal static GeoPoint Intersection(string name, GeoObject a, GeoObject b, int index, Options options) =>
         new(name, options, _ => Intersections.Find(a, b, index), false, a, b);
 

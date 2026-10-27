@@ -693,6 +693,31 @@ public static class ScriptCompiler
                 case CircleRadiusDefinition d:
                     created = c.Circle(name0, ResolvePoint(d.Center), d.Radius, options);
                     break;
+                case CircleRadiusOfDefinition d when d.B != null:
+                    created = c.Circle(name0, ResolvePoint(d.Center), ResolvePoint(d.A), ResolvePoint(d.B), options);
+                    break;
+                case CircleRadiusOfDefinition d:
+                    {
+                        GeoObject radius = Resolve(d.A);
+                        created = c.Circle(name0, ResolvePoint(d.Center), radius as GeoNumber
+                            ?? throw new ScriptError(d.A.Line, d.A.Column, $"{d.A.Name} is a {radius.Kind}: the radius is a number, a number's name or two points (radius A B)."), options);
+                        break;
+                    }
+                case ParallelDefinition d:
+                    {
+                        GeoObject straight = Resolve(d.Straight);
+                        GeoStraight g = straight as GeoStraight
+                            ?? throw new ScriptError(d.Straight.Line, d.Straight.Column, $"{d.Straight.Name} is a {straight.Kind}, not a segment, ray or line.");
+                        GeoPoint through = ResolvePoint(d.Through);
+                        created = s.Kind switch
+                        {
+                            "point" => c.Parallel(name0, g, through, d.Perpendicular, options),
+                            "segment" => c.Parallel(StraightKind.Segment, name0, g, through, d.Perpendicular, options),
+                            "ray" => c.Parallel(StraightKind.Ray, name0, g, through, d.Perpendicular, options),
+                            _ => c.Parallel(StraightKind.Line, name0, g, through, d.Perpendicular, options),
+                        };
+                        break;
+                    }
                 case ArcDefinition d:
                     {
                         GeoObject circle = Resolve(d.Circle);

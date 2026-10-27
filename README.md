@@ -120,6 +120,7 @@ Koordinaten sind mathematisch: die y-Achse zeigt nach oben. Der Maßstab ist in 
 |---|---|
 | `point A = 2 3` | freier Punkt (kann sich bewegen) |
 | `point M = midpoint A B` | Mittelpunkt |
+| `point D = parallel g through C` / `point D = perpendicular g through C` | der Punkt C + (B − A) für die Gerade (Strecke, Strahl) g = AB, bzw. dieser Vektor um 90° gegen den Uhrzeigersinn gedreht: mit C zusammen bestimmt er die Parallele bzw. Senkrechte zu g durch C; er folgt g und C |
 | `point X = copy P` | freier Punkt an der Stelle, an der P gerade ist (z. B. um eine Kopie zu bewegen, ohne die Konstruktion zu ändern) |
 | `point S T = intersect k1 k2` | Schnittpunkte (ein oder zwei Namen) |
 | `point P = on k at 60` | Punkt auf einem Kreis, Winkel in Grad (gegen den Uhrzeigersinn ab der x-Richtung) |
@@ -129,6 +130,8 @@ Koordinaten sind mathematisch: die y-Achse zeigt nach oben. Der Maßstab ist in 
 | `ray r = A B` | Strahl ab A durch B |
 | `circle k = center M through P` | Kreis um M durch P |
 | `circle k = center M radius 2.5` | Kreis mit festem Radius |
+| `circle k = center M radius A B` / `circle k = center M radius l` | Kreis, dessen Radius der Zeichnung folgt – „mit dem Zirkel abgegriffen“: der Abstand von A und B bzw. eine Zahl (gemessen oder berechnet, etwa `number r = l + 0.5` oder `number r = l1 + l2`); so lassen sich Strecken übertragen (Dreieck aus drei Seiten, Parallele mit dem Zirkel, …) |
+| `line p = parallel g through C` / `line s = perpendicular g through C` | Parallele bzw. Senkrechte zu g durch C (ebenso `segment` – von C aus, so lang wie g – und `ray`); sie folgt g und C |
 | `arc b = k from A to B` | Kreisbogen auf k gegen den Uhrzeigersinn von A bis B (A, B geben die Richtungen vom Mittelpunkt an; der Bogen bleibt auf dem Kreis, wenn er sich ändert); Optionen wie bei einer Strecke, auch `arrow` |
 | `sector s = k from A to B` | Kreissektor: die beiden Radien und der Bogen dazwischen, gefüllt wie ein Vieleck (`fill`, `opacity`), Beschriftung innen |
 | `arc b = k from 30 to 120` / `… from A to 90` | Bogen bzw. Sektor mit Richtungen in Grad statt Punkten (gegen den Uhrzeigersinn ab Osten; auch Konstanten), gemischt mit Punkten möglich – ohne erst Punkte auf dem Kreis zu konstruieren |

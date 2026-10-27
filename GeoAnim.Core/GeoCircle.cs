@@ -5,6 +5,7 @@ public sealed class GeoCircle : GeoObject
 {
     private readonly GeoPoint? through;
     private readonly double fixedRadius;
+    private readonly Func<double?>? radiusSource;
     private Primitive? arc;
     private Primitive? disc;
 
@@ -26,6 +27,17 @@ public sealed class GeoCircle : GeoObject
         fixedRadius = radius;
     }
 
+    /// <summary>
+    /// A circle whose radius follows the drawing (the compass takes a length): the distance of two points or a number
+    /// (measured or computed); <paramref name="parents"/> are what it depends on.
+    /// </summary>
+    internal GeoCircle(string name, GeoPoint center, Func<double?> radius, Options options, params GeoObject[] parents)
+        : base(name, options, [center, .. parents])
+    {
+        Center = center;
+        radiusSource = radius;
+    }
+
     public override string Kind => "circle";
 
     public GeoPoint Center { get; }
@@ -39,6 +51,16 @@ public sealed class GeoCircle : GeoObject
 
     internal override void Compute()
     {
+        if (radiusSource != null)
+        {
+            double? radius = radiusSource();
+            IsDefined = Center.IsDefined && radius > 1e-9;
+            if (IsDefined)
+            {
+                Radius = radius!.Value;
+            }
+            return;
+        }
         if (through == null)
         {
             Radius = fixedRadius;

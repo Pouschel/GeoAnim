@@ -219,6 +219,31 @@ public sealed class Construction
     public GeoCircle Circle(string name, GeoPoint center, double radius, Options? options = null) =>
         Define(new GeoCircle(name, center, radius, options ?? Options.None));
 
+    /// <summary>A circle around <paramref name="center"/> with the distance of <paramref name="a"/> and <paramref name="b"/> as its radius (it follows them).</summary>
+    public GeoCircle Circle(string name, GeoPoint center, GeoPoint a, GeoPoint b, Options? options = null) =>
+        Define(new GeoCircle(name, center, () => a.IsDefined && b.IsDefined ? (b.Position - a.Position).Length : null, options ?? Options.None, a, b));
+
+    /// <summary>A circle around <paramref name="center"/> with a number as its radius (it follows it when it is measured).</summary>
+    public GeoCircle Circle(string name, GeoPoint center, GeoNumber radius, Options? options = null) =>
+        Define(new GeoCircle(name, center, () => radius.IsDefined ? radius.Value : null, options ?? Options.None, radius));
+
+    /// <summary>
+    /// The point C + (B − A) for the straight <paramref name="straight"/> AB: with C, a parallel to it
+    /// (<paramref name="perpendicular"/>: turned by 90°, a perpendicular).
+    /// </summary>
+    public GeoPoint Parallel(string name, GeoStraight straight, GeoPoint through, bool perpendicular = false, Options? options = null) =>
+        Define(GeoPoint.Offset(name, through, straight, perpendicular, options ?? Options.None));
+
+    /// <summary>
+    /// A segment, ray or line through <paramref name="through"/> parallel (<paramref name="perpendicular"/>: at right
+    /// angles) to <paramref name="straight"/>: from it to a hidden point C + (B − A) (turned); it follows both.
+    /// </summary>
+    public GeoStraight Parallel(StraightKind kind, string name, GeoStraight straight, GeoPoint through, bool perpendicular = false, Options? options = null)
+    {
+        GeoPoint direction = Parallel(name + "#direction", straight, through, perpendicular, new Options { Hidden = true, NoLabel = true });
+        return Define(new GeoStraight(kind, name, through, direction, options ?? Options.None));
+    }
+
     /// <summary>The angle at <paramref name="vertex"/>, counterclockwise from the ray to <paramref name="a"/> to the ray to <paramref name="c"/>.</summary>
     public GeoAngle Angle(string name, GeoPoint a, GeoPoint vertex, GeoPoint c, Options? options = null) =>
         Define(new GeoAngle(name, a, vertex, c, options ?? Options.None));

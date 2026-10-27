@@ -674,7 +674,7 @@
           "include": "#number"
         },
         {
-          "match": "\\b(midpoint|intersect|on|at|below|gap|center|through|radius|to|copy|use|draw|steps)\\b",
+          "match": "\\b(midpoint|intersect|parallel|perpendicular|on|at|below|gap|center|through|radius|to|copy|use|draw|steps)\\b",
           "name": "keyword.other.geo"
         },
         {

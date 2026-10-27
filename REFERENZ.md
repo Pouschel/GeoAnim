@@ -67,6 +67,7 @@ Alle Objekte: `art name = Definition Optionen…`. Vor dem ersten `step` gehöre
 |---|---|
 | `point A = x y` | freier Punkt (kann sich bewegen) |
 | `point M = midpoint A B` | Mittelpunkt von A und B |
+| `point D = parallel g through C` · `point D = perpendicular g through C` | C + (B − A) für g = AB (bzw. um 90° gedreht): mit C die Parallele bzw. Senkrechte zu g durch C |
 | `point S = intersect o1 o2` · `point S T = intersect o1 o2` | Schnittpunkt(e) zweier Kreise, Strecken, Geraden, Strahlen |
 | `point P = on k at n` | auf einem Kreis, bei n Grad |
 | `point P = on g at n` | auf einer Strecke/Geraden/einem Strahl bei A + n·(B − A) |
@@ -82,6 +83,7 @@ Alle Objekte: `art name = Definition Optionen…`. Vor dem ersten `step` gehöre
 | `segment s = A B` · `segment A B` (heißt dann `AB`) | Strecke von A nach B |
 | `ray r = A B` | Strahl ab A durch B, bis zum Bildrand |
 | `line g = A B` | Gerade durch A und B, bis zum Bildrand |
+| `line p = parallel g through C` · `perpendicular g through C` | Parallele bzw. Senkrechte zu g durch C (ebenso `segment`, `ray`) |
 | `segment s = use datei A B …` (ebenso `ray`, `line`) | Ergebnis einer anderen Datei |
 
 **Optionen:**
@@ -99,6 +101,7 @@ Alle Objekte: `art name = Definition Optionen…`. Vor dem ersten `step` gehöre
 |---|---|
 | `circle k = center M through P` | um M durch P (wird ab P gezogen) |
 | `circle k = center M radius n` | um M mit festem Radius |
+| `circle k = center M radius A B` · `radius l` | um M, Radius = Abstand von A und B bzw. die Zahl l (folgt der Zeichnung) |
 | `circle k = use datei A B …` | Ergebnis einer anderen Datei |
 
 **Optionen:** `color` `width`, `fill` (gefüllte Kreisscheibe: `fill lightblue` oder `fill` allein in der Linienfarbe) mit `opacity` (Standard 0,2), *Zeichnen*. Die Füllung wächst beim Zeichnen mit dem Zirkelstrich mit und liegt bei den Flächen der Vielecke und Winkel.
@@ -256,4 +259,4 @@ Aktionen stehen in einem Schritt und laufen nacheinander. Die Optionen *Ablauf* 
 
 Diese Wörter können keine Namen sein:
 
-`title` `description` `info` `keyword` `view` `background` `grid` `axes` `speed` `var` `default` `include` `input` `output` `use` `draw` `steps` `copy` `set` `step` `textstep` `point` `segment` `line` `ray` `circle` `arc` `sector` `polygon` `angle` `text` `number` `length` `degrees` `area` `perimeter` `show` `hide` `all` `highlight` `unhighlight` `keep` `move` `rotate` `reflect` `along` `around` `across` `in` `by` `pause` `together` `end` `midpoint` `intersect` `center` `through` `radius` `at` `from` `to` `on` `x` `y` `below` `gap` `align` `left` `right` `duration` `color` `width` `fill` `opacity` `size` `labelsize` `labelpos` `labeldir` `labelgap` `label` `nolabel` `hidden` `offset` `shift` `arrow` `start` `both` `straight` `back` `front` `halo` `clockwise` `linear` `ease` `easein` `easeout` `easeinout`
+`title` `description` `info` `keyword` `view` `background` `grid` `axes` `speed` `var` `default` `include` `input` `output` `use` `draw` `steps` `copy` `set` `step` `textstep` `point` `segment` `line` `ray` `circle` `arc` `sector` `polygon` `angle` `text` `number` `length` `degrees` `area` `perimeter` `show` `hide` `all` `highlight` `unhighlight` `keep` `move` `rotate` `reflect` `along` `around` `across` `in` `by` `pause` `together` `end` `midpoint` `intersect` `parallel` `perpendicular` `center` `through` `radius` `at` `from` `to` `on` `x` `y` `below` `gap` `align` `left` `right` `duration` `color` `width` `fill` `opacity` `size` `labelsize` `labelpos` `labeldir` `labelgap` `label` `nolabel` `hidden` `offset` `shift` `arrow` `start` `both` `straight` `back` `front` `halo` `clockwise` `linear` `ease` `easein` `easeout` `easeinout`

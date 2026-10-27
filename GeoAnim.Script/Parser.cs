@@ -8,7 +8,7 @@ internal sealed class Parser
     {
         "title", "description", "info", "keyword", "view", "background", "grid", "axes", "speed", "var", "default", "include", "input", "output", "use",
         "draw", "steps", "copy", "set", "step", "textstep", "point", "segment", "line", "ray", "circle", "arc", "sector", "polygon", "angle",
-        "text", "number", "length", "degrees", "area", "perimeter", "show", "hide", "all", "highlight", "unhighlight", "keep", "move", "rotate", "reflect", "along", "around", "across", "in", "by", "pause", "together", "end", "midpoint", "intersect", "center", "through",
+        "text", "number", "length", "degrees", "area", "perimeter", "show", "hide", "all", "highlight", "unhighlight", "keep", "move", "rotate", "reflect", "along", "around", "across", "in", "by", "pause", "together", "end", "midpoint", "intersect", "parallel", "perpendicular", "center", "through",
         "radius", "at", "from", "to", "on", "x", "y", "below", "gap", "align", "left", "right",
         "duration", "color", "width", "fill", "opacity", "size", "labelsize", "labelpos", "labeldir", "labelgap", "label", "nolabel", "hidden", "offset", "shift",
         "arrow", "start", "both", "straight", "back", "front", "halo", "clockwise", "linear", "ease", "easein", "easeout", "easeinout",
@@ -490,6 +490,10 @@ internal sealed class Parser
             position++;
             definition = new MidpointDefinition(ExpectName(), ExpectName());
         }
+        else if (Current.Is("parallel") || Current.Is("perpendicular"))
+        {
+            definition = ParseParallel();
+        }
         else if (Current.Is("intersect"))
         {
             position++;
@@ -522,6 +526,15 @@ internal sealed class Parser
         return new DefineStatement(word.Line, word.Column, "point", names, definition, ParseOptions());
     }
 
+    // "parallel g through C", "perpendicular g through C"
+    private ParallelDefinition ParseParallel()
+    {
+        bool perpendicular = Next().Text == "perpendicular";
+        NameRef straight = ExpectName();
+        ExpectWord("through");
+        return new ParallelDefinition(straight, ExpectName(), perpendicular);
+    }
+
     private DefineStatement ParseStraight(Token word)
     {
         NameRef first = ExpectNewName();
@@ -535,6 +548,10 @@ internal sealed class Parser
             if (TryParseUse() is { } use)
             {
                 return new DefineStatement(word.Line, word.Column, word.Text, [name], use, ParseOptions());
+            }
+            if (Current.Is("parallel") || Current.Is("perpendicular"))
+            {
+                return new DefineStatement(word.Line, word.Column, word.Text, [name], ParseParallel(), ParseOptions());
             }
             a = ExpectName();
             b = ExpectName();
@@ -569,11 +586,21 @@ internal sealed class Parser
         else if (Current.Is("radius"))
         {
             position++;
-            definition = new CircleRadiusDefinition(center, ExpectPositive("the radius"));
+            if (IsNumberAt(position))
+            {
+                definition = new CircleRadiusDefinition(center, ExpectPositive("the radius"));
+            }
+            else
+            {
+                // the compass takes a length: "radius A B" (the distance of two points) or "radius l" (a number)
+                NameRef first = ExpectName();
+                NameRef? second = Current.Kind == TokenKind.Name && !IsOption(Current.Text) ? ExpectName() : null;
+                definition = new CircleRadiusOfDefinition(center, first, second);
+            }
         }
         else
         {
-            throw Error(Current, $"Expected \"through <point>\" or \"radius <number>\", not {Current.Describe()}.");
+            throw Error(Current, $"Expected \"through <point>\" or \"radius <number>\", \"radius A B\", \"radius l\", not {Current.Describe()}.");
         }
         return new DefineStatement(word.Line, word.Column, "circle", [name], definition, ParseOptions());
     }

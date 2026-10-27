@@ -134,6 +134,12 @@ internal sealed record ArcDefinition(NameRef Circle, ArcEndRef From, ArcEndRef T
 /// <summary>An end of an arc: a point or a direction in degrees.</summary>
 internal sealed record ArcEndRef(NameRef? Point, double Degrees);
 
+/// <summary>"circle k = center M radius A B" (the distance of two points) or "radius l" (a number; <paramref name="B"/> null).</summary>
+internal sealed record CircleRadiusOfDefinition(NameRef Center, NameRef A, NameRef? B) : Definition;
+
+/// <summary>"parallel g through C" / "perpendicular g through C": a point, or a segment, ray or line.</summary>
+internal sealed record ParallelDefinition(NameRef Straight, NameRef Through, bool Perpendicular) : Definition;
+
 internal sealed record PolygonDefinition(IReadOnlyList<NameRef> Vertices) : Definition;
 
 /// <summary>"angle w = A B C": at B, counterclockwise from BA to BC.</summary>

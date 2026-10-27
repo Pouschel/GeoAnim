@@ -1003,6 +1003,36 @@ public class ScriptTests
     }
 
     [Fact]
+    public void ParallelsPerpendicularsAndRadiiFollowTheDrawing()
+    {
+        Construction c = ScriptCompiler.CompileConstruction("""
+            point A = 0 0
+            point B = 2 1
+            line g = A B
+            point C = 0 3
+            line p = parallel g through C
+            ray s = perpendicular g through C
+            point D = parallel g through C
+            segment AB = A B
+            number l = length AB
+            number r = l + 1
+            circle k = center C radius A B
+            circle m = center C radius r
+            step bewegen
+              move B to 3 0
+            """);
+        Vec At(string name) => ((GeoPoint)c.Objects[name]).Position;
+        // after the move: AB = (3, 0); D = C + AB; the parallel runs that way, the perpendicular turned by 90°
+        Assert.Equal(new Vec(3, 3), At("D"));
+        Assert.Equal(new Vec(3, 0), ((GeoStraight)c.Objects["p"]).Direction);
+        Assert.Equal(new Vec(0, 3), ((GeoStraight)c.Objects["s"]).Direction);
+        Assert.Equal(3, ((GeoCircle)c.Objects["k"]).Radius, 9);
+        Assert.Equal(4, ((GeoCircle)c.Objects["m"]).Radius, 9);
+        ErrorAt("point A = 0 0\ncircle k = center A radius A", 2, 28, "the radius is a number");
+        ErrorAt("point A = 0 0\npoint C = 1 1\nline p = parallel A through C", 3, 19, "not a segment, ray or line");
+    }
+
+    [Fact]
     public void ShiftMovesLabelsFromTheirDefaultPlace()
     {
         AnimationData animation = ScriptCompiler.Compile("""
