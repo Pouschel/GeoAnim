@@ -1,6 +1,7 @@
 // GeoAnim for VS Code: a live preview of the .geo file being edited, its errors in the editor, and the preview following
-// the step the cursor is in. The work is done by "geoanim daemon" (JSON lines over standard input and output); the
-// preview is GeoAnim's own player in a webview, which gets the animations as messages.
+// the step the cursor is in; likewise for the pages of a book in Markdown (.geo.md, language "geomd"). The work
+// is done by "geoanim daemon" (JSON lines over standard input and output); the preview is GeoAnim's own player (or its
+// page for Markdown) in a webview, which gets the animations (pages) as messages.
 'use strict'
 
 const vscode = require('vscode')
@@ -23,6 +24,9 @@ let previewDocument = null
 let previewReady = false
 let previewPageLoaded = false
 let previewStep = null
+// what the preview shows: 'geo' (the player) or 'markdown' (a page); the page that is loaded in it
+let previewKind = null
+let loadedKind = null
 const lastResults = new Map()
 const timers = new Map()
 const reported = new Map()
@@ -244,7 +248,7 @@ function restart () {
     loadPreviewPage()
   }
   for (const document of vscode.workspace.textDocuments) {
-    if (isGeo(document)) {
+    if (kindOf(document)) {
       compile(document)
     }
   }
@@ -253,6 +257,11 @@ function restart () {
 // ------------------------------------------------------------------ compiling and errors
 
 const isGeo = document => document.languageId === 'geo'
+
+// a page of a book in Markdown (.geo.md)
+const isPage = document => document.languageId === 'geomd'
+
+const kindOf = document => isGeo(document) ? 'geo' : isPage(document) ? 'markdown' : null
 
 function schedule (document) {
   const key = document.uri.toString()
@@ -264,6 +273,9 @@ function schedule (document) {
 }
 
 async function compile (document) {
+  if (!isGeo(document)) {
+    return renderMarkdown(document)
+  }
   let result
   try {
     result = await request({ type: 'compile', file: document.uri.scheme === 'file' ? document.uri.fsPath : '', text: document.getText() })
@@ -283,6 +295,28 @@ async function compile (document) {
   if (document === previewDocument) {
     // while writing: the animation shows the end of the step the cursor is in (its end may have moved)
     sendResult(result, true, cursorStep(document))
+  }
+}
+
+// a Markdown page: its errors in the editor, the page in the preview
+async function renderMarkdown (document) {
+  let result
+  try {
+    result = await request({ type: 'markdown', file: document.uri.scheme === 'file' ? document.uri.fsPath : '', text: document.getText() })
+  } catch (error) {
+    return
+  }
+  if (document.isClosed) {
+    return
+  }
+  if (result.fatal) {
+    output.appendLine(result.fatal)
+    return
+  }
+  lastResults.set(document.uri.toString(), result)
+  report(document, result.errors, result.warnings || [])
+  if (document === previewDocument) {
+    sendResult(result)
   }
 }
 
@@ -503,10 +537,12 @@ function provideDocumentHighlights (document, position) {
 
 async function loadPreviewPage () {
   previewReady = false
+  const kind = previewKind || 'geo'
   try {
-    const answer = await request({ type: 'player' })
-    if (preview && answer.html) {
+    const answer = await request({ type: kind === 'markdown' ? 'page' : 'player' })
+    if (preview && answer.html && kind === (previewKind || 'geo')) {
       preview.webview.html = answer.html
+      loadedKind = kind
       previewPageLoaded = true
     }
   } catch (error) {
@@ -516,6 +552,16 @@ async function loadPreviewPage () {
 
 function sendResult (result, keepPosition, step) {
   if (!preview || !previewReady) {
+    return
+  }
+  if (previewKind === 'markdown') {
+    const error = result.errors[0]
+    preview.webview.postMessage({
+      type: 'page',
+      html: result.html,
+      error: error ? `Line ${error.line}, column ${error.column}: ${error.message}` : null,
+      line: keepPosition ? undefined : topLine(previewDocument)
+    })
     return
   }
   if (result.animation) {
@@ -535,6 +581,13 @@ function showInPreview (document) {
   previewDocument = document
   previewStep = null
   preview.title = 'GeoAnim: ' + path.basename(document.uri.fsPath)
+  const kind = kindOf(document)
+  if (kind !== previewKind) {
+    // the other page (player or Markdown page): it says "ready" when it is there
+    previewKind = kind
+    loadPreviewPage()
+    return
+  }
   const result = lastResults.get(document.uri.toString())
   if (result) {
     sendResult(result, false)
@@ -544,8 +597,8 @@ function showInPreview (document) {
 
 function openPreview () {
   const editor = vscode.window.activeTextEditor
-  if (!editor || !isGeo(editor.document)) {
-    vscode.window.showInformationMessage('GeoAnim: Bitte zuerst eine .geo-Datei öffnen.')
+  if (!editor || !kindOf(editor.document)) {
+    vscode.window.showInformationMessage('GeoAnim: Bitte zuerst eine .geo- oder .geo.md-Datei öffnen.')
     return
   }
   if (preview) {
@@ -559,6 +612,8 @@ function openPreview () {
     preview = null
     previewDocument = null
     previewPageLoaded = false
+    previewKind = null
+    loadedKind = null
   })
   preview.webview.onDidReceiveMessage(message => {
     if (message && message.type === 'open') {
@@ -576,6 +631,10 @@ function openPreview () {
       answer(message.result)
     }
     if (message && message.type === 'ready') {
+      if (loadedKind !== previewKind) {
+        // the page of before, while the other one loads
+        return
+      }
       previewReady = true
       sentHighlight = null
       if (previewDocument) {
@@ -589,12 +648,14 @@ function openPreview () {
     }
   })
   previewDocument = editor.document
+  previewKind = kindOf(editor.document)
   preview.title = 'GeoAnim: ' + path.basename(editor.document.uri.fsPath)
   loadPreviewPage()
   compile(editor.document)
 }
 
-// a link in the preview: a site in the browser, another animation (Prop1.html) as its script (Prop1.geo)
+// a link in the preview: a site in the browser, another animation (Prop1.html) as its script (Prop1.geo), a page of the
+// book (a .md file) or a figure of a page ("Punkte.geo#3..4") as its script at the step
 async function openLink (href) {
   if (/^[a-z][a-z0-9+.-]*:/i.test(href)) {
     vscode.env.openExternal(vscode.Uri.parse(href))
@@ -605,21 +666,21 @@ async function openLink (href) {
   }
   const target = path.resolve(path.dirname(previewDocument.uri.fsPath), decodeURIComponent(href.split(/[?#]/)[0]))
   // a link to a step ("Strecken.geo#2", as the keyword links of a book): the cursor goes to its "step" line
-  const step = /#(\d+)$/.exec(href)
+  const step = /#(\d+)(?:(?:\.\.|-)[^#]*)?$/.exec(href)
+  if (/\.md$/i.test(target)) {
+    if (fs.existsSync(target)) {
+      openBeside(await vscode.workspace.openTextDocument(target))
+    } else {
+      vscode.window.showInformationMessage(`GeoAnim: Die Seite ${href} gibt es nicht.`)
+    }
+    return
+  }
   const script = target.replace(/\.html?$/i, '.geo')
   if (!fs.existsSync(script)) {
     vscode.window.showInformationMessage(`GeoAnim: Zu ${href} gibt es kein Skript (gesucht: ${script}).`)
     return
   }
-  const document = await vscode.workspace.openTextDocument(script)
-  // in the editor group of the script shown so far – never in the preview's group, so that the preview stays visible
-  const previewColumn = preview ? preview.viewColumn : undefined
-  const shown = (vscode.window.visibleTextEditors || []).find(editor => editor.document === previewDocument)
-  let column = shown ? shown.viewColumn : undefined
-  if (!column || column === previewColumn) {
-    column = previewColumn === vscode.ViewColumn.One ? vscode.ViewColumn.Two : vscode.ViewColumn.One
-  }
-  const editor = await vscode.window.showTextDocument(document, { viewColumn: column, preview: false })
+  const editor = await openBeside(await vscode.workspace.openTextDocument(script))
   if (step && Number(step[1]) > 0) {
     for (let i = 0, count = 0; i < document.lineCount; i++) {
       if (/^\s*(?:text)?step\b/.test(document.lineAt(i).text) && ++count === Number(step[1])) {
@@ -632,6 +693,32 @@ async function openLink (href) {
     }
   }
   // the preview follows the newly opened script (onDidChangeActiveTextEditor)
+}
+
+// a document in the editor group of the one shown so far – never in the preview's group, so that the preview stays visible
+function openBeside (document) {
+  const previewColumn = preview ? preview.viewColumn : undefined
+  const shown = (vscode.window.visibleTextEditors || []).find(editor => editor.document === previewDocument)
+  let column = shown ? shown.viewColumn : undefined
+  if (!column || column === previewColumn) {
+    column = previewColumn === vscode.ViewColumn.One ? vscode.ViewColumn.Two : vscode.ViewColumn.One
+  }
+  return vscode.window.showTextDocument(document, { viewColumn: column, preview: false })
+}
+
+// the first line (from 1) the editor of a Markdown page shows: the preview shows the same place
+function topLine (document) {
+  const editor = document && (vscode.window.visibleTextEditors || []).find(e => e.document === document)
+  return editor && editor.visibleRanges.length > 0 ? editor.visibleRanges[0].start.line + 1 : undefined
+}
+
+function followScrolling (editor) {
+  if (preview && previewReady && previewKind === 'markdown' && editor.document === previewDocument) {
+    const line = topLine(editor.document)
+    if (line !== undefined) {
+      preview.webview.postMessage({ type: 'line', line })
+    }
+  }
 }
 
 // the step the cursor is in: the number of "step" lines up to it, minus one (-1: the starting picture); undefined if the
@@ -681,7 +768,7 @@ function revealStep (index) {
 }
 
 function followCursor (editor) {
-  if (!preview || !previewReady || editor.document !== previewDocument) {
+  if (!preview || !previewReady || editor.document !== previewDocument || previewKind !== 'geo') {
     return
   }
   const index = cursorStep(editor.document)
@@ -831,6 +918,86 @@ function lastContentLine (document, start, end) {
   return end
 }
 
+// ------------------------------------------------------------------ pages (.geo.md): outline and folding
+
+// the parts of a page: the YAML block at the start, code blocks (``` or ~~~) and headings ("# …" to "###### …", not in
+// those two)
+function pageParts (document) {
+  const parts = { front: null, fences: [], headings: [] }
+  let i = 0
+  if (document.lineCount > 0 && /^---\s*$/.test(document.lineAt(0).text)) {
+    for (let k = 1; k < document.lineCount; k++) {
+      if (/^(---|\.\.\.)\s*$/.test(document.lineAt(k).text)) {
+        parts.front = [0, k]
+        i = k + 1
+        break
+      }
+    }
+  }
+  let fence = null
+  for (; i < document.lineCount; i++) {
+    const text = document.lineAt(i).text
+    const mark = /^\s{0,3}(`{3,}|~{3,})/.exec(text)
+    if (fence) {
+      if (mark && mark[1][0] === fence.mark[0] && mark[1].length >= fence.mark.length && text.trim() === mark[1]) {
+        parts.fences.push([fence.line, i])
+        fence = null
+      }
+      continue
+    }
+    if (mark) {
+      fence = { mark: mark[1], line: i }
+      continue
+    }
+    const heading = /^\s{0,3}(#{1,6})\s+(.*?)(?:\s+#+)?\s*$/.exec(text)
+    if (heading) {
+      parts.headings.push({ line: i, level: heading[1].length, text: heading[2] || '…' })
+    }
+  }
+  return parts
+}
+
+// the last line of each heading's section: before the next heading of the same or a higher level
+function sectionEnds (document, headings) {
+  return headings.map((heading, index) => {
+    const next = headings.slice(index + 1).find(h => h.level <= heading.level)
+    return lastContentLine(document, heading.line, next ? next.line - 1 : document.lineCount - 1)
+  })
+}
+
+// the outline of a page: its headings, nested by level
+function providePageSymbols (document) {
+  const { headings } = pageParts(document)
+  const ends = sectionEnds(document, headings)
+  const roots = []
+  const open = []
+  headings.forEach((heading, index) => {
+    const line = document.lineAt(heading.line)
+    const symbol = new vscode.DocumentSymbol(heading.text, '', vscode.SymbolKind.String,
+      new vscode.Range(heading.line, 0, ends[index], document.lineAt(ends[index]).text.length), line.range)
+    while (open.length > 0 && open[open.length - 1].level >= heading.level) {
+      open.pop()
+    }
+    ;(open.length > 0 ? open[open.length - 1].symbol.children : roots).push(symbol)
+    open.push({ level: heading.level, symbol })
+  })
+  return roots
+}
+
+// folding: each heading's section, the YAML block at the start, code blocks
+function providePageFoldingRanges (document) {
+  const { front, fences, headings } = pageParts(document)
+  const ends = sectionEnds(document, headings)
+  const ranges = headings.map((heading, index) => new vscode.FoldingRange(heading.line, ends[index]))
+  if (front) {
+    ranges.push(new vscode.FoldingRange(front[0], front[1], vscode.FoldingRangeKind.Region))
+  }
+  for (const [start, end] of fences) {
+    ranges.push(new vscode.FoldingRange(start, end))
+  }
+  return ranges.filter(range => range.end > range.start)
+}
+
 // colour swatches: after color, fill and background (names and #rgb / #rrggbb), with the colour picker
 async function provideDocumentColors (document) {
   if (colors === null) {
@@ -969,6 +1136,8 @@ function activate (context) {
     vscode.commands.registerCommand('geoanim.surroundTogether', surroundTogether),
     vscode.languages.registerDocumentSymbolProvider('geo', { provideDocumentSymbols }, { label: 'GeoAnim' }),
     vscode.languages.registerFoldingRangeProvider('geo', { provideFoldingRanges }),
+    vscode.languages.registerDocumentSymbolProvider('geomd', { provideDocumentSymbols: providePageSymbols }, { label: 'GeoAnim' }),
+    vscode.languages.registerFoldingRangeProvider('geomd', { provideFoldingRanges: providePageFoldingRanges }),
     vscode.languages.registerColorProvider('geo', { provideDocumentColors, provideColorPresentations }),
     vscode.languages.registerCodeActionsProvider('geo', { provideCodeActions }, { providedCodeActionKinds: [vscode.CodeActionKind.RefactorRewrite] }),
     vscode.languages.registerHoverProvider('geo', { provideHover: hover }),
@@ -976,13 +1145,13 @@ function activate (context) {
     vscode.languages.registerRenameProvider('geo', { prepareRename, provideRenameEdits }),
     vscode.languages.registerReferenceProvider('geo', { provideReferences }),
     vscode.languages.registerDocumentHighlightProvider('geo', { provideDocumentHighlights }),
-    vscode.workspace.onDidOpenTextDocument(document => { if (isGeo(document)) compile(document) }),
-    vscode.workspace.onDidChangeTextDocument(event => { if (isGeo(event.document)) schedule(event.document) }),
-    // a saved file may be included or used by others
+    vscode.workspace.onDidOpenTextDocument(document => { if (kindOf(document)) compile(document) }),
+    vscode.workspace.onDidChangeTextDocument(event => { if (kindOf(event.document)) schedule(event.document) }),
+    // a saved file may be included or used by others, or be a figure of a page
     vscode.workspace.onDidSaveTextDocument(saved => {
       if (isGeo(saved)) {
         for (const document of vscode.workspace.textDocuments) {
-          if (isGeo(document) && document !== saved) {
+          if (kindOf(document) && document !== saved) {
             schedule(document)
           }
         }
@@ -999,15 +1168,16 @@ function activate (context) {
       references.delete(key)
     }),
     vscode.window.onDidChangeActiveTextEditor(editor => {
-      if (editor && isGeo(editor.document) && preview && editor.document !== previewDocument) {
+      if (editor && kindOf(editor.document) && preview && editor.document !== previewDocument) {
         showInPreview(editor.document)
       }
     }),
     vscode.window.onDidChangeTextEditorSelection(event => followCursor(event.textEditor)),
+    vscode.window.onDidChangeTextEditorVisibleRanges(event => followScrolling(event.textEditor)),
     vscode.workspace.onDidChangeConfiguration(event => { if (event.affectsConfiguration('geoanim.path')) restart() }),
     { dispose: () => { stopDaemon(); watchBuilds([]) } })
   for (const document of vscode.workspace.textDocuments) {
-    if (isGeo(document)) {
+    if (kindOf(document)) {
       compile(document)
     }
   }

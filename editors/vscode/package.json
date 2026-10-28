@@ -1,7 +1,7 @@
 {
   "name": "geoanim-geo",
   "displayName": "GeoAnim (.geo)",
-  "description": "GeoAnim scripts (.geo): syntax highlighting, live preview, errors in the editor, tooltips and go to definition",
+  "description": "GeoAnim scripts (.geo): syntax highlighting, live preview, errors in the editor, tooltips and go to definition; live preview of the pages of a book in Markdown (.geo.md)",
   "version": "0.2.0",
   "publisher": "mathepedia",
   "license": "MIT",
@@ -16,6 +16,9 @@
       "[geo]": {
         "editor.tabSize": 2,
         "editor.insertSpaces": true
+      },
+      "[geomd]": {
+        "editor.wordWrap": "on"
       }
     },
     "languages": [
@@ -29,6 +32,17 @@
           ".geo"
         ],
         "configuration": "./language-configuration.json"
+      },
+      {
+        "id": "geomd",
+        "aliases": [
+          "GeoAnim-Markdown",
+          "geomd"
+        ],
+        "filenamePatterns": [
+          "*.geo.md"
+        ],
+        "configuration": "./language-configuration-geomd.json"
       }
     ],
     "grammars": [
@@ -36,6 +50,18 @@
         "language": "geo",
         "scopeName": "source.geo",
         "path": "./syntaxes/geo.tmLanguage.json"
+      },
+      {
+        "language": "geomd",
+        "scopeName": "text.geomd",
+        "path": "./syntaxes/geomd.tmLanguage.json"
+      },
+      {
+        "scopeName": "geomd.math.injection",
+        "path": "./syntaxes/geomd-math.tmLanguage.json",
+        "injectTo": [
+          "text.geomd"
+        ]
       }
     ],
     "commands": [
@@ -55,14 +81,14 @@
       "editor/title": [
         {
           "command": "geoanim.preview",
-          "when": "resourceLangId == geo",
+          "when": "resourceLangId == geo || resourceLangId == geomd",
           "group": "navigation"
         }
       ],
       "commandPalette": [
         {
           "command": "geoanim.preview",
-          "when": "editorLangId == geo"
+          "when": "editorLangId == geo || editorLangId == geomd"
         }
       ]
     },
@@ -70,7 +96,7 @@
       {
         "command": "geoanim.preview",
         "key": "ctrl+k v",
-        "when": "editorLangId == geo"
+        "when": "editorLangId == geo || editorLangId == geomd"
       }
     ],
     "configuration": {
@@ -86,6 +112,7 @@
   },
   "main": "./extension.js",
   "activationEvents": [
-    "onLanguage:geo"
+    "onLanguage:geo",
+    "onLanguage:geomd"
   ]
 }

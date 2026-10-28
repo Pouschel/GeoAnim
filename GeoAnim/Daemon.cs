@@ -19,6 +19,10 @@ namespace GeoAnim.Cli;
 /// <item>{"id": 2, "type": "player"} → {"id": 2, "html": "…"} – the player page for the preview.</item>
 /// <item>{"id": 3, "type": "keywords"} → {"id": 3, "keywords": ["angle", …], "colors": {"red": "#d32f2f", …}} – the words that
 /// cannot be names, and the colour names.</item>
+/// <item>{"id": 4, "type": "markdown", "file": "C:\\…\\a.geo.md", "text": "…"} → {"id": 4, "html": "…", "title": "…" or null,
+/// "errors": […], "warnings": […] (as for "compile")} – a page of a book in Markdown, its figures looked for beside the
+/// file.</item>
+/// <item>{"id": 5, "type": "page"} → {"id": 5, "html": "…"} – the page for the preview of a Markdown page.</item>
 /// </list>
 /// A request that fails completely gets {"id": …, "fatal": "…"}.
 /// </summary>
@@ -51,6 +55,8 @@ internal static class Daemon
             {
                 "compile" => Compile(id, root.GetProperty("file").GetString() ?? "", root.GetProperty("text").GetString() ?? ""),
                 "player" => Answer(id, json => json.WriteString("html", HtmlExporter.ExportPlayer())),
+                "markdown" => RenderMarkdown(id, root.GetProperty("file").GetString() ?? "", root.GetProperty("text").GetString() ?? ""),
+                "page" => Answer(id, json => json.WriteString("html", HtmlExporter.ExportPagePreview())),
                 "keywords" => Answer(id, json =>
                 {
                     json.WriteStartArray("keywords");
@@ -168,6 +174,33 @@ internal static class Daemon
                 json.WriteEndObject();
             }
             json.WriteEndArray();
+        });
+    }
+
+    private static string RenderMarkdown(JsonElement id, string file, string text)
+    {
+        string? path = Path.IsPathRooted(file) ? Path.GetFullPath(file) : null;
+        MarkdownPage page = MarkdownPage.Parse(text, path);
+        return Answer(id, json =>
+        {
+            json.WriteString("html", page.Html);
+            json.WriteString("title", page.Title);
+            void Problems(string name, IEnumerable<MarkdownProblem> problems)
+            {
+                json.WriteStartArray(name);
+                foreach (MarkdownProblem problem in problems)
+                {
+                    json.WriteStartObject();
+                    json.WriteString("file", path);
+                    json.WriteNumber("line", problem.Line);
+                    json.WriteNumber("column", problem.Column);
+                    json.WriteString("message", problem.Message);
+                    json.WriteEndObject();
+                }
+                json.WriteEndArray();
+            }
+            Problems("errors", page.Errors);
+            Problems("warnings", page.Warnings);
         });
     }
 

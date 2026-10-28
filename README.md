@@ -281,6 +281,40 @@ point D = use Prop1.geo A B draw offset 0 0.2
 
 **Standardwerte:** Punkte blau, Radius 5 pt, erscheinen in 400 ms; Linien schwarz, 2,5 pt, 800 ms; Kreise 1200 ms; Vielecke 600 ms; Texte 26 pt, 400 ms; `show`/`hide` 400 ms; `move` 1000 ms mit `ease`.
 
+## Buchseiten in Markdown (im Aufbau)
+
+Längere Texte eines Buchs schreibt man in Markdown statt in `info`-Zeilen: eine Datei `….geo.md` neben den Skripten, die
+ihre Abbildungen aus `.geo`-Dateien holt. So beschreibt das Skript nur noch Bild und Ablauf, das Markdown den Text –
+Grundlage für das Buch im Web, als E-Book und im Druck. Bisher gibt es die Vorschau in VS Code; der Export folgt. Die
+Doppelendung gibt den Seiten in VS Code eine eigene Sprache (ohne Konflikt mit der Markdown-Unterstützung von VS Code),
+während andere Programme (GitHub, Markdown-Editoren) sie weiter als Markdown anzeigen.
+
+```markdown
+---
+title: Punkte und ihre Lage
+description: Was ein Punkt ist und wie wir ihn bezeichnen.
+keywords: [Punkt/e/en]
+---
+
+# Punkte und ihre Lage
+
+![Punkte in der Ebene](10_Punkte.geo#2)
+
+Ein **Punkt** beschreibt eine genaue Lage. Man schreibt $M != Q$, wenn …
+```
+
+- **Kopf (Front Matter):** ein YAML-Block zwischen zwei `---`-Zeilen am Dateianfang, alles freiwillig: `title` (Name der
+  Seite in Menü, Inhaltsverzeichnis und Seitenkopf; ohne ihn gilt die erste `#`-Überschrift), `description`, `keywords`
+  (Schreibweise wie bei `keyword`, als Liste). Unbekannte Schlüssel sind eine Warnung.
+- **Text:** CommonMark mit Tabellen, Fußnoten und Attributen (`{#marke .klasse}`).
+- **Formeln:** AsciiMath zwischen `$…$` wie in den Skripten, auf eigenen Zeilen zwischen `$$` abgesetzt und zentriert;
+  `\$` ist ein Dollarzeichen. Ein `$`, das keine Formel beginnt (kein schließendes, oder ein Leerzeichen dahinter), ist ein
+  Fehler.
+- **Abbildungen:** ein Bild auf ein Skript, allein im Absatz: `![Bildunterschrift](datei.geo)` (die ganze Animation),
+  `#2` (Stand nach Schritt 2), `#3..4` (Schritte 3 bis 4; bei Zahlen auch `#3-4`), `#name` oder `#von..bis` (Schritte über
+  ihren Namen). Mehrere solche Bilder in einem Absatz bilden eine Abbildung. Die Bildunterschrift darf Markdown und Formeln
+  enthalten. Ein fehlendes Skript ist ein Fehler. Noch erscheint an der Stelle nur ein Platzhalter mit der Adresse.
+
 ## C#
 
 Dieselben Möglichkeiten ohne Skript (`GeoAnim.Core`); das Skript wird genau in diese Aufrufe übersetzt:
@@ -304,7 +338,7 @@ File.WriteAllText("mittelsenkrechte.html", HtmlExporter.Export(c.Build()));
 
 `editors/vscode` ist eine Erweiterung für VS Code: Syntaxhervorhebung (Befehle, Hilfswörter, Optionen, Zahlen, Farben,
 neue Objektnamen, Vars, Texte, Formeln, Dateipfade, Kommentare), eine Live-Vorschau neben dem Editor, die schon beim
-Tippen aktualisiert und dem Schritt unter dem Cursor folgt, Fehler als rote Unterstreichung und Tooltips mit Definition und aktuellen Werten eines Objekts, das dabei in der Vorschau als Geist erscheint (auch versteckte Hilfsobjekte). Dahinter steht
+Tippen aktualisiert und dem Schritt unter dem Cursor folgt, Fehler als rote Unterstreichung und Tooltips mit Definition und aktuellen Werten eines Objekts, das dabei in der Vorschau als Geist erscheint (auch versteckte Hilfsobjekte); ebenso eine Vorschau für die Markdown-Seiten eines Buchs. Dahinter steht
 `geoanim daemon` (JSON-Zeilen über Standardein- und -ausgabe). Einrichten: siehe `editors/vscode/README.md`.
 
 ## Aufbau
@@ -314,7 +348,7 @@ Tippen aktualisiert und dem Schritt unter dem Cursor folgt, Fehler als rote Unte
 | `GeoAnim.Core` | Geometrie (Punkte, Strecken, Kreise, Schnittpunkte, Abhängigkeiten), Zeitleiste (`Construction`: Schritte und Aktionen), Animationsdaten (`AnimationData.ToJson`) |
 | `GeoAnim.Formulas` | Formeln: `MathText` zerlegt Texte in Text und `$…$`; `MathRenderer` lässt MathJax (AsciiMath → SVG, Schrift STIX2) in der JavaScript-Engine Jint laufen (Start unter einer Sekunde, dann wenige Millisekunden je Formel). MathJax und die Zeichendaten liegen in `mathjax/` und `mathjax-stix2-font/` als eingebettete Ressourcen |
 | `GeoAnim.Script` | Skriptsprache: Lexer, Parser, Übersetzung in eine `Construction`; Fehler als `ScriptError` mit Zeile/Spalte |
-| `GeoAnim.Viewer` | Player (`view/`: `player.html`, `player.js`, `player.css`, Schrift) als eingebettete Ressourcen; `HtmlExporter` für die eigenständige Datei |
+| `GeoAnim.Viewer` | Player (`view/`: `player.html`, `player.js`, `player.css`, Schrift) und Seite für Markdown (`page.html`, `page.js`, `page.css`) als eingebettete Ressourcen; `HtmlExporter` für die eigenständige Datei; `MarkdownPage` liest eine Buchseite in Markdown (Markdig) |
 | `GeoAnim` | Kommandozeile `geoanim serve` (EmbedIO, Dateibeobachtung, `/animation.json`) und `geoanim export` |
 | `GeoAnim.Tests` | xUnit: Geometrie, Zeitleiste, Sprache, Formeln, Export, Server, alle Beispiele in `Samples` |
 
@@ -330,6 +364,8 @@ GeoAnim steht unter der MIT-Lizenz (`LICENSE`). Fremde Bestandteile:
 | MathJax 4 (Auszug) und die Zeichendaten von MathJax STIX2 (aus den STIX-Two-Schriften, OFL 1.1) | Apache 2.0 | `GeoAnim.Formulas/mathjax*/`; im Export stehen nur die erzeugten Pfade |
 | Jint | BSD 2-Clause | NuGet-Paket |
 | EmbedIO | MIT | NuGet-Paket |
+| Markdig | BSD 2-Clause | NuGet-Paket |
+| YamlDotNet | MIT | NuGet-Paket |
 | xUnit (nur Tests) | Apache 2.0 | NuGet-Paket |
 
 ## Ideen für später

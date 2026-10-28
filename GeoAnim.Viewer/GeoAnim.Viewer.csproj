@@ -17,4 +17,10 @@
     <InternalsVisibleTo Include="GeoAnim.Tests" />
   </ItemGroup>
 
+  <!-- the pages of a book in Markdown (with a YAML block at the start) -->
+  <ItemGroup>
+    <PackageReference Include="Markdig" Version="1.4.0" />
+    <PackageReference Include="YamlDotNet" Version="16.3.0" />
+  </ItemGroup>
+
 </Project>

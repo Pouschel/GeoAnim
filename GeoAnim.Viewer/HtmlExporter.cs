@@ -168,9 +168,18 @@ public static partial class HtmlExporter
     /// The player page without an animation, for an editor's preview: it gets its animations as messages
     /// ({ type: "animation" | "error" | "step", … }, see player.js) instead of fetching them from "geoanim serve".
     /// </summary>
-    public static string ExportPlayer()
+    public static string ExportPlayer() => Embedded("player.html");
+
+    /// <summary>
+    /// The page for a book page in Markdown, for an editor's preview: it gets the page as messages
+    /// ({ type: "page", html, error } and { type: "line", line }, see page.js).
+    /// </summary>
+    public static string ExportPagePreview() => Embedded("page.html");
+
+    // a page with its stylesheets and script inside, for a webview
+    private static string Embedded(string page)
     {
-        string html = ViewerFiles.ReadText("player.html");
+        string html = ViewerFiles.ReadText(page);
         html = StylesheetPattern().Replace(html, m => "<style>\n" + InlineCss(m.Groups[1].Value) + "</style>");
         html = ScriptPattern().Replace(html, m =>
             "<script>window.GEO_EMBEDDED = true;</script>\n"

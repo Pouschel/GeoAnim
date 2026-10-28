@@ -1,0 +1,11 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "GeoAnim-Markdown",
+  "scopeName": "text.geomd",
+  "comment": "A page of a book (.geo.md): VS Code's Markdown grammar (with the YAML block at the start); formulas come from geomd-math.tmLanguage.json, injected into it.",
+  "patterns": [
+    {
+      "include": "text.html.markdown"
+    }
+  ]
+}

@@ -15,6 +15,7 @@ Alle Befehle mit allen Schreibweisen und den Optionen, die jeweils erlaubt sind.
 - [Dateien](#dateien): `include`, `use`, `input`, `output`
 - [Optionen](#optionen) – welche Option für welchen Befehl
 - [Farben](#farben), [Standardwerte](#standardwerte), [Schlüsselwörter](#schlüsselwörter)
+- [Markdown-Seiten](#markdown-seiten) – Kopf und Abbildungen einer Buchseite in Markdown
 
 ## Grundregeln
 
@@ -254,6 +255,18 @@ Aktionen stehen in einem Schritt und laufen nacheinander. Die Optionen *Ablauf* 
 | `move`, `rotate`, `reflect` | | | 1000 ms, `ease` |
 | `pause` | | | 500 ms |
 | Schritt ohne Aktion | | | 500 ms |
+
+## Markdown-Seiten
+
+Eine Buchseite in Markdown (`….geo.md` neben den Skripten, im Aufbau; Erklärung in der [README](README.md#buchseiten-in-markdown-im-aufbau)).
+
+| Element | Schreibweise | Hinweise |
+|---|---|---|
+| Kopf | `---` · `title: …` · `description: …` · `keywords: [Punkt/e/en, …]` · `---` | am Dateianfang, alles freiwillig; ohne `title` gilt die erste `#`-Überschrift |
+| Formel | `$…$` · `$$` … `$$` auf eigenen Zeilen | AsciiMath; `\$` ist ein Dollarzeichen |
+| Abbildung | `![Unterschrift](datei.geo)` | die ganze Animation; allein im Absatz |
+| | `![…](datei.geo#2)` · `#gleich` | Stand nach einem Schritt (Nummer oder Name) |
+| | `![…](datei.geo#3..4)` · `#3-4` · `#von..bis` | Schritte von … bis |
 
 ## Schlüsselwörter
 

@@ -1,6 +1,6 @@
 # GeoAnim für VS Code
 
-Syntaxhervorhebung, Live-Vorschau und Fehlermeldungen für GeoAnim-Skripte (`.geo`). Die Grammatik steht in `syntaxes/geo.tmLanguage.json`.
+Syntaxhervorhebung, Live-Vorschau und Fehlermeldungen für GeoAnim-Skripte (`.geo`) und Buchseiten in Markdown (`.geo.md`). Die Grammatik steht in `syntaxes/geo.tmLanguage.json` (Seiten: `geomd.tmLanguage.json`, die Markdown-Grammatik von VS Code, mit den Formeln aus `geomd-math.tmLanguage.json`).
 
 **Kategorien:** Befehle am Zeilenanfang, Hilfswörter (`midpoint`, `center`, `to`, `use` …), Optionen, Zahlen, Farben, neue
 Objektnamen (links vom `=`), Vars (bei `var` und dort, wo Optionen stehen), Texte, Formeln `$…$`, Dateipfade (`include`,
@@ -71,6 +71,15 @@ mklink /J "%USERPROFILE%\.vscode\extensions\geoanim-geo" "%CD%\editors\vscode"
 - **Alle Verweise** (Umschalt+F12) listet die Stellen eines Namens; steht der Cursor auf einem Namen, sind seine
   Vorkommen in der Datei hervorgehoben.
 - Koordinaten unter der Maus und Umschalt+Klick zum Kopieren gibt es wie bei `geoanim serve`.
+- **Buchseiten in Markdown (`….geo.md`):** Sie haben eine eigene Sprache, „GeoAnim-Markdown“: Hervorhebung wie Markdown
+  (mit dem YAML-Kopf), dazu Formeln `$…$` und `$$ … $$`; die Gliederung zeigt die Überschriften verschachtelt,
+  Abschnitte, Kopf und Codeblöcke lassen sich falten; Zeilen werden umgebrochen angezeigt. Gewöhnliche `.md`-Dateien
+  bleiben bei der Markdown-Unterstützung von VS Code. Es gibt dieselbe Vorschau wie für Skripte – Symbol oben rechts,
+  Strg+K V oder „GeoAnim: Vorschau öffnen“. Sie zeigt die Seite, wie GeoAnim sie setzt (Schrift, Formeln als SVG, Abbildungen vorerst als
+  Platzhalter), aktualisiert sich beim Tippen und zeigt dieselbe Stelle wie der Editor (beim Blättern im Editor blättert
+  sie mit). Fehler (eine Formel ohne schließendes `$`, ein fehlendes Skript, ein Fehler im Kopf) werden unterstrichen und
+  stehen über der Seite. Ein Klick auf eine Abbildung öffnet ihr Skript (bei `#3..4` auf Schritt 3), ein Link auf eine
+  andere Seite (`….geo.md`) diese. Die Vorschau wechselt mit dem aktiven Editor zwischen Skript und Seite.
 
 Die Arbeit macht `geoanim daemon`, einmal im Hintergrund gestartet (MathJax startet daher nur einmal). Gefunden wird
 `geoanim` so: die Einstellung `geoanim.path`, sonst der neuere der Builds `GeoAnim\bin\Debug\net10.0\geoanim.exe` und

@@ -13,7 +13,7 @@ public class ViewerTests
         Assert.Equal(
             ["fonts/LICENSE-stix-two-text.txt", "fonts/fonts.css", "fonts/stix-two-text-latin-400-italic.woff2",
              "fonts/stix-two-text-latin-400-normal.woff2", "fonts/stix-two-text-latin-700-normal.woff2",
-             "player.css", "player.html", "player.js"],
+             "page.css", "page.html", "page.js", "player.css", "player.html", "player.js"],
             ViewerFiles.Paths);
         Assert.Null(ViewerFiles.Read("missing.js"));
     }
