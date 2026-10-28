@@ -20,8 +20,9 @@ namespace GeoAnim.Cli;
 /// <item>{"id": 3, "type": "keywords"} → {"id": 3, "keywords": ["angle", …], "colors": {"red": "#d32f2f", …}} – the words that
 /// cannot be names, and the colour names.</item>
 /// <item>{"id": 4, "type": "markdown", "file": "C:\\…\\a.geo.md", "text": "…"} → {"id": 4, "html": "…", "title": "…" or null,
-/// "errors": […], "warnings": […] (as for "compile")} – a page of a book in Markdown, its figures looked for beside the
-/// file.</item>
+/// "figures": {"key": {"animation": {…}, "from": 2 or null, "to": 3 or null, "still": false}, …}, "errors": […],
+/// "warnings": […] (as for "compile")} – a page of a book in Markdown, its figures from the scripts beside the file (as
+/// saved; compiled scripts are kept while their files stay the same).</item>
 /// <item>{"id": 5, "type": "page"} → {"id": 5, "html": "…"} – the page for the preview of a Markdown page.</item>
 /// </list>
 /// A request that fails completely gets {"id": …, "fatal": "…"}.
@@ -180,11 +181,34 @@ internal static class Daemon
     private static string RenderMarkdown(JsonElement id, string file, string text)
     {
         string? path = Path.IsPathRooted(file) ? Path.GetFullPath(file) : null;
-        MarkdownPage page = MarkdownPage.Parse(text, path);
+        MarkdownPage page = MarkdownPage.Parse(text, path, LoadScript);
         return Answer(id, json =>
         {
             json.WriteString("html", page.Html);
             json.WriteString("title", page.Title);
+            json.WriteStartObject("figures");
+            foreach (PageFigure figure in page.PageFigures.DistinctBy(f => f.Key))
+            {
+                json.WriteStartObject(figure.Key);
+                json.WritePropertyName("animation");
+                json.WriteRawValue(figure.AnimationJson);
+                void Index(string name, int? value)
+                {
+                    if (value is int index)
+                    {
+                        json.WriteNumber(name, index);
+                    }
+                    else
+                    {
+                        json.WriteNull(name);
+                    }
+                }
+                Index("from", figure.From);
+                Index("to", figure.To);
+                json.WriteBoolean("still", figure.Still);
+                json.WriteEndObject();
+            }
+            json.WriteEndObject();
             void Problems(string name, IEnumerable<MarkdownProblem> problems)
             {
                 json.WriteStartArray(name);
@@ -202,6 +226,35 @@ internal static class Daemon
             Problems("errors", page.Errors);
             Problems("warnings", page.Warnings);
         });
+    }
+
+    // the scripts of the figures, compiled, with the files they read and when those were written
+    private static readonly Dictionary<string, (List<(string File, DateTime Written)> Files, AnimationData Animation)> Scripts =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    // a script for a figure: compiled once, again when it or a file it reads has changed
+    private static AnimationData LoadScript(string path)
+    {
+        if (Scripts.TryGetValue(path, out var known) && known.Files.All(f => File.Exists(f.File) && File.GetLastWriteTimeUtc(f.File) == f.Written))
+        {
+            return known.Animation;
+        }
+        ScriptSource source = ScriptSource.FromFile(path);
+        AnimationData animation;
+        try
+        {
+            animation = ScriptCompiler.Compile(source);
+        }
+        catch (ScriptError e)
+        {
+            string where = source.FullPathOf(e) is { } other && !string.Equals(other, path, StringComparison.OrdinalIgnoreCase)
+                ? Path.GetFileName(other) + ", line " : "line ";
+            throw new FormatException($"{Path.GetFileName(path)}: {where}{e.Line}: {e.Message}");
+        }
+        var files = source.Files.Append(path).Distinct(StringComparer.OrdinalIgnoreCase)
+            .Select(f => (f, File.GetLastWriteTimeUtc(f))).ToList();
+        Scripts[path] = (files, animation);
+        return animation;
     }
 
     private static string Answer(JsonElement id, Action<Utf8JsonWriter> write)

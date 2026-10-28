@@ -172,17 +172,24 @@ public static partial class HtmlExporter
 
     /// <summary>
     /// The page for a book page in Markdown, for an editor's preview: it gets the page as messages
-    /// ({ type: "page", html, error } and { type: "line", line }, see page.js).
+    /// ({ type: "page", html, figures, error } and { type: "line", line }, see page.js). It carries the player for its
+    /// figures (window.GEO_FIGURE_PLAYER: the player page; each figure gets one in a frame, with its animation and its
+    /// part in place of the comment <see cref="FigureMark"/>).
     /// </summary>
-    public static string ExportPagePreview() => Embedded("page.html");
+    public static string ExportPagePreview() =>
+        Embedded("page.html", "window.GEO_EMBEDDED = true;\n      window.GEO_FIGURE_PLAYER = "
+            + System.Text.Json.JsonSerializer.Serialize(Embedded("player.html", FigureMark)) + ";");
 
-    // a page with its stylesheets and script inside, for a webview
-    private static string Embedded(string page)
+    /// <summary>The place in the player page of a figure where its animation and its part (window.GEO_FIGURE) go.</summary>
+    public const string FigureMark = "/*GEO_FIGURE*/";
+
+    // a page with its stylesheets and script inside, for a webview; the preamble is a script before its own
+    private static string Embedded(string page, string preamble = "window.GEO_EMBEDDED = true;")
     {
         string html = ViewerFiles.ReadText(page);
         html = StylesheetPattern().Replace(html, m => "<style>\n" + InlineCss(m.Groups[1].Value) + "</style>");
         html = ScriptPattern().Replace(html, m =>
-            "<script>window.GEO_EMBEDDED = true;</script>\n"
+            "<script>" + EscapeScript(preamble) + "</script>\n"
             + "    <script>\n" + EscapeScript(ViewerFiles.ReadText(m.Groups[1].Value)) + "</script>");
         return html;
     }

@@ -166,7 +166,7 @@ Aktionen stehen in einem Schritt und laufen nacheinander. Die Optionen *Ablauf* 
 
 | Befehl | Schreibweisen | Optionen | Hinweise |
 |---|---|---|---|
-| `step` | `step Text …` | – | neuer Schritt; mit `|` fortsetzbar |
+| `step` | `step Text …` · `step Text … #marke` | – | neuer Schritt; mit `|` fortsetzbar; `#marke` am Ende: sein Name für Abbildungen einer Markdown-Seite (eindeutig in der Datei, gehört nicht zum Text; ebenso bei `textstep`) |
 | `textstep` | `textstep Text …` | – | Schritt nur mit Text: seine `info`-Texte stehen dort, wo sonst das Bild ist (bei langem Text scrollbar); erlaubt sind nur `info`, `keyword`, `pause` und Zahlen. Das Bild ist im nächsten Schritt wieder da, wie es war. Dauer beim Durchlaufen: eine `pause`, sonst eine Lesezeit (3 s + ¼ s je Wort) |
 | `info` | `info Text …` | – | Erklärung zum Schritt, linksbündig unter der Beschreibung; mit `|` fortsetzbar; ein weiteres `info` wird ein neuer Absatz; `info ## Titel` ist eine Zwischenüberschrift |
 | `show` | `show A B …` | *Ablauf* | zeigt Objekte (zeichnet versteckte, blendet ausgeblendete ein); schon sichtbare bleiben, wie sie sind |
@@ -265,8 +265,8 @@ Eine Buchseite in Markdown (`….geo.md` neben den Skripten, im Aufbau; Erkläru
 | Kopf | `---` · `title: …` · `description: …` · `keywords: [Punkt/e/en, …]` · `---` | am Dateianfang, alles freiwillig; ohne `title` gilt die erste `#`-Überschrift |
 | Formel | `$…$` · `$$` … `$$` auf eigenen Zeilen | AsciiMath; `\$` ist ein Dollarzeichen |
 | Abbildung | `![Unterschrift](datei.geo)` | die ganze Animation; allein im Absatz |
-| | `![…](datei.geo#2)` · `#gleich` | Stand nach einem Schritt (Nummer oder Name) |
-| | `![…](datei.geo#3..4)` · `#3-4` · `#von..bis` | Schritte von … bis |
+| | `![…](datei.geo#2)` · `#gleich` · `#0` | Standbild am Ende eines Schritts (Nummer, Marke oder Name aus dem Schritttext); `#0` das Startbild |
+| | `![…](datei.geo#3..4)` · `#3-4` · `#von..bis` | Player nur für die Schritte von … bis (ab Schritt 1) |
 
 ## Schlüsselwörter
 

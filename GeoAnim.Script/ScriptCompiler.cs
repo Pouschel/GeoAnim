@@ -222,13 +222,15 @@ public static class ScriptCompiler
                 case StepStatement s:
                     if (module == null || module.Mode == UseMode.Steps)
                     {
+                        // the marks of a used file's steps belong to that file
+                        string? mark = module == null ? s.Mark : null;
                         if (s.TextOnly)
                         {
-                            c.TextStep(s.Caption);
+                            c.TextStep(s.Caption, mark);
                         }
                         else
                         {
-                            c.Step(s.Caption);
+                            c.Step(s.Caption, mark);
                         }
                     }
                     break;

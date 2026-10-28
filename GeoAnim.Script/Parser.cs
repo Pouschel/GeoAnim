@@ -1,7 +1,9 @@
+using System.Text.RegularExpressions;
+
 namespace GeoAnim.Script;
 
 /// <summary>Reads the statements of a script (one per line; "together" … "end" spans several lines).</summary>
-internal sealed class Parser
+internal sealed partial class Parser
 {
     /// <summary>Words that cannot be names of objects.</summary>
     internal static readonly HashSet<string> Keywords = new(StringComparer.Ordinal)
@@ -254,7 +256,17 @@ internal sealed class Parser
                 {
                     throw Error(word, "A step cannot begin inside a \"together\" block.");
                 }
-                statement = new StepStatement(l, c, TextOf(Next())) { TextOnly = word.Text == "textstep" };
+                {
+                    // "step Gleiche Punkte #gleich": the mark at the end of the text (also after "|" lines), not part of it
+                    string text = TextOf(Next());
+                    int lineEnd = text.IndexOf('\n') < 0 ? text.Length : text.IndexOf('\n');
+                    Match mark = StepMark().Match(text.Substring(0, lineEnd));
+                    if (mark.Success)
+                    {
+                        text = text.Substring(0, mark.Index).TrimEnd() + text.Substring(lineEnd);
+                    }
+                    statement = new StepStatement(l, c, text) { TextOnly = word.Text == "textstep", Mark = mark.Success ? mark.Groups[1].Value : null };
+                }
                 break;
             case "point":
                 statement = ParsePoint(word);
@@ -1146,4 +1158,8 @@ internal sealed class Parser
     }
 
     private static string Capitalize(string text) => text.Length == 0 ? text : char.ToUpperInvariant(text[0]) + text.Substring(1);
+
+    // the mark of a step: "#name" at the end of its line, after a space (or alone)
+    [GeneratedRegex(@"(?:^|\s)#([\p{L}\p{N}_-]+)\s*$")]
+    private static partial Regex StepMark();
 }

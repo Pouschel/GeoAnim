@@ -598,6 +598,30 @@ body.still #stage {
   margin: 0;
 }
 
+/* a figure of a page (in a frame): picture, step description and controls; no title, menu or explanations */
+body.figure {
+  background: #fff;
+}
+
+body.figure #header,
+body.figure #texts,
+body.figure #menu-button,
+body.figure #menu,
+body.figure #stops,
+body.figure #speed-box,
+body.figure #coords {
+  display: none !important;
+}
+
+body.figure #scene {
+  box-shadow: none;
+  outline: 1px solid #e3e6eb;
+}
+
+body.figure #controls {
+  border: 1px solid #e3e6eb;
+}
+
 /* a text step: no picture; the text takes its space (scrolling if it is long) */
 body.textstep #stage {
   display: none;

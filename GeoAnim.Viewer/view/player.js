@@ -2,6 +2,7 @@
 // The animation comes from window.GEO_ANIMATION (an exported file), in "geoanim serve" from animation.json, which is
 // fetched again and again so that a changed script shows at once, or, in an editor's preview (window.GEO_EMBEDDED), as
 // messages: { type: 'animation', animation, keepPosition, step }, { type: 'error', error }, { type: 'step', index }.
+// A figure of a page (window.GEO_FIGURE, in a frame) shows only its picture, step description and controls.
 (function () {
   'use strict'
 
@@ -37,6 +38,14 @@
   let liveVersion = null
   // the editor around an embedded preview (VS Code's webview API), if any
   let host = null
+  // a figure of a page ({ id, from, to, still }, in a frame of the page): from/to the steps shown (indices; null: all),
+  // still only the picture at the end of "to" (-1: the starting picture); it is as wide as its frame and tells the page
+  // its height ({ type: 'geoanim-figure-height', id, height }) and when it starts to play ({ type: 'geoanim-figure-play',
+  // id }; the page pauses the others: { type: 'geoanim-pause' })
+  const figure = window.GEO_FIGURE || null
+  // the time shown: all of it, or in a figure the steps from … to
+  let rangeStart = 0
+  let rangeEnd = 0
 
   // ------------------------------------------------------------------ values over time
 
@@ -1153,7 +1162,8 @@
     if (index >= 0) {
       const number = document.createElement('span')
       number.className = 'step-number'
-      number.textContent = String(index + 1)
+      // in a figure of steps from … to: the step's number in the script
+      number.textContent = String(index + 1 + (figure && figure.from > 0 ? figure.from : 0))
       caption.appendChild(number)
     }
     renderInline(caption, parseMarkdown(text))
@@ -1241,7 +1251,8 @@
       setTextScale(width / REFERENCE_WIDTH)
       reserveCaptionSpace()
       // with the reserved heights, not the texts shown now (a text step's long text does not count)
-      const available = Math.max(1, content.clientHeight - top - reservedHeights.top - reservedHeights.texts)
+      // a figure (not a still): as wide as its frame, which gets the height that needs
+      const available = figure && !still ? Infinity : Math.max(1, content.clientHeight - top - reservedHeights.top - reservedHeights.texts)
       width = Math.max(1, Math.min(content.clientWidth - side, available * ratio))
       if (Math.abs(width - before) < 2) {
         break
@@ -1259,6 +1270,21 @@
     unit = width / REFERENCE_WIDTH
     drawDecor()
     render()
+    if (figure && !still) {
+      reportFigureHeight(height)
+    }
+  }
+
+  // a figure: the height of picture, step description and controls, for the frame on the page
+  let reportedHeight = null
+
+  function reportFigureHeight (pictureHeight) {
+    const height = Math.ceil($('caption-box').offsetHeight + parseFloat(getComputedStyle(stage).marginTop) + pictureHeight +
+      $('texts').offsetHeight + $('controls').offsetHeight)
+    if (height !== reportedHeight && window.parent !== window) {
+      reportedHeight = height
+      window.parent.postMessage({ type: 'geoanim-figure-height', id: figure.id, height }, '*')
+    }
   }
 
   // ------------------------------------------------------------------ steps and playing
@@ -1278,7 +1304,7 @@
   }
 
   function setTime (t) {
-    time = Math.max(0, Math.min(animation.duration, t))
+    time = Math.max(rangeStart, Math.min(rangeEnd, t))
     render()
   }
 
@@ -1289,14 +1315,22 @@
   }
 
   function play () {
-    if (time >= animation.duration - EPSILON) {
-      time = 0
+    if (time >= rangeEnd - EPSILON) {
+      time = rangeStart
     }
+    tellPlaying()
     const next = steps().find(step => step.end > time + EPSILON)
     stopTime = stopAtSteps && next ? next.end : null
     playing = true
     previousTimestamp = null
     updateControls()
+  }
+
+  // a figure: the page pauses the other figures
+  function tellPlaying () {
+    if (figure && window.parent !== window) {
+      window.parent.postMessage({ type: 'geoanim-figure-play', id: figure.id }, '*')
+    }
   }
 
   function togglePlay () {
@@ -1311,14 +1345,14 @@
   function nextStep () {
     pause()
     const next = steps().find(step => step.end > time + EPSILON)
-    setTime(next ? next.end : animation.duration)
+    setTime(next ? next.end : rangeEnd)
     reportStep()
   }
 
   function previousStep () {
     pause()
     const before = steps().filter(step => step.end < time - EPSILON)
-    setTime(before.length ? before[before.length - 1].end : 0)
+    setTime(before.length ? before[before.length - 1].end : rangeStart)
     reportStep()
   }
 
@@ -1339,6 +1373,7 @@
       return
     }
     setTime(list[index].start)
+    tellPlaying()
     playing = true
     stopTime = list[index].end
     previousTimestamp = null
@@ -1356,8 +1391,8 @@
         stopTime = null
         stopped = true
       }
-      if (t >= animation.duration) {
-        t = animation.duration
+      if (t >= rangeEnd) {
+        t = rangeEnd
         playing = false
         stopped = true
       }
@@ -1378,7 +1413,7 @@
     const index = currentStepIndex()
     setCaption(index)
     // a text step: its text where the picture is (not in a still of the contact sheet)
-    const textMode = index >= 0 && !!list[index].text && !document.body.classList.contains('still')
+    const textMode = index >= 0 && !!list[index].text && !document.body.classList.contains('still') && !figure
     document.body.classList.toggle('textstep', textMode)
     // an error (VS Code preview, serve) stays in sight: over the picture, in a text step above the text
     const error = $('error')
@@ -1543,12 +1578,12 @@
   function drawMarks () {
     const marks = $('marks')
     marks.textContent = ''
-    if (!(animation.duration > 0)) {
+    if (!(rangeEnd > rangeStart)) {
       return
     }
     for (const step of steps()) {
       const mark = document.createElement('span')
-      mark.style.left = (100 * step.end / animation.duration) + '%'
+      mark.style.left = (100 * (step.end - rangeStart) / (rangeEnd - rangeStart)) + '%'
       marks.appendChild(mark)
     }
   }
@@ -1563,13 +1598,21 @@
       stepIndex = currentStepIndex()
       atStepEnd = stepIndex >= 0 && Math.abs(time - steps()[stepIndex].end) < EPSILON
     }
+    // a figure of steps from … to: only those steps
+    const part = figure && typeof figure.from === 'number' && figure.from >= 0
+    if (part) {
+      data = Object.assign({}, data, { steps: data.steps.slice(figure.from, figure.to + 1) })
+    }
     animation = data
+    rangeStart = part && data.steps.length ? data.steps[0].start : 0
+    rangeEnd = part && data.steps.length ? data.steps[data.steps.length - 1].end : data.duration
     document.title = data.title ? plainText(data.title) : 'GeoAnim'
     setRichText($('title'), data.title || '')
     $('header').hidden = !data.title
     $('message').textContent = ''
     buildScene()
-    $('timeline').max = String(Math.max(1, Math.round(data.duration)))
+    $('timeline').min = String(Math.round(rangeStart))
+    $('timeline').max = String(Math.max(Math.round(rangeStart) + 1, Math.round(rangeEnd)))
     drawMarks()
     buildMenu()
     document.querySelectorAll('#controls button, #timeline, #menu-button').forEach(control => { control.disabled = false })
@@ -1578,7 +1621,7 @@
     } else if (keepPosition) {
       time = Math.min(time, data.duration)
     } else {
-      time = 0
+      time = rangeStart
     }
     if (!keepPosition) {
       pause()
@@ -1586,8 +1629,12 @@
     }
     reserveCaptionSpace()
     layout()
+    // a still of a figure: the end of its step (or the starting picture)
+    if (figure && figure.still) {
+      setTime(typeof figure.to === 'number' && figure.to >= 0 ? rangeEnd : 0)
+    }
     // a page opened at a step (page.html#3)
-    if (!keepPosition && !window.GEO_EMBEDDED) {
+    if (!keepPosition && !window.GEO_EMBEDDED && !figure) {
       applyHash()
     }
   }
@@ -1628,11 +1675,11 @@
 
   // buttons keep no focus, so that the keys always work
   document.querySelectorAll('#controls button').forEach(button => button.addEventListener('mousedown', event => event.preventDefault()))
-  $('first').addEventListener('click', () => goTo(0))
+  $('first').addEventListener('click', () => goTo(rangeStart))
   $('previous').addEventListener('click', previousStep)
   $('play').addEventListener('click', togglePlay)
   $('next').addEventListener('click', nextStep)
-  $('last').addEventListener('click', () => goTo(animation.duration))
+  $('last').addEventListener('click', () => goTo(rangeEnd))
   $('replay').addEventListener('click', replayStep)
   $('timeline').addEventListener('input', event => {
     // read the position before pause() updates the slider
@@ -1825,8 +1872,8 @@
       ' ': togglePlay,
       ArrowRight: nextStep,
       ArrowLeft: previousStep,
-      Home: () => goTo(0),
-      End: () => goTo(animation.duration),
+      Home: () => goTo(rangeStart),
+      End: () => goTo(rangeEnd),
       r: replayStep,
       R: replayStep,
       s: toggleStops,
@@ -1895,6 +1942,10 @@
   let reportTimer = null
 
   function reportStep () {
+    // a figure has no address of its own and no editor
+    if (figure) {
+      return
+    }
     clearTimeout(reportTimer)
     reportTimer = setTimeout(() => {
       if (!animation || playing) {
@@ -1955,8 +2006,16 @@
   async function start () {
     // "page.html?still#3": only the picture at the end of step 3, without texts and controls (the contact sheet of
     // "geoanim exportdir -sheet")
-    if (/[?&]still\b/.test(location.search)) {
+    if (/[?&]still\b/.test(location.search) || (figure && figure.still)) {
       document.body.classList.add('still')
+    }
+    if (figure) {
+      document.body.classList.add('figure')
+      window.addEventListener('message', event => {
+        if (event.data && event.data.type === 'geoanim-pause' && playing) {
+          pause()
+        }
+      })
     }
     // the fonts first: the labels are measured with them (bold and italic too, which load only when used)
     try {

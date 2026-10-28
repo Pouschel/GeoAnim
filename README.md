@@ -310,10 +310,16 @@ Ein **Punkt** beschreibt eine genaue Lage. Man schreibt $M != Q$, wenn …
 - **Formeln:** AsciiMath zwischen `$…$` wie in den Skripten, auf eigenen Zeilen zwischen `$$` abgesetzt und zentriert;
   `\$` ist ein Dollarzeichen. Ein `$`, das keine Formel beginnt (kein schließendes, oder ein Leerzeichen dahinter), ist ein
   Fehler.
-- **Abbildungen:** ein Bild auf ein Skript, allein im Absatz: `![Bildunterschrift](datei.geo)` (die ganze Animation),
-  `#2` (Stand nach Schritt 2), `#3..4` (Schritte 3 bis 4; bei Zahlen auch `#3-4`), `#name` oder `#von..bis` (Schritte über
-  ihren Namen). Mehrere solche Bilder in einem Absatz bilden eine Abbildung. Die Bildunterschrift darf Markdown und Formeln
-  enthalten. Ein fehlendes Skript ist ein Fehler. Noch erscheint an der Stelle nur ein Platzhalter mit der Adresse.
+- **Abbildungen:** ein Bild auf ein Skript, allein im Absatz: `![Bildunterschrift](datei.geo)` zeigt die ganze Animation
+  als Player (Bild, Schrittbeschreibung, Steuerleiste; ohne Titel, Menü und Erklärungen), `#2` ein Standbild am Ende von
+  Schritt 2 (`#0`: das Startbild), `#3..4` einen Player nur für die Schritte 3 bis 4, der mit dem Bild nach Schritt 2
+  beginnt (bei Zahlen auch `#3-4`). Statt Nummern gehen Namen: die Marke eines Schritts (`step Gleiche Punkte #gleich`
+  im Skript – `#name` am Ende des Schritttexts, gehört nicht zum Text) oder sein Text in Kleinbuchstaben mit `-` zwischen
+  den Wörtern (`#gleiche-punkte`; ä → ae usw., `$bar(AB)$` → `ab`). Marken bleiben beim Umbenennen eines Schritts gültig;
+  zwei Schritte mit demselben Namen brauchen eine. Mehrere solche Bilder in einem Absatz stehen nebeneinander. Die
+  Bildunterschrift darf Markdown und Formeln enthalten. Ein fehlendes oder fehlerhaftes Skript, ein unbekannter Schritt
+  (die Meldung nennt die vorhandenen) und ein verkehrter Bereich sind Fehler. Spielt ein Player, halten die anderen der
+  Seite an.
 
 ## C#
 

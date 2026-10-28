@@ -763,15 +763,22 @@ public sealed class Construction
         }
     }
 
-    /// <summary>Begins a new step with its description.</summary>
-    public void Step(string caption)
+    /// <summary>
+    /// Begins a new step with its description; <paramref name="mark"/> names it for the pages of a book (unique in the
+    /// construction).
+    /// </summary>
+    public void Step(string caption, string? mark = null)
     {
         if (together != null)
         {
             throw new GeoException("A step cannot begin inside a \"together\" block.");
         }
+        if (mark != null && (steps.Any(s => s.Mark == mark) || currentStep?.Mark == mark))
+        {
+            throw new GeoException($"Another step has the mark \"#{mark}\" already.");
+        }
         CloseStep();
-        currentStep = new AnimationStep(CheckText(caption), time, time);
+        currentStep = new AnimationStep(CheckText(caption), time, time) { Mark = mark };
     }
 
     /// <summary>
@@ -779,9 +786,9 @@ public sealed class Construction
     /// the next step. Nothing may be drawn or moved in it (a pause may set how long it lasts; without one it lasts a
     /// reading time after its length).
     /// </summary>
-    public void TextStep(string caption)
+    public void TextStep(string caption, string? mark = null)
     {
-        Step(caption);
+        Step(caption, mark);
         currentStep = currentStep! with { TextOnly = true };
     }
 
@@ -1035,4 +1042,7 @@ public sealed record AnimationStep(string Caption, double Start, double End)
 
     /// <summary>A step with text only ("textstep"): the player shows its explanation where the picture is.</summary>
     public bool TextOnly { get; init; }
+
+    /// <summary>The step's mark ("step Gleiche Punkte #gleich" → "gleich"), by which a page refers to it, or null.</summary>
+    public string? Mark { get; init; }
 }

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using GeoAnim.Cli;
+using GeoAnim.Script;
 using GeoAnim.Viewer;
 
 namespace GeoAnim.Tests;
@@ -145,5 +146,113 @@ public sealed class MarkdownTests : IDisposable
         string page = JsonDocument.Parse(Daemon.Handle("{\"id\": 8, \"type\": \"page\"}")).RootElement.GetProperty("html").GetString()!;
         Assert.Contains("acquireVsCodeApi", page);
         Assert.Contains("font/woff2;base64", page);
+    }
+
+    [Fact]
+    public void StepsHaveMarks()
+    {
+        AnimationData animation = ScriptCompiler.Compile("""
+            point A = 0 0
+            step Gleiche Punkte #gleich
+            step Zweiter Schritt
+            | weiter #kein
+            step #nur
+            step Preis #5 und mehr
+            """);
+
+        Assert.Equal(["Gleiche Punkte", "Zweiter Schritt weiter", "", "Preis #5 und mehr"], animation.Steps.Select(s => s.Caption));
+        Assert.Equal(["gleich", "kein", "nur", null], animation.Steps.Select(s => s.Mark));
+        Assert.Contains("#gleich", Assert.Throws<ScriptError>(() => ScriptCompiler.Compile("step a #gleich\nstep b #gleich")).Message);
+    }
+
+    [Fact]
+    public void StepNamesComeFromTheirText()
+    {
+        Assert.Equal("gleiche-punkte", MarkdownPage.StepName("Gleiche Punkte"));
+        Assert.Equal("laenge-und-groesse", MarkdownPage.StepName("Länge und **Größe**"));
+        Assert.Equal("die-strecke-ab", MarkdownPage.StepName("Die Strecke $bar(AB)$"));
+        Assert.Equal("cafe-1", MarkdownPage.StepName("Café 1!\nzweite Zeile"));
+    }
+
+    [Fact]
+    public void FiguresGetTheirAnimationAndSteps()
+    {
+        File.WriteAllText(Path.Combine(folder, "punkte.geo"), """
+            view x -10 .. 10 y -5 .. 5
+            point A = 0 0
+            step Erster
+            step Zweiter #zwei
+            step Dritter
+            step Erster
+            """);
+        string file = Path.Combine(folder, "punkte.geo.md");
+        int loads = 0;
+        AnimationData Load(string path)
+        {
+            loads++;
+            return ScriptCompiler.CompileFile(path);
+        }
+        MarkdownPage page = MarkdownPage.Parse("""
+            ![](punkte.geo)
+
+            ![](punkte.geo#2)
+            ![](punkte.geo#0)
+
+            ![](punkte.geo#zwei..dritter)
+
+            ![](punkte.geo#erster)
+
+            ![](punkte.geo#7)
+
+            ![](punkte.geo#0..2)
+
+            ![](punkte.geo#3..zwei)
+
+            ![](punkte.geo#nichts)
+            """, file, Load);
+
+        Assert.Equal(6 + 3, loads);
+        Assert.Collection(page.PageFigures,
+            f => Assert.Equal((null, null, false), (f.From, f.To, f.Still)),
+            f => Assert.Equal((1, 1, true), (f.From, f.To, f.Still)),
+            f => Assert.Equal((-1, -1, true), (f.From, f.To, f.Still)),
+            f => Assert.Equal((1, 2, false), (f.From, f.To, f.Still)));
+        Assert.Equal(2.0, page.PageFigures[0].Ratio);
+        Assert.Contains("data-figure=\"" + page.PageFigures[1].Key + "\"", page.Html);
+        Assert.Contains("geo-still", page.Html);
+        Assert.Contains("geo-player", page.Html);
+        Assert.Collection(page.Errors,
+            e => Assert.Contains("steps 1 and 4 are both called \"erster\"", e.Message),
+            e => Assert.Contains("has 4 steps, not 7", e.Message),
+            e => Assert.Contains("starts at step 1", e.Message),
+            e => Assert.Contains("wrong order", e.Message),
+            e => Assert.Contains("no step \"#nichts\" (there are #erster, #zwei, #dritter, #erster)", e.Message));
+    }
+
+    [Fact]
+    public void DaemonSendsTheFiguresAndReportsFaultyScripts()
+    {
+        File.WriteAllText(Path.Combine(folder, "gut.geo"), "point A = 0 0\nstep Eins\nstep Zwei\n");
+        File.WriteAllText(Path.Combine(folder, "kaputt.geo"), "point A = 0 0\npoint A = 1 1\n");
+        string file = Path.Combine(folder, "seite.geo.md");
+        JsonElement Ask() => JsonDocument.Parse(Daemon.Handle(JsonSerializer.Serialize(new
+        {
+            id = 1, type = "markdown", file, text = "![](gut.geo#1..2)\n\n![](gut.geo#1..2)\n\n![](kaputt.geo)\n",
+        }))).RootElement;
+
+        JsonElement answer = Ask();
+        JsonProperty figure = Assert.Single(answer.GetProperty("figures").EnumerateObject());
+        Assert.Equal(0, figure.Value.GetProperty("from").GetInt32());
+        Assert.Equal(1, figure.Value.GetProperty("to").GetInt32());
+        Assert.False(figure.Value.GetProperty("still").GetBoolean());
+        Assert.Equal(2, figure.Value.GetProperty("animation").GetProperty("steps").GetArrayLength());
+        JsonElement error = Assert.Single(answer.GetProperty("errors").EnumerateArray());
+        Assert.Equal(5, error.GetProperty("line").GetInt32());
+        Assert.StartsWith("kaputt.geo: line 2:", error.GetProperty("message").GetString());
+
+        // a changed script is compiled again
+        File.WriteAllText(Path.Combine(folder, "gut.geo"), "point A = 0 0\nstep Eins\nstep Zwei\nstep Drei\n");
+        File.SetLastWriteTimeUtc(Path.Combine(folder, "gut.geo"), DateTime.UtcNow.AddSeconds(5));
+        Assert.Equal(3, Assert.Single(Ask().GetProperty("figures").EnumerateObject()).Value.GetProperty("animation").GetProperty("steps").GetArrayLength());
     }
 }

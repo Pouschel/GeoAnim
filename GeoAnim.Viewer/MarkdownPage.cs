@@ -30,10 +30,19 @@ public sealed record GeoReference(string File, string? From, string? To, string 
 }
 
 /// <summary>
+/// A figure of a page with its animation (JSON for the player): <see cref="From"/> to <see cref="To"/> are the steps shown
+/// (indices from 0; both null: the whole animation), <see cref="Still"/> only the picture at the end of <see cref="To"/>
+/// (-1: the starting picture). <see cref="Key"/> stays the same as long as all of that does; <see cref="Ratio"/> is the
+/// picture's width by its height.
+/// </summary>
+public sealed record PageFigure(string Key, GeoReference Reference, string AnimationJson, int? From, int? To, bool Still, double Ratio);
+
+/// <summary>
 /// A page of a book in Markdown (CommonMark with tables, footnotes and attributes): a YAML block at the start
 /// ("front matter": title, description, keywords), formulas as AsciiMath between $…$ (block formulas between $$…$$),
 /// figures from .geo scripts. <see cref="Parse"/> turns it into HTML: formulas as SVG (as in the player), figures as
-/// placeholders for now; the blocks carry their line ("data-line") for an editor's preview.
+/// elements for the player (<see cref="PageFigures"/>, "data-figure" with their key); the blocks carry their line
+/// ("data-line") for an editor's preview.
 /// </summary>
 public sealed partial class MarkdownPage
 {
@@ -71,6 +80,9 @@ public sealed partial class MarkdownPage
     /// <summary>The figures from scripts, in their order.</summary>
     public IReadOnlyList<GeoReference> Figures { get; private set; } = [];
 
+    /// <summary>The figures with their animations (only with a loader for the scripts), in their order.</summary>
+    public IReadOnlyList<PageFigure> PageFigures { get; private set; } = [];
+
     /// <summary>The page body as HTML.</summary>
     public string Html { get; }
 
@@ -82,9 +94,11 @@ public sealed partial class MarkdownPage
 
     /// <summary>
     /// Reads a page. <paramref name="file"/> (its full path) is for the figures: their scripts are looked for beside it;
-    /// without it they are not checked.
+    /// without it they are not checked. <paramref name="loadScript"/> compiles a script (by its full path) for its figure;
+    /// it throws <see cref="FormatException"/> with the message for a faulty one. Without it the figures stay
+    /// placeholders.
     /// </summary>
-    public static MarkdownPage Parse(string text, string? file = null)
+    public static MarkdownPage Parse(string text, string? file = null, Func<string, AnimationData>? loadScript = null)
     {
         var errors = new List<MarkdownProblem>();
         var warnings = new List<MarkdownProblem>();
@@ -106,6 +120,7 @@ public sealed partial class MarkdownPage
 
         // paragraphs of figures only become figure blocks
         var figures = new List<GeoReference>();
+        var pageFigures = new List<PageFigure>();
         string? folder = file == null ? null : Path.GetDirectoryName(Path.GetFullPath(file));
         foreach (ParagraphBlock paragraph in document.Descendants<ParagraphBlock>().ToList())
         {
@@ -114,20 +129,41 @@ public sealed partial class MarkdownPage
                 continue;
             }
             var references = new List<GeoReference>();
-            var shown = new List<(string Source, GeoReference? Reference)>();
+            var shown = new List<FigureItem>();
             foreach (LinkInline image in images)
             {
                 GeoReference? reference = ReferenceOf(text, image, locate, errors);
-                shown.Add((image.Url!, reference));
                 if (reference == null)
                 {
+                    shown.Add(new FigureItem(image.Url!, null, null, Faulty: true));
                     continue;
                 }
-                if (folder != null && !File.Exists(Path.Combine(folder, reference.File.Replace('/', Path.DirectorySeparatorChar))))
+                references.Add(reference);
+                string? script = folder == null ? null : Path.Combine(folder, reference.File.Replace('/', Path.DirectorySeparatorChar));
+                if (script != null && !File.Exists(script))
                 {
                     errors.Add(new MarkdownProblem(reference.Line, reference.Column, $"The script \"{reference.File}\" does not exist."));
+                    shown.Add(new FigureItem(image.Url!, reference, null, Faulty: true));
+                    continue;
                 }
-                references.Add(reference);
+                PageFigure? figure = null;
+                if (script != null && loadScript != null)
+                {
+                    try
+                    {
+                        figure = FigureOf(reference, loadScript(script));
+                        pageFigures.Add(figure);
+                    }
+                    catch (FormatException e)
+                    {
+                        errors.Add(new MarkdownProblem(reference.Line, reference.Column, e.Message));
+                    }
+                    catch (IOException e)
+                    {
+                        errors.Add(new MarkdownProblem(reference.Line, reference.Column, $"{reference.File}: {e.Message}"));
+                    }
+                }
+                shown.Add(new FigureItem(image.Url!, reference, figure, Faulty: figure == null && loadScript != null && script != null));
             }
             figures.AddRange(references);
             ContainerBlock parent = paragraph.Parent!;
@@ -178,6 +214,7 @@ public sealed partial class MarkdownPage
             Description = description,
             Keywords = keywords,
             Figures = figures,
+            PageFigures = pageFigures,
             Errors = errors.OrderBy(e => e.Line).ThenBy(e => e.Column).ToList(),
             Warnings = warnings,
         };
@@ -405,32 +442,43 @@ public sealed partial class MarkdownPage
     // ------------------------------------------------------------------ figures
 
     // the figures of a paragraph; a faulty address has no reference
-    private sealed class GeoFigureBlock(List<(string Source, GeoReference? Reference)> figures) : LeafBlock(null)
+    // a figure of a paragraph: its address, its reference (null: a faulty address) and its animation (null: none loaded)
+    private sealed record FigureItem(string Source, GeoReference? Reference, PageFigure? Figure, bool Faulty);
+
+    // the figures of a paragraph
+    private sealed class GeoFigureBlock(List<FigureItem> items) : LeafBlock(null)
     {
-        public List<(string Source, GeoReference? Reference)> Figures { get; } = figures;
+        public List<FigureItem> Items { get; } = items;
     }
 
-    // for now a placeholder with the address (the player and the pictures come later)
+    // the figures side by side, each an element for the player (data-figure: its key; --ratio: the picture's width by its
+    // height); without an animation a box with the address
     private sealed class GeoFigureRenderer : HtmlObjectRenderer<GeoFigureBlock>
     {
         protected override void Write(HtmlRenderer renderer, GeoFigureBlock figure)
         {
             renderer.Write("<figure class=\"geo-figure\"").WriteAttributes(figure).WriteLine('>');
+            renderer.WriteLine("<div class=\"geo-row\">");
             var captions = new StringBuilder();
-            foreach ((string source, GeoReference? reference) in figure.Figures)
+            foreach (FigureItem item in figure.Items)
             {
-                if (reference == null)
+                if (item.Figure is { } loaded)
                 {
-                    renderer.Write("<span class=\"geo-placeholder geo-faulty\">").WriteEscape(source).WriteLine("</span>");
-                    continue;
+                    renderer.Write("<div class=\"geo-item ").Write(loaded.Still ? "geo-still" : "geo-player")
+                        .Write("\" data-figure=\"").Write(loaded.Key)
+                        .Write("\" style=\"--ratio: ").Write(loaded.Ratio.ToString("0.####", CultureInfo.InvariantCulture)).WriteLine("\"></div>");
                 }
-                renderer.Write("<a class=\"geo-placeholder\" href=\"").WriteEscapeUrl(reference.Source).Write("\">")
-                    .WriteEscape(reference.Source).WriteLine("</a>");
-                if (reference.Caption.Length > 0)
+                else
+                {
+                    renderer.Write("<span class=\"geo-placeholder").Write(item.Faulty ? " geo-faulty" : "").Write("\">")
+                        .WriteEscape(item.Reference?.Source ?? item.Source).WriteLine("</span>");
+                }
+                if (item.Reference is { Caption.Length: > 0 } reference)
                 {
                     captions.Append(captions.Length > 0 ? " · " : "").Append(reference.Caption);
                 }
             }
+            renderer.WriteLine("</div>");
             if (captions.Length > 0)
             {
                 // the caption is Markdown too (formulas, emphasis)
@@ -441,6 +489,93 @@ public sealed partial class MarkdownPage
             renderer.WriteLine("</figure>");
         }
     }
+
+    // ------------------------------------------------------------------ steps of a figure
+
+    // the figure for a reference: the whole animation, a still (one step) or the steps from … to
+    private static PageFigure FigureOf(GeoReference reference, AnimationData animation)
+    {
+        int? from = null, to = null;
+        bool still = false;
+        if (reference.From != null)
+        {
+            from = StepIndex(reference, animation, reference.From);
+            to = StepIndex(reference, animation, reference.To!);
+            still = reference.From == reference.To;
+            if (!still && from < 0)
+            {
+                throw new FormatException($"{reference.File}: a range of steps starts at step 1 or later (#0 is the starting picture).");
+            }
+            if (to < from)
+            {
+                throw new FormatException($"{reference.File}: the steps #{reference.From}..{reference.To} are in the wrong order.");
+            }
+        }
+        string json = animation.ToJson();
+        string key = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(
+            json + "|" + from + "|" + to + "|" + still)))[..16].ToLowerInvariant();
+        ViewWindow view = animation.View;
+        double ratio = (view.XMax - view.XMin) / (view.YMax - view.YMin);
+        return new PageFigure(key, reference, json, from, to, still, ratio);
+    }
+
+    /// <summary>
+    /// The index (from 0) of a step by its number (from 1; 0: the starting picture, -1), its mark ("step … #gleich") or
+    /// its name (the step's text in small letters, with "-" between the words: "Gleiche Punkte" → "gleiche-punkte").
+    /// </summary>
+    internal static int StepIndex(GeoReference reference, AnimationData animation, string step)
+    {
+        IReadOnlyList<AnimationStep> steps = animation.Steps;
+        if (step.All(char.IsAsciiDigit))
+        {
+            int number = int.Parse(step, CultureInfo.InvariantCulture);
+            if (number > steps.Count)
+            {
+                throw new FormatException($"{reference.File} has {steps.Count} steps, not {number}.");
+            }
+            return number - 1;
+        }
+        int marked = steps.ToList().FindIndex(s => s.Mark == step);
+        if (marked >= 0)
+        {
+            return marked;
+        }
+        List<int> named = Enumerable.Range(0, steps.Count).Where(i => StepName(steps[i].Caption) == step).ToList();
+        if (named.Count == 1)
+        {
+            return named[0];
+        }
+        if (named.Count > 1)
+        {
+            throw new FormatException($"{reference.File}: the steps {named[0] + 1} and {named[1] + 1} are both called \"{step}\"; give one a mark (\"step … #name\").");
+        }
+        string known = string.Join(", ", steps.Select(s => "#" + (s.Mark ?? StepName(s.Caption))).Where(n => n.Length > 1));
+        throw new FormatException($"{reference.File} has no step \"#{step}\"" + (known.Length > 0 ? $" (there are {known})." : "."));
+    }
+
+    /// <summary>The name of a step from its text: "Gleiche Punkte" → "gleiche-punkte", "Die Strecke $bar(AB)$" → "die-strecke-ab".</summary>
+    public static string StepName(string caption)
+    {
+        string first = caption.Split('\n')[0];
+        string plain = HtmlExporter.PlainText(DecorationPattern().Replace(first, d => d.Groups[2].Value)).ToLowerInvariant();
+        var name = new StringBuilder();
+        foreach (char c in plain.Normalize(NormalizationForm.FormC))
+        {
+            name.Append(c switch
+            {
+                'ä' => "ae", 'ö' => "oe", 'ü' => "ue", 'ß' => "ss",
+                _ when char.IsAsciiLetterOrDigit(c) => c.ToString(),
+                // é → e: the letter without its accent; anything else separates words
+                _ when char.IsLetter(c) => string.Concat(c.ToString().Normalize(NormalizationForm.FormD).Where(char.IsAsciiLetter)),
+                _ => "-",
+            });
+        }
+        return Regex.Replace(name.ToString(), "-{2,}", "-").Trim('-');
+    }
+
+    // bar(AB) → AB (in names of steps)
+    [GeneratedRegex(@"\b(bar|vec|hat|overline|ul|tilde|dot)\(([^()]*)\)")]
+    private static partial Regex DecorationPattern();
 
     // the formulas Markdig leaves in a caption (<span class="math">\(…\)</span>) as SVG
     private static string RenderFormulasIn(string html) => MathSpan().Replace(html, m =>

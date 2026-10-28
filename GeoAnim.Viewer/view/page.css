@@ -110,10 +110,33 @@ svg.formula {
   font-size: 0.85em;
 }
 
-/* a figure from a script; for now its address in a box */
+/* a figure from a script: players and stills side by side, each in a frame (a box with the address while there is
+   no animation) */
 .geo-figure {
   margin: 1em 0 1.2em;
   text-align: center;
+}
+
+.geo-row {
+  display: flex;
+  gap: 0.6em;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.geo-item {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.geo-item iframe {
+  display: block;
+  width: 100%;
+  border: 0;
+}
+
+.geo-still iframe {
+  outline: 1px solid #e3e6eb;
 }
 
 .geo-placeholder {
@@ -132,6 +155,11 @@ svg.formula {
   font-family: Consolas, 'Cascadia Mono', monospace;
   font-size: 0.75em;
   text-decoration: none;
+}
+
+.geo-placeholder.geo-faulty {
+  border-color: #c62828;
+  color: #c62828;
 }
 
 .geo-figure figcaption {

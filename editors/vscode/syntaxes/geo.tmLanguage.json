@@ -11,6 +11,26 @@
       "include": "#comment"
     },
     {
+      "comment": "a step with its mark at the end of the line (\"step Gleiche Punkte #gleich\")",
+      "match": "^\\s*(step|textstep)\\b(.*?)(\\s#[\\p{L}\\p{N}_-]+)\\s*$",
+      "captures": {
+        "1": {
+          "name": "keyword.control.geo"
+        },
+        "2": {
+          "name": "string.unquoted.caption.geo",
+          "patterns": [
+            {
+              "include": "#inline"
+            }
+          ]
+        },
+        "3": {
+          "name": "entity.name.tag.mark.geo"
+        }
+      }
+    },
+    {
       "match": "^\\s*(title|step|textstep|description|info|keyword)\\b(.*)$",
       "captures": {
         "1": {
