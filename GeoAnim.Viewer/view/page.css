@@ -139,6 +139,32 @@ svg.formula {
   outline: 1px solid #e3e6eb;
 }
 
+/* in the book: the steps of a figure as a row of stills (at most three side by side) */
+.geo-steps {
+  display: grid;
+  grid-template-columns: repeat(var(--columns, 3), minmax(0, 1fr));
+  gap: 0.6em;
+}
+
+/* the switch between book and web */
+#mode {
+  position: fixed;
+  top: 8px;
+  right: 8px;
+  z-index: 1;
+  padding: 3px 10px;
+  border: 1px solid #c7ccd4;
+  border-radius: 4px;
+  background: #fff;
+  color: #444;
+  font: 13px 'Segoe UI', system-ui, sans-serif;
+  cursor: pointer;
+}
+
+#mode:hover {
+  background: #f3f4f6;
+}
+
 .geo-placeholder {
   display: inline-flex;
   align-items: center;

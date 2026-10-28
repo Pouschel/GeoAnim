@@ -75,8 +75,10 @@ mklink /J "%USERPROFILE%\.vscode\extensions\geoanim-geo" "%CD%\editors\vscode"
   (mit dem YAML-Kopf), dazu Formeln `$…$` und `$$ … $$`; die Gliederung zeigt die Überschriften verschachtelt,
   Abschnitte, Kopf und Codeblöcke lassen sich falten; Zeilen werden umgebrochen angezeigt. Gewöhnliche `.md`-Dateien
   bleiben bei der Markdown-Unterstützung von VS Code. Es gibt dieselbe Vorschau wie für Skripte – Symbol oben rechts,
-  Strg+K V oder „GeoAnim: Vorschau öffnen“. Sie zeigt die Seite, wie GeoAnim sie setzt (Schrift, Formeln als SVG, Abbildungen als Player
-  oder Standbild), aktualisiert sich beim Tippen und zeigt dieselbe Stelle wie der Editor (beim Blättern im Editor blättert
+  Strg+K V oder „GeoAnim: Vorschau öffnen“. Sie zeigt die Seite, wie GeoAnim sie setzt (Schrift, Formeln als SVG, Abbildungen). Oben rechts
+  schaltet „Buch“/„Web“ um, wie die Abbildungen erscheinen: wie im Buch (Voreinstellung; `#2` ein Standbild, `#3..4` die
+  Standbilder der Schritte nebeneinander – höchstens drei in einer Reihe – mit Nummer und Schrittbeschreibung, eine ganze
+  Animation ihr letztes Bild) oder wie im Web (Player). Die Vorschau aktualisiert sich beim Tippen und zeigt dieselbe Stelle wie der Editor (beim Blättern im Editor blättert
   sie mit). Abbildungen, an denen sich nichts ändert, bleiben beim Tippen stehen (eine laufende Animation läuft weiter);
   sie zeigen die Skripte, wie sie gespeichert sind – nach dem Speichern eines Skripts aktualisiert sich die Seite. Fehler
   (eine Formel ohne schließendes `$`, ein fehlendes oder fehlerhaftes Skript, ein unbekannter Schritt, ein Fehler im Kopf)

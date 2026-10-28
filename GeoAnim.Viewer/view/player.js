@@ -38,8 +38,9 @@
   let liveVersion = null
   // the editor around an embedded preview (VS Code's webview API), if any
   let host = null
-  // a figure of a page ({ id, from, to, still }, in a frame of the page): from/to the steps shown (indices; null: all),
-  // still only the picture at the end of "to" (-1: the starting picture); it is as wide as its frame and tells the page
+  // a figure of a page ({ id, from, to, still, caption }, in a frame of the page): from/to the steps shown (indices;
+  // null: all), still only the picture at the end of "to" (-1: the starting picture; with caption: and the step's number
+  // and description above it); it is as wide as its frame (a still without caption: fills it) and tells the page
   // its height ({ type: 'geoanim-figure-height', id, height }) and when it starts to play ({ type: 'geoanim-figure-play',
   // id }; the page pauses the others: { type: 'geoanim-pause' })
   const figure = window.GEO_FIGURE || null
@@ -2006,11 +2007,13 @@
   async function start () {
     // "page.html?still#3": only the picture at the end of step 3, without texts and controls (the contact sheet of
     // "geoanim exportdir -sheet")
-    if (/[?&]still\b/.test(location.search) || (figure && figure.still)) {
+    if (/[?&]still\b/.test(location.search) || (figure && figure.still && !figure.caption)) {
       document.body.classList.add('still')
     }
     if (figure) {
       document.body.classList.add('figure')
+      // a still with its step's number and description (a row of stills in the book): no controls
+      document.body.classList.toggle('nocontrols', !!figure.still)
       window.addEventListener('message', event => {
         if (event.data && event.data.type === 'geoanim-pause' && playing) {
           pause()

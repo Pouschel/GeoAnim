@@ -88,7 +88,15 @@
 
   // ------------------------------------------------------------------ figures
 
-  // a player in a frame for every figure that has none yet
+  // how figures show: 'book' as in the printed book (stills; steps from … to as a row of stills with their numbers and
+  // descriptions; a whole animation as its last picture) or 'web' as on a web page (players)
+  let mode = 'book'
+  try {
+    mode = (host && host.getState() && host.getState().mode) || 'book'
+  } catch (ignored) {
+  }
+
+  // a frame with the player for every figure that has none yet
   function startFigures () {
     for (const item of page.querySelectorAll('.geo-item[data-figure]')) {
       if (item.querySelector('iframe')) {
@@ -98,24 +106,72 @@
       if (!data || !window.GEO_FIGURE_PLAYER) {
         continue
       }
-      const frame = document.createElement('iframe')
-      const id = 'figure' + nextFrame++
-      frame.dataset.id = id
-      frame.title = 'Abbildung'
       const ratio = parseFloat(getComputedStyle(item).getPropertyValue('--ratio')) || 1.6
-      if (data.still) {
-        frame.style.aspectRatio = String(ratio)
-      } else {
-        // until the player tells its height: picture, description and controls
-        frame.style.height = Math.round(item.clientWidth / ratio + 110) + 'px'
+      if (mode === 'web' || data.still) {
+        item.appendChild(frame(data.animation, { from: data.from, to: data.to, still: data.still }, ratio, item.clientWidth))
+        continue
       }
-      const script = 'window.GEO_ANIMATION = ' + JSON.stringify(data.animation) + ';\n' +
-        'window.GEO_FIGURE = ' + JSON.stringify({ id, from: data.from, to: data.to, still: data.still }) + ';'
-      // the JSON in a script element: "<" written as <, so that it cannot end the element
-      frame.srcdoc = window.GEO_FIGURE_PLAYER.replace('/*GEO_FIGURE*/', () => script.replace(/[<]/g, '\\u003c'))
-      item.appendChild(frame)
+      // the book: the stills of the steps side by side (at most three in a row), each with its number and description;
+      // a whole animation: its last picture
+      const count = data.animation.steps.length
+      const from = typeof data.from === 'number' ? data.from : count - 1
+      const to = typeof data.to === 'number' ? data.to : count - 1
+      if (from === to) {
+        item.appendChild(frame(data.animation, { from: to, to, still: true }, ratio, item.clientWidth))
+        continue
+      }
+      const row = document.createElement('div')
+      row.className = 'geo-steps'
+      const columns = Math.min(to - from + 1, to - from + 1 === 4 ? 2 : 3)
+      row.style.setProperty('--columns', String(columns))
+      item.appendChild(row)
+      for (let step = from; step <= to; step++) {
+        row.appendChild(frame(data.animation, { from: step, to: step, still: true, caption: true }, ratio, item.clientWidth / columns))
+      }
     }
   }
+
+  function frame (animation, part, ratio, width) {
+    const element = document.createElement('iframe')
+    const id = 'figure' + nextFrame++
+    element.dataset.id = id
+    element.title = 'Abbildung'
+    if (part.still && !part.caption) {
+      element.style.aspectRatio = String(ratio)
+    } else {
+      // until the player tells its height: picture, description (and controls)
+      element.style.height = Math.round(width / ratio + (part.caption ? 40 : 110)) + 'px'
+    }
+    const script = 'window.GEO_ANIMATION = ' + JSON.stringify(animation) + ';\n' +
+      'window.GEO_FIGURE = ' + JSON.stringify(Object.assign({ id }, part)) + ';'
+    // the JSON in a script element: "<" written as \u003c, so that it cannot end the element
+    element.srcdoc = window.GEO_FIGURE_PLAYER.replace('/*GEO_FIGURE*/', () => script.replace(/[<]/g, '\\u003c'))
+    return element
+  }
+
+  // the switch between book and web: all figures anew
+  const modeButton = document.getElementById('mode')
+  function showMode () {
+    modeButton.textContent = mode === 'book' ? 'Buch' : 'Web'
+    modeButton.title = mode === 'book'
+      ? 'Abbildungen wie im Buch (Standbilder); klicken: wie im Web (Player)'
+      : 'Abbildungen wie im Web (Player); klicken: wie im Buch (Standbilder)'
+  }
+  showMode()
+  modeButton.addEventListener('click', () => {
+    mode = mode === 'book' ? 'web' : 'book'
+    try {
+      if (host) {
+        host.setState({ mode })
+      }
+    } catch (ignored) {
+    }
+    showMode()
+    for (const old of page.querySelectorAll('.geo-item[data-figure] > *')) {
+      old.remove()
+    }
+    startFigures()
+  })
 
   const frameOf = id => page.querySelector(`iframe[data-id="${id}"]`)
 

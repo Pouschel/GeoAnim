@@ -667,6 +667,7 @@ function sendPage (result, keepPosition) {
   pagePreview.webview.postMessage({
     type: 'page',
     html: result.html,
+    figures: result.figures || {},
     error: error ? `Line ${error.line}, column ${error.column}: ${error.message}` : null,
     line: keepPosition ? undefined : topLine(pageDocument)
   })

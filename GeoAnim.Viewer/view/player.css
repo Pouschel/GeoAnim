@@ -613,9 +613,14 @@ body.figure #coords {
   display: none !important;
 }
 
+body.nocontrols #controls {
+  display: none !important;
+}
+
 body.figure #scene {
   box-shadow: none;
   outline: 1px solid #e3e6eb;
+  outline-offset: -1px;
 }
 
 body.figure #controls {

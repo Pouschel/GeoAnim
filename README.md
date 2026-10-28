@@ -319,7 +319,9 @@ Ein **Punkt** beschreibt eine genaue Lage. Man schreibt $M != Q$, wenn …
   zwei Schritte mit demselben Namen brauchen eine. Mehrere solche Bilder in einem Absatz stehen nebeneinander. Die
   Bildunterschrift darf Markdown und Formeln enthalten. Ein fehlendes oder fehlerhaftes Skript, ein unbekannter Schritt
   (die Meldung nennt die vorhandenen) und ein verkehrter Bereich sind Fehler. Spielt ein Player, halten die anderen der
-  Seite an.
+  Seite an. So erscheinen die Abbildungen im Web; im Buch wird `#3..4` zur Bildfolge (die Standbilder der Schritte
+  nebeneinander, mit Nummer und Schrittbeschreibung) und eine ganze Animation zu ihrem letzten Bild – die Vorschau in VS
+  Code zeigt beides (Schalter „Buch“/„Web“).
 
 ## C#
 
