@@ -266,7 +266,9 @@ Eine Buchseite in Markdown (`….geo.md` neben den Skripten, im Aufbau; Erkläru
 | Formel | `$…$` · `$$` … `$$` auf eigenen Zeilen | AsciiMath; `\$` ist ein Dollarzeichen |
 | Abbildung | `![Unterschrift](datei.geo)` | die ganze Animation; allein im Absatz |
 | | `![…](datei.geo#2)` · `#gleich` · `#0` | Standbild am Ende eines Schritts (Nummer, Marke oder Name aus dem Schritttext); `#0` das Startbild |
-| | `![…](datei.geo#3..4)` · `#3-4` · `#von..bis` | Player nur für die Schritte von … bis (ab Schritt 1) |
+| | `![…](datei.geo#3..4)` · `#3-4` · `#von..bis` | Player nur für die Schritte von … bis (ab Schritt 1); im Buch die Bildfolge |
+| | `![…](#2)` · `#3..4` · `#name` · `![…](#)` | dasselbe aus dem eigenen Skript der Seite (`seite.geo` zu `seite.geo.md`); `#` allein: die ganze Animation |
+| Attribute | `{crop=no}` · `{float=left}` · `{float=right}` · `{width=40%}` · `{width=60mm}` | hinter dem Bild; `crop=no`: im Buch nicht auf den Inhalt zuschneiden; `float`/`width`: Text fließt um die Abbildung (noch nicht umgesetzt) |
 
 ## Schlüsselwörter
 

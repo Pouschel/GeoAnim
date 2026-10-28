@@ -70,6 +70,7 @@ public sealed class GeoStraight : GeoObject
         {
             IsDrawn = true;
             line = context.Scene.Create(this, "line", Layers.Of(Options, Layers.Curve));
+            line.Unbounded = StraightKind != StraightKind.Segment;
         }
         var part = IsDefined ? VisiblePart(context.View) : null;
         line.Animate("opacity", span, part == null ? 0 : Opacity);

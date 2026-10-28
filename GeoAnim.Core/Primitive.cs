@@ -24,6 +24,9 @@ internal sealed class Primitive(int id, string type, int layer)
     /// <summary>The object it belongs to (its label too), or null.</summary>
     public GeoObject? Owner { get; init; }
 
+    /// <summary>A line without ends (a ray or a whole line): it reaches to the border of the view.</summary>
+    public bool Unbounded { get; set; }
+
     /// <summary>
     /// Changes <paramref name="property"/> to <paramref name="value"/> during <paramref name="span"/>: it keeps its value
     /// until the start of the span, then changes with the span's easing until its end. A span of length 0 sets the value

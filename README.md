@@ -316,12 +316,22 @@ Ein **Punkt** beschreibt eine genaue Lage. Man schreibt $M != Q$, wenn …
   beginnt (bei Zahlen auch `#3-4`). Statt Nummern gehen Namen: die Marke eines Schritts (`step Gleiche Punkte #gleich`
   im Skript – `#name` am Ende des Schritttexts, gehört nicht zum Text) oder sein Text in Kleinbuchstaben mit `-` zwischen
   den Wörtern (`#gleiche-punkte`; ä → ae usw., `$bar(AB)$` → `ab`). Marken bleiben beim Umbenennen eines Schritts gültig;
-  zwei Schritte mit demselben Namen brauchen eine. Mehrere solche Bilder in einem Absatz stehen nebeneinander. Die
+  zwei Schritte mit demselben Namen brauchen eine. **Das eigene Skript** der Seite (`seite.geo` zu `seite.geo.md`) braucht
+  keinen Namen: `![](#2)`, `![](#3..4)`, `![](#gleich)`, `![](#)` für die ganze Animation – so bleiben die Verweise
+  richtig, wenn man beide Dateien umbenennt (für Links bleibt `[Text](#abschnitt)` eine Sprungmarke). Mehrere solche Bilder in einem Absatz stehen nebeneinander. Die
   Bildunterschrift darf Markdown und Formeln enthalten. Ein fehlendes oder fehlerhaftes Skript, ein unbekannter Schritt
   (die Meldung nennt die vorhandenen) und ein verkehrter Bereich sind Fehler. Spielt ein Player, halten die anderen der
   Seite an. So erscheinen die Abbildungen im Web; im Buch wird `#3..4` zur Bildfolge (die Standbilder der Schritte
   nebeneinander, mit Nummer und Schrittbeschreibung) und eine ganze Animation zu ihrem letzten Bild – die Vorschau in VS
-  Code zeigt beides (Schalter „Buch“/„Web“).
+  Code zeigt beides (Schalter „Buch“/„Web“). Im Buch wird jede Abbildung auf ihren Inhalt zugeschnitten (was gezeichnet ist,
+  samt Beschriftungen, aber ohne Strahlen und Geraden, die ohnehin bis zum Rand reichen; dazu ein Rand von 5 %, mindestens
+  16 pt) und um so viel kleiner – Linien und Schrift behalten die Größe, die sie in der ganzen Ansicht hätten; die Bilder
+  einer Bildfolge bekommen denselben Ausschnitt.
+- **Attribute** in geschweiften Klammern hinter dem Bild: `{crop=no}` zeigt im Buch die ganze `view` statt des
+  Zuschnitts; `{float=left}` oder `{float=right}` mit `{width=40%}` (oder `width=60mm`) lässt den Text um die Abbildung
+  fließen – festgelegt, aber noch nicht umgesetzt; im Web und im E-Book kommt es später, im gedruckten Buch bleiben
+  Abbildungen zentriert. Mehrere Attribute: `{float=right width=40%}`; bei mehreren Bildern einer Abbildung gelten
+  `float` und `width` für die ganze Abbildung. Falsche Werte sind Fehler, unbekannte Attribute eine Warnung.
 
 ## C#
 
@@ -360,7 +370,7 @@ Tippen aktualisiert und dem Schritt unter dem Cursor folgt, Fehler als rote Unte
 | `GeoAnim` | Kommandozeile `geoanim serve` (EmbedIO, Dateibeobachtung, `/animation.json`) und `geoanim export` |
 | `GeoAnim.Tests` | xUnit: Geometrie, Zeitleiste, Sprache, Formeln, Export, Server, alle Beispiele in `Samples` |
 
-**Animationsdaten:** Ein Objekt besteht aus Grundelementen (`dot`, `line`, `arc`, `polygon`, `text`) mit je einer Spur pro Eigenschaft: Schlüssel `[zeit, wert]` oder `[zeit, wert, verlauf]` (Zeit in ms; Verlauf `s` = Sprung, `i`/`o`/`io` = ease in/out/in-out, sonst linear). Zwischen zwei Schlüsseln interpoliert der Player mit dem Verlauf des späteren; vor dem ersten Schlüssel ist ein Element nicht da. Beim Schreiben fallen Schlüssel weg, die auf der Geraden zwischen ihren Nachbarn liegen (Koordinaten auf einen Viertelpunkt genau, sonst auf ein Tausendstel) – vor allem die alle 40 ms berechneten Werte während Bewegungen. Dazu kommen Titel, Bereich, Hintergrund, Gitter, Achsen, Gesamtdauer, die Schritte (`caption`, `start`, `end`) und die Formeln aller Texte (`math`: AsciiMath → `box` = viewBox in Tausendstel em mit der Grundlinie bei y = 0, `svg` = Pfade in `currentColor`).
+**Animationsdaten:** Ein Objekt besteht aus Grundelementen (`dot`, `line`, `arc`, `polygon`, `text`; Strahlen und Geraden mit `unbounded`) mit je einer Spur pro Eigenschaft: Schlüssel `[zeit, wert]` oder `[zeit, wert, verlauf]` (Zeit in ms; Verlauf `s` = Sprung, `i`/`o`/`io` = ease in/out/in-out, sonst linear). Zwischen zwei Schlüsseln interpoliert der Player mit dem Verlauf des späteren; vor dem ersten Schlüssel ist ein Element nicht da. Beim Schreiben fallen Schlüssel weg, die auf der Geraden zwischen ihren Nachbarn liegen (Koordinaten auf einen Viertelpunkt genau, sonst auf ein Tausendstel) – vor allem die alle 40 ms berechneten Werte während Bewegungen. Dazu kommen Titel, Bereich, Hintergrund, Gitter, Achsen, Gesamtdauer, die Schritte (`caption`, `start`, `end`) und die Formeln aller Texte (`math`: AsciiMath → `box` = viewBox in Tausendstel em mit der Grundlinie bei y = 0, `svg` = Pfade in `currentColor`).
 
 ## Lizenz
 

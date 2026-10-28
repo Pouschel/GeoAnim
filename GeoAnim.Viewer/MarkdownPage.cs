@@ -20,10 +20,12 @@ public sealed record MarkdownProblem(int Line, int Column, string Message);
 
 /// <summary>
 /// A figure from a script: "![caption](file.geo)", "![](file.geo#2)", "![](file.geo#3..4)" (steps 3 to 4) or
-/// "![](file.geo#verschieden..gleich)" (steps by their mark or the name made from their title). <see cref="From"/> and
-/// <see cref="To"/> are null for the whole animation; a single step has both the same.
+/// "![](file.geo#verschieden..gleich)" (steps by their mark or the name made from their title); "![](#2)" and "![](#)"
+/// refer to the page's own script (seite.geo for seite.geo.md). <see cref="From"/> and <see cref="To"/> are null for the
+/// whole animation; a single step has both the same. <see cref="Crop"/>: cut to what it shows in the book (attribute
+/// "{crop=no}": the whole view).
 /// </summary>
-public sealed record GeoReference(string File, string? From, string? To, string Caption, int Line, int Column)
+public sealed record GeoReference(string File, string? From, string? To, string Caption, int Line, int Column, bool Crop = true)
 {
     /// <summary>The address as written: file and steps.</summary>
     public string Source => From == null ? File : File + "#" + (From == To ? From : From + ".." + To);
@@ -35,7 +37,11 @@ public sealed record GeoReference(string File, string? From, string? To, string 
 /// (-1: the starting picture). <see cref="Key"/> stays the same as long as all of that does; <see cref="Ratio"/> is the
 /// picture's width by its height.
 /// </summary>
-public sealed record PageFigure(string Key, GeoReference Reference, string AnimationJson, int? From, int? To, bool Still, double Ratio);
+public sealed record PageFigure(string Key, GeoReference Reference, string AnimationJson, int? From, int? To, bool Still, double Ratio)
+{
+    /// <summary>Cut to what it shows (in the book).</summary>
+    public bool Crop => Reference.Crop;
+}
 
 /// <summary>
 /// A page of a book in Markdown (CommonMark with tables, footnotes and attributes): a YAML block at the start
@@ -130,9 +136,10 @@ public sealed partial class MarkdownPage
             }
             var references = new List<GeoReference>();
             var shown = new List<FigureItem>();
+            var figureOptions = new Dictionary<string, string>(StringComparer.Ordinal);
             foreach (LinkInline image in images)
             {
-                GeoReference? reference = ReferenceOf(text, image, locate, errors);
+                GeoReference? reference = ReferenceOf(text, file, image, locate, errors, warnings, figureOptions);
                 if (reference == null)
                 {
                     shown.Add(new FigureItem(image.Url!, null, null, Faulty: true));
@@ -169,7 +176,13 @@ public sealed partial class MarkdownPage
             ContainerBlock parent = paragraph.Parent!;
             int index = parent.IndexOf(paragraph);
             parent.RemoveAt(index);
-            parent.Insert(index, new GeoFigureBlock(shown) { Line = paragraph.Line, Column = paragraph.Column, Span = paragraph.Span });
+            var block = new GeoFigureBlock(shown) { Line = paragraph.Line, Column = paragraph.Column, Span = paragraph.Span };
+            // float and width (for the web and e-books later; in print the figure stays centred)
+            foreach ((string key, string value) in figureOptions)
+            {
+                block.GetAttributes().AddProperty("data-" + key, value);
+            }
+            parent.Insert(index, block);
         }
 
         // a "$" that does not start a formula (no closing one, or a space after it): as in scripts a mistake
@@ -343,20 +356,70 @@ public sealed partial class MarkdownPage
         return images.Count > 0 ? images : null;
     }
 
+    // a script ("file.geo…") or the page's own ("#…": an image cannot point to a place on its page)
     private static bool IsScript(string? url) =>
-        url != null && Regex.IsMatch(url.Split('#')[0], @"\.geo$", RegexOptions.IgnoreCase);
+        url != null && (url.StartsWith('#') || Regex.IsMatch(url.Split('#')[0], @"\.geo$", RegexOptions.IgnoreCase));
 
-    // "file.geo", "file.geo#2", "file.geo#3..4" (also "3-4"), "file.geo#name", "file.geo#from..to"
-    private static GeoReference? ReferenceOf(string text, LinkInline image, Func<int, (int, int)> locate, List<MarkdownProblem> errors)
+    // the attributes of a figure: "{crop=no}" for the image, "{float=right width=40%}" for the whole figure
+    private static readonly string[] FigureAttributes = ["crop", "float", "width"];
+
+    // "file.geo", "file.geo#2", "file.geo#3..4" (also "3-4"), "file.geo#name", "file.geo#from..to"; "#…" the page's own
+    // script
+    private static GeoReference? ReferenceOf(string text, string? page, LinkInline image, Func<int, (int, int)> locate,
+        List<MarkdownProblem> errors, List<MarkdownProblem> warnings, Dictionary<string, string> figureOptions)
     {
         string url = image.Url!;
         (int line, int column) = locate(image.Span.Start);
         string caption = image.FirstChild == null ? "" : CaptionOf(text, image);
+        bool crop = true;
+        foreach ((string key, string? raw) in image.TryGetAttributes()?.Properties ?? [])
+        {
+            string value = (raw ?? "").Trim();
+            switch (key)
+            {
+                case "crop" when value is "yes" or "no":
+                    crop = value == "yes";
+                    break;
+                case "float" when value is "left" or "right":
+                case "width" when WidthPattern().IsMatch(value):
+                    if (figureOptions.TryGetValue(key, out string? other) && other != value)
+                    {
+                        errors.Add(new MarkdownProblem(line, column, $"The images of this figure have different values for \"{key}\" ({other}, {value})."));
+                    }
+                    figureOptions[key] = value;
+                    break;
+                case "crop" or "float" or "width":
+                    errors.Add(new MarkdownProblem(line, column, key switch
+                    {
+                        "crop" => $"\"crop={value}\": write crop=yes or crop=no.",
+                        "float" => $"\"float={value}\": write float=left or float=right.",
+                        _ => $"\"width={value}\": write a width like width=40% or width=60mm.",
+                    }));
+                    break;
+                default:
+                    warnings.Add(new MarkdownProblem(line, column,
+                        $"Unknown attribute \"{key}\" of a figure (known: {string.Join(", ", FigureAttributes)})."));
+                    break;
+            }
+        }
         int hash = url.IndexOf('#');
         string file = Uri.UnescapeDataString(hash < 0 ? url : url.Substring(0, hash));
-        if (hash < 0)
+        if (hash == 0)
         {
-            return new GeoReference(file, null, null, caption, line, column);
+            // the page's own script: seite.geo for seite.geo.md
+            string? name = page == null ? null : Path.GetFileName(page);
+            if (name == null || !name.EndsWith(".geo.md", StringComparison.OrdinalIgnoreCase))
+            {
+                errors.Add(new MarkdownProblem(line, column, name == null
+                    ? $"\"{url}\" means the page's own script: the page must be saved first."
+                    : $"\"{url}\" means the page's own script, but \"{name}\" is not named after one (seite.geo.md for seite.geo)."));
+                return null;
+            }
+            file = name.Substring(0, name.Length - ".md".Length);
+        }
+        if (hash < 0 || hash == url.Length - 1)
+        {
+            return new GeoReference(file, null, null, caption, line, column, crop);
         }
         string steps = url.Substring(hash + 1);
         Match match = StepPattern().Match(steps);
@@ -368,8 +431,11 @@ public sealed partial class MarkdownPage
         }
         string from = match.Groups[1].Success ? match.Groups[1].Value : match.Groups[3].Value;
         string to = match.Groups[2].Success ? match.Groups[2].Value : match.Groups[4].Success ? match.Groups[4].Value : from;
-        return new GeoReference(file, from, to, caption, line, column);
+        return new GeoReference(file, from, to, caption, line, column, crop);
     }
+
+    [GeneratedRegex(@"^\d+(\.\d+)?(%|mm)$")]
+    private static partial Regex WidthPattern();
 
     // "3..4", "3-4" (numbers only: names have hyphens), "verschieden..gleich", "2", "gleich"
     [GeneratedRegex(@"^(?:(\d+)-(\d+)|([\p{L}\p{N}_-]+)(?:\.\.([\p{L}\p{N}_-]+))?)$")]
@@ -513,7 +579,7 @@ public sealed partial class MarkdownPage
         }
         string json = animation.ToJson();
         string key = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(
-            json + "|" + from + "|" + to + "|" + still)))[..16].ToLowerInvariant();
+            json + "|" + from + "|" + to + "|" + still + "|" + reference.Crop)))[..16].ToLowerInvariant();
         ViewWindow view = animation.View;
         double ratio = (view.XMax - view.XMin) / (view.YMax - view.YMin);
         return new PageFigure(key, reference, json, from, to, still, ratio);

@@ -255,4 +255,49 @@ public sealed class MarkdownTests : IDisposable
         File.SetLastWriteTimeUtc(Path.Combine(folder, "gut.geo"), DateTime.UtcNow.AddSeconds(5));
         Assert.Equal(3, Assert.Single(Ask().GetProperty("figures").EnumerateObject()).Value.GetProperty("animation").GetProperty("steps").GetArrayLength());
     }
+
+    [Fact]
+    public void AHashAloneMeansThePagesOwnScript()
+    {
+        File.WriteAllText(Path.Combine(folder, "punkte.geo"), "point A = 0 0\nstep Eins #eins\nstep Zwei\n");
+        string file = Path.Combine(folder, "punkte.geo.md");
+        MarkdownPage page = MarkdownPage.Parse("![](#)\n\n![](#2)\n\n![](#eins..2)\n", file, ScriptCompiler.CompileFile);
+
+        Assert.Empty(page.Errors);
+        Assert.Equal(["punkte.geo", "punkte.geo#2", "punkte.geo#eins..2"], page.Figures.Select(f => f.Source));
+        Assert.Equal(3, page.PageFigures.Count);
+
+        // a page not named after a script, and one not saved
+        Assert.Contains("not named after one", Assert.Single(MarkdownPage.Parse("![](#2)", Path.Combine(folder, "seite.md")).Errors).Message);
+        Assert.Contains("saved first", Assert.Single(MarkdownPage.Parse("![](#2)").Errors).Message);
+        // a link to a place on the page stays a link
+        Assert.Contains("<a href=\"#oben\">", MarkdownPage.Parse("[nach oben](#oben)").Html);
+    }
+
+    [Fact]
+    public void FiguresHaveAttributes()
+    {
+        File.WriteAllText(Path.Combine(folder, "punkte.geo"), "point A = 0 0\nstep Eins\n");
+        string file = Path.Combine(folder, "punkte.geo.md");
+        MarkdownPage page = MarkdownPage.Parse("""
+            ![](#1){crop=no float=right width=40%}
+
+            ![](#1){width=60mm}
+            ![](#1){width=50mm}
+
+            ![](#1){crop=vielleicht float=oben width=breit farbe=rot}
+            """, file, ScriptCompiler.CompileFile);
+
+        Assert.False(page.Figures[0].Crop);
+        Assert.True(page.Figures[1].Crop);
+        Assert.Contains("data-float=\"right\"", page.Html);
+        Assert.Contains("data-width=\"40%\"", page.Html);
+        Assert.NotEqual(page.PageFigures[0].Key, page.PageFigures[1].Key);
+        Assert.Collection(page.Errors,
+            e => Assert.Equal((4, "The images of this figure have different values for \"width\" (60mm, 50mm)."), (e.Line, e.Message)),
+            e => Assert.Contains("crop=yes or crop=no", e.Message),
+            e => Assert.Contains("float=left or float=right", e.Message),
+            e => Assert.Contains("width=40%", e.Message));
+        Assert.Contains("farbe", Assert.Single(page.Warnings).Message);
+    }
 }

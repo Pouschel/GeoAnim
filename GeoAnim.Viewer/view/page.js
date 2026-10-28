@@ -107,17 +107,22 @@
         continue
       }
       const ratio = parseFloat(getComputedStyle(item).getPropertyValue('--ratio')) || 1.6
+      const steps = data.animation.steps
+      // in the book cut to what the pictures show: the times of the stills (a row of stills: all of them alike)
+      const endOf = index => index >= 0 && steps[index] ? steps[index].end : 0
+      const crop = (from, to) => mode === 'book' && data.crop ? Array.from({ length: to - from + 1 }, (_, k) => endOf(from + k)) : undefined
       if (mode === 'web' || data.still) {
-        item.appendChild(frame(data.animation, { from: data.from, to: data.to, still: data.still }, ratio, item.clientWidth))
+        const still = data.still ? crop(data.to, data.to) : undefined
+        item.appendChild(frame(data.animation, { from: data.from, to: data.to, still: data.still, crop: still }, ratio, item.clientWidth))
         continue
       }
       // the book: the stills of the steps side by side (at most three in a row), each with its number and description;
       // a whole animation: its last picture
-      const count = data.animation.steps.length
+      const count = steps.length
       const from = typeof data.from === 'number' ? data.from : count - 1
       const to = typeof data.to === 'number' ? data.to : count - 1
       if (from === to) {
-        item.appendChild(frame(data.animation, { from: to, to, still: true }, ratio, item.clientWidth))
+        item.appendChild(frame(data.animation, { from: to, to, still: true, crop: crop(to, to) }, ratio, item.clientWidth))
         continue
       }
       const row = document.createElement('div')
@@ -125,8 +130,9 @@
       const columns = Math.min(to - from + 1, to - from + 1 === 4 ? 2 : 3)
       row.style.setProperty('--columns', String(columns))
       item.appendChild(row)
+      const cell = (item.clientWidth - 10 * (columns - 1)) / columns
       for (let step = from; step <= to; step++) {
-        row.appendChild(frame(data.animation, { from: step, to: step, still: true, caption: true }, ratio, item.clientWidth / columns))
+        row.appendChild(frame(data.animation, { from: step, to: step, still: true, caption: true, crop: crop(from, to) }, ratio, cell))
       }
     }
   }
@@ -136,6 +142,11 @@
     const id = 'figure' + nextFrame++
     element.dataset.id = id
     element.title = 'Abbildung'
+    // the width it has before it is cut to its content (a row of stills: the width of a column)
+    element.baseWidth = width
+    if (part.caption) {
+      element.style.width = Math.floor(width) + 'px'
+    }
     if (part.still && !part.caption) {
       element.style.aspectRatio = String(ratio)
     } else {
@@ -180,7 +191,16 @@
     if (!message) {
       return
     }
-    if (message.type === 'geoanim-figure-height') {
+    if (message.type === 'geoanim-figure-crop') {
+      // cut to its content: as much narrower as its picture, in its new shape
+      const frame = frameOf(message.id)
+      if (frame && frame.baseWidth) {
+        frame.style.width = Math.max(40, Math.round(frame.baseWidth * message.fraction)) + 'px'
+        if (frame.style.aspectRatio) {
+          frame.style.aspectRatio = String(message.ratio)
+        }
+      }
+    } else if (message.type === 'geoanim-figure-height') {
       const frame = frameOf(message.id)
       if (frame) {
         frame.style.height = message.height + 'px'

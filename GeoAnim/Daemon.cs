@@ -20,7 +20,7 @@ namespace GeoAnim.Cli;
 /// <item>{"id": 3, "type": "keywords"} → {"id": 3, "keywords": ["angle", …], "colors": {"red": "#d32f2f", …}} – the words that
 /// cannot be names, and the colour names.</item>
 /// <item>{"id": 4, "type": "markdown", "file": "C:\\…\\a.geo.md", "text": "…"} → {"id": 4, "html": "…", "title": "…" or null,
-/// "figures": {"key": {"animation": {…}, "from": 2 or null, "to": 3 or null, "still": false}, …}, "errors": […],
+/// "figures": {"key": {"animation": {…}, "from": 2 or null, "to": 3 or null, "still": false, "crop": true}, …}, "errors": […],
 /// "warnings": […] (as for "compile")} – a page of a book in Markdown, its figures from the scripts beside the file (as
 /// saved; compiled scripts are kept while their files stay the same).</item>
 /// <item>{"id": 5, "type": "page"} → {"id": 5, "html": "…"} – the page for the preview of a Markdown page.</item>
@@ -206,6 +206,7 @@ internal static class Daemon
                 Index("from", figure.From);
                 Index("to", figure.To);
                 json.WriteBoolean("still", figure.Still);
+                json.WriteBoolean("crop", figure.Crop);
                 json.WriteEndObject();
             }
             json.WriteEndObject();

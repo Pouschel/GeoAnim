@@ -232,6 +232,11 @@ public sealed class AnimationData
         json.WriteNumber("id", primitive.Id);
         json.WriteString("type", primitive.Type);
         json.WriteNumber("layer", primitive.Layer);
+        if (primitive.Unbounded)
+        {
+            // a ray or a whole line: not part of what a figure is cut to
+            json.WriteBoolean("unbounded", true);
+        }
         json.WriteStartObject("tracks");
         foreach (KeyValuePair<string, List<Primitive.Key>> track in primitive.Tracks)
         {

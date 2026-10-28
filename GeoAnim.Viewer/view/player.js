@@ -38,7 +38,7 @@
   let liveVersion = null
   // the editor around an embedded preview (VS Code's webview API), if any
   let host = null
-  // a figure of a page ({ id, from, to, still, caption }, in a frame of the page): from/to the steps shown (indices;
+  // a figure of a page ({ id, from, to, still, caption, crop }, in a frame of the page): from/to the steps shown (indices;
   // null: all), still only the picture at the end of "to" (-1: the starting picture; with caption: and the step's number
   // and description above it); it is as wide as its frame (a still without caption: fills it) and tells the page
   // its height ({ type: 'geoanim-figure-height', id, height }) and when it starts to play ({ type: 'geoanim-figure-play',
@@ -47,6 +47,9 @@
   // the time shown: all of it, or in a figure the steps from … to
   let rangeStart = 0
   let rangeEnd = 0
+  // a figure in the book cut to what it shows (figure.crop: the times whose pictures count): the width of the whole
+  // view, so that lines and texts keep the size they have there
+  let fullViewWidth = null
 
   // ------------------------------------------------------------------ values over time
 
@@ -1234,6 +1237,8 @@
     }
     const view = animation.view
     const ratio = (view.xmax - view.xmin) / (view.ymax - view.ymin)
+    // sizes (texts, lines, points) as in the whole view, also when the figure shows a part of it
+    const fullFactor = fullViewWidth ? fullViewWidth / (view.xmax - view.xmin) : 1
     // the space between title and control bar, without the texts above and below the picture and the margins (16 left
     // and right, 10 in all).
     // The texts grow with the picture, so their height depends on its width and the other way round: a few rounds
@@ -1249,7 +1254,7 @@
     document.body.classList.remove('textstep')
     for (let round = 0; round < 3; round++) {
       const before = width
-      setTextScale(width / REFERENCE_WIDTH)
+      setTextScale(width * fullFactor / REFERENCE_WIDTH)
       reserveCaptionSpace()
       // with the reserved heights, not the texts shown now (a text step's long text does not count)
       // a figure (not a still): as wide as its frame, which gets the height that needs
@@ -1268,11 +1273,65 @@
     scene.setAttribute('height', height)
     scene.setAttribute('viewBox', `0 0 ${width} ${height}`)
     scale = width / (view.xmax - view.xmin)
-    unit = width / REFERENCE_WIDTH
+    unit = width * fullFactor / REFERENCE_WIDTH
     drawDecor()
     render()
     if (figure && !still) {
       reportFigureHeight(height)
+    }
+  }
+
+  // a figure in the book: the view cut to what is drawn at the given times (labels too; not rays and whole lines, which
+  // reach to the border anyway), with a margin; the page gets the part of the width that remains and the new shape
+  // ({ type: 'geoanim-figure-crop', id, fraction, ratio }) and makes the frame that much smaller
+  function cropToContent (times) {
+    const view = animation.view
+    const frame = scene.getBoundingClientRect()
+    let box = null
+    for (const t of times) {
+      time = Math.max(0, Math.min(animation.duration, t))
+      render()
+      for (const item of items) {
+        if (!item.shown || item.primitive.unbounded) {
+          continue
+        }
+        const rect = item.element.getBoundingClientRect()
+        if (!(rect.width > 0 || rect.height > 0)) {
+          continue
+        }
+        const x1 = rect.left - frame.left
+        const y1 = rect.top - frame.top
+        const x2 = rect.right - frame.left
+        const y2 = rect.bottom - frame.top
+        box = box ? { x1: Math.min(box.x1, x1), y1: Math.min(box.y1, y1), x2: Math.max(box.x2, x2), y2: Math.max(box.y2, y2) } : { x1, y1, x2, y2 }
+      }
+    }
+    if (!box) {
+      return
+    }
+    const xmin = view.xmin + box.x1 / scale
+    const xmax = view.xmin + box.x2 / scale
+    const ymax = view.ymax - box.y1 / scale
+    const ymin = view.ymax - box.y2 / scale
+    const full = view.xmax - view.xmin
+    // a margin of 5 % of the content, at least 16 points
+    const margin = Math.max(0.05 * Math.max(xmax - xmin, ymax - ymin), 16 * full / REFERENCE_WIDTH)
+    const cropped = {
+      xmin: Math.max(view.xmin, xmin - margin),
+      xmax: Math.min(view.xmax, xmax + margin),
+      ymin: Math.max(view.ymin, ymin - margin),
+      ymax: Math.min(view.ymax, ymax + margin)
+    }
+    fullViewWidth = full
+    animation = Object.assign({}, animation, { view: cropped })
+    layout()
+    if (window.parent !== window) {
+      window.parent.postMessage({
+        type: 'geoanim-figure-crop',
+        id: figure.id,
+        fraction: (cropped.xmax - cropped.xmin) / full,
+        ratio: (cropped.xmax - cropped.xmin) / (cropped.ymax - cropped.ymin)
+      }, '*')
     }
   }
 
@@ -1630,6 +1689,10 @@
     }
     reserveCaptionSpace()
     layout()
+    // a figure in the book: cut to what it shows
+    if (figure && Array.isArray(figure.crop) && !keepPosition) {
+      cropToContent(figure.crop)
+    }
     // a still of a figure: the end of its step (or the starting picture)
     if (figure && figure.still) {
       setTime(typeof figure.to === 'number' && figure.to >= 0 ? rangeEnd : 0)
