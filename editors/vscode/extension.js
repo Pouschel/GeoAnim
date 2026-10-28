@@ -24,9 +24,11 @@ let previewDocument = null
 let previewReady = false
 let previewPageLoaded = false
 let previewStep = null
-// what the preview shows: 'geo' (the player) or 'markdown' (a page); the page that is loaded in it
-let previewKind = null
-let loadedKind = null
+// the preview of the pages (.geo.md), apart from the one of the scripts: both can be open at once (e.g. in two windows)
+let pagePreview = null
+let pageDocument = null
+let pageReady = false
+let pagePageLoaded = false
 const lastResults = new Map()
 const timers = new Map()
 const reported = new Map()
@@ -159,9 +161,14 @@ function startDaemon () {
         output.appendLine(line)
         continue
       }
-      if (!answered && preview && !previewPageLoaded && answer.html === undefined) {
-        // geoanim answers again (e.g. after a new build): the preview gets its page now
-        setTimeout(loadPreviewPage, 0)
+      if (!answered && answer.html === undefined) {
+        // geoanim answers again (e.g. after a new build): the previews get their pages now
+        if (preview && !previewPageLoaded) {
+          setTimeout(loadPreviewPage, 0)
+        }
+        if (pagePreview && !pagePageLoaded) {
+          setTimeout(loadPagePreview, 0)
+        }
       }
       answered = true
       const waiting = pending.get(answer.id)
@@ -247,6 +254,9 @@ function restart () {
   if (preview) {
     loadPreviewPage()
   }
+  if (pagePreview) {
+    loadPagePreview()
+  }
   for (const document of vscode.workspace.textDocuments) {
     if (kindOf(document)) {
       compile(document)
@@ -315,8 +325,8 @@ async function renderMarkdown (document) {
   }
   lastResults.set(document.uri.toString(), result)
   report(document, result.errors, result.warnings || [])
-  if (document === previewDocument) {
-    sendResult(result)
+  if (document === pageDocument) {
+    sendPage(result)
   }
 }
 
@@ -533,16 +543,14 @@ function provideDocumentHighlights (document, position) {
   return reference ? referencesInFile(document, reference.name).map(r => new vscode.DocumentHighlight(rangeOf(r))) : []
 }
 
-// ------------------------------------------------------------------ preview
+// ------------------------------------------------------------------ preview of the scripts
 
 async function loadPreviewPage () {
   previewReady = false
-  const kind = previewKind || 'geo'
   try {
-    const answer = await request({ type: kind === 'markdown' ? 'page' : 'player' })
-    if (preview && answer.html && kind === (previewKind || 'geo')) {
+    const answer = await request({ type: 'player' })
+    if (preview && answer.html) {
       preview.webview.html = answer.html
-      loadedKind = kind
       previewPageLoaded = true
     }
   } catch (error) {
@@ -552,16 +560,6 @@ async function loadPreviewPage () {
 
 function sendResult (result, keepPosition, step) {
   if (!preview || !previewReady) {
-    return
-  }
-  if (previewKind === 'markdown') {
-    const error = result.errors[0]
-    preview.webview.postMessage({
-      type: 'page',
-      html: result.html,
-      error: error ? `Line ${error.line}, column ${error.column}: ${error.message}` : null,
-      line: keepPosition ? undefined : topLine(previewDocument)
-    })
     return
   }
   if (result.animation) {
@@ -581,13 +579,6 @@ function showInPreview (document) {
   previewDocument = document
   previewStep = null
   preview.title = 'GeoAnim: ' + path.basename(document.uri.fsPath)
-  const kind = kindOf(document)
-  if (kind !== previewKind) {
-    // the other page (player or Markdown page): it says "ready" when it is there
-    previewKind = kind
-    loadPreviewPage()
-    return
-  }
   const result = lastResults.get(document.uri.toString())
   if (result) {
     sendResult(result, false)
@@ -595,9 +586,14 @@ function showInPreview (document) {
   compile(document)
 }
 
+// the preview for the active editor: the player for a script, the page for a page
 function openPreview () {
   const editor = vscode.window.activeTextEditor
-  if (!editor || !kindOf(editor.document)) {
+  if (editor && isPage(editor.document)) {
+    openPagePreview(editor.document)
+    return
+  }
+  if (!editor || !isGeo(editor.document)) {
     vscode.window.showInformationMessage('GeoAnim: Bitte zuerst eine .geo- oder .geo.md-Datei öffnen.')
     return
   }
@@ -612,12 +608,10 @@ function openPreview () {
     preview = null
     previewDocument = null
     previewPageLoaded = false
-    previewKind = null
-    loadedKind = null
   })
   preview.webview.onDidReceiveMessage(message => {
     if (message && message.type === 'open') {
-      openLink(message.href)
+      openLink(message.href, previewDocument)
     }
     if (message && message.type === 'step' && typeof message.index === 'number') {
       revealStep(message.index)
@@ -631,10 +625,6 @@ function openPreview () {
       answer(message.result)
     }
     if (message && message.type === 'ready') {
-      if (loadedKind !== previewKind) {
-        // the page of before, while the other one loads
-        return
-      }
       previewReady = true
       sentHighlight = null
       if (previewDocument) {
@@ -648,28 +638,101 @@ function openPreview () {
     }
   })
   previewDocument = editor.document
-  previewKind = kindOf(editor.document)
   preview.title = 'GeoAnim: ' + path.basename(editor.document.uri.fsPath)
   loadPreviewPage()
   compile(editor.document)
 }
 
-// a link in the preview: a site in the browser, another animation (Prop1.html) as its script (Prop1.geo), a page of the
-// book (a .md file) or a figure of a page ("Punkte.geo#3..4") as its script at the step
-async function openLink (href) {
+// ------------------------------------------------------------------ preview of the pages
+
+async function loadPagePreview () {
+  pageReady = false
+  try {
+    const answer = await request({ type: 'page' })
+    if (pagePreview && answer.html) {
+      pagePreview.webview.html = answer.html
+      pagePageLoaded = true
+    }
+  } catch (error) {
+    // geoanim did not start: the error message says so
+  }
+}
+
+// the page, at the place the editor shows (unless keepPosition: while writing it stays where it is)
+function sendPage (result, keepPosition) {
+  if (!pagePreview || !pageReady) {
+    return
+  }
+  const error = result.errors[0]
+  pagePreview.webview.postMessage({
+    type: 'page',
+    html: result.html,
+    error: error ? `Line ${error.line}, column ${error.column}: ${error.message}` : null,
+    line: keepPosition ? undefined : topLine(pageDocument)
+  })
+}
+
+function showPage (document) {
+  pageDocument = document
+  pagePreview.title = 'GeoAnim: ' + path.basename(document.uri.fsPath)
+  const result = lastResults.get(document.uri.toString())
+  if (result) {
+    sendPage(result)
+  }
+  compile(document)
+}
+
+function openPagePreview (document) {
+  if (pagePreview) {
+    pagePreview.reveal(vscode.ViewColumn.Beside, true)
+    showPage(document)
+    return
+  }
+  pagePreview = vscode.window.createWebviewPanel('geoanimPagePreview', 'GeoAnim', { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true },
+    { enableScripts: true, retainContextWhenHidden: true })
+  pagePreview.onDidDispose(() => {
+    pagePreview = null
+    pageDocument = null
+    pagePageLoaded = false
+  })
+  pagePreview.webview.onDidReceiveMessage(message => {
+    if (message && message.type === 'open') {
+      openLink(message.href, pageDocument)
+    }
+    if (message && message.type === 'ready') {
+      pageReady = true
+      if (pageDocument) {
+        const result = lastResults.get(pageDocument.uri.toString())
+        if (result) {
+          sendPage(result)
+        } else {
+          compile(pageDocument)
+        }
+      }
+    }
+  })
+  pageDocument = document
+  pagePreview.title = 'GeoAnim: ' + path.basename(document.uri.fsPath)
+  loadPagePreview()
+  compile(document)
+}
+
+// a link in a preview of the document: a site in the browser, another animation (Prop1.html) as its script (Prop1.geo),
+// a page of the book (a .md file) or a figure of a page ("Punkte.geo#3..4") as its script at the step
+async function openLink (href, from) {
   if (/^[a-z][a-z0-9+.-]*:/i.test(href)) {
     vscode.env.openExternal(vscode.Uri.parse(href))
     return
   }
-  if (!previewDocument || previewDocument.uri.scheme !== 'file') {
+  if (!from || from.uri.scheme !== 'file') {
     return
   }
-  const target = path.resolve(path.dirname(previewDocument.uri.fsPath), decodeURIComponent(href.split(/[?#]/)[0]))
+  const target = path.resolve(path.dirname(from.uri.fsPath), decodeURIComponent(href.split(/[?#]/)[0]))
   // a link to a step ("Strecken.geo#2", as the keyword links of a book): the cursor goes to its "step" line
   const step = /#(\d+)(?:(?:\.\.|-)[^#]*)?$/.exec(href)
   if (/\.md$/i.test(target)) {
     if (fs.existsSync(target)) {
-      openBeside(await vscode.workspace.openTextDocument(target))
+      openBeside(await vscode.workspace.openTextDocument(target), from)
     } else {
       vscode.window.showInformationMessage(`GeoAnim: Die Seite ${href} gibt es nicht.`)
     }
@@ -680,7 +743,8 @@ async function openLink (href) {
     vscode.window.showInformationMessage(`GeoAnim: Zu ${href} gibt es kein Skript (gesucht: ${script}).`)
     return
   }
-  const editor = await openBeside(await vscode.workspace.openTextDocument(script))
+  const document = await vscode.workspace.openTextDocument(script)
+  const editor = await openBeside(document, from)
   if (step && Number(step[1]) > 0) {
     for (let i = 0, count = 0; i < document.lineCount; i++) {
       if (/^\s*(?:text)?step\b/.test(document.lineAt(i).text) && ++count === Number(step[1])) {
@@ -695,13 +759,14 @@ async function openLink (href) {
   // the preview follows the newly opened script (onDidChangeActiveTextEditor)
 }
 
-// a document in the editor group of the one shown so far – never in the preview's group, so that the preview stays visible
-function openBeside (document) {
-  const previewColumn = preview ? preview.viewColumn : undefined
-  const shown = (vscode.window.visibleTextEditors || []).find(editor => editor.document === previewDocument)
+// a document in the editor group of the one shown so far (from) – never in a preview's group, so that the previews stay
+// visible
+function openBeside (document, from) {
+  const previewColumns = [preview, pagePreview].filter(p => p).map(p => p.viewColumn)
+  const shown = (vscode.window.visibleTextEditors || []).find(editor => editor.document === from)
   let column = shown ? shown.viewColumn : undefined
-  if (!column || column === previewColumn) {
-    column = previewColumn === vscode.ViewColumn.One ? vscode.ViewColumn.Two : vscode.ViewColumn.One
+  if (!column || previewColumns.includes(column)) {
+    column = [vscode.ViewColumn.One, vscode.ViewColumn.Two, vscode.ViewColumn.Three].find(c => !previewColumns.includes(c))
   }
   return vscode.window.showTextDocument(document, { viewColumn: column, preview: false })
 }
@@ -713,10 +778,10 @@ function topLine (document) {
 }
 
 function followScrolling (editor) {
-  if (preview && previewReady && previewKind === 'markdown' && editor.document === previewDocument) {
+  if (pagePreview && pageReady && editor.document === pageDocument) {
     const line = topLine(editor.document)
     if (line !== undefined) {
-      preview.webview.postMessage({ type: 'line', line })
+      pagePreview.webview.postMessage({ type: 'line', line })
     }
   }
 }
@@ -768,7 +833,7 @@ function revealStep (index) {
 }
 
 function followCursor (editor) {
-  if (!preview || !previewReady || editor.document !== previewDocument || previewKind !== 'geo') {
+  if (!preview || !previewReady || editor.document !== previewDocument) {
     return
   }
   const index = cursorStep(editor.document)
@@ -1168,8 +1233,12 @@ function activate (context) {
       references.delete(key)
     }),
     vscode.window.onDidChangeActiveTextEditor(editor => {
-      if (editor && kindOf(editor.document) && preview && editor.document !== previewDocument) {
+      // each preview follows the active editor of its kind
+      if (editor && isGeo(editor.document) && preview && editor.document !== previewDocument) {
         showInPreview(editor.document)
+      }
+      if (editor && isPage(editor.document) && pagePreview && editor.document !== pageDocument) {
+        showPage(editor.document)
       }
     }),
     vscode.window.onDidChangeTextEditorSelection(event => followCursor(event.textEditor)),
