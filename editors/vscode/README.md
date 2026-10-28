@@ -71,7 +71,7 @@ mklink /J "%USERPROFILE%\.vscode\extensions\geoanim-geo" "%CD%\editors\vscode"
 - **Alle Verweise** (Umschalt+F12) listet die Stellen eines Namens; steht der Cursor auf einem Namen, sind seine
   Vorkommen in der Datei hervorgehoben.
 - Koordinaten unter der Maus und Umschalt+Klick zum Kopieren gibt es wie bei `geoanim serve`.
-- **Buchseiten in Markdown (`….geo.md`):** Sie haben eine eigene Sprache, „GeoAnim-Markdown“: Hervorhebung wie Markdown
+- **Buchseiten in Markdown (`….geo.md`,** Schreibweise in der [Referenz der Buchseiten](../../REFERENZ-MARKDOWN.md)**):** Sie haben eine eigene Sprache, „GeoAnim-Markdown“: Hervorhebung wie Markdown
   (mit dem YAML-Kopf), dazu Formeln `$…$` und `$$ … $$`; die Gliederung zeigt die Überschriften verschachtelt,
   Abschnitte, Kopf und Codeblöcke lassen sich falten; Zeilen werden umgebrochen angezeigt. Gewöhnliche `.md`-Dateien
   bleiben bei der Markdown-Unterstützung von VS Code. Es gibt dieselbe Vorschau wie für Skripte – Symbol oben rechts,

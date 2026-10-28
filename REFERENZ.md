@@ -15,7 +15,7 @@ Alle Befehle mit allen Schreibweisen und den Optionen, die jeweils erlaubt sind.
 - [Dateien](#dateien): `include`, `use`, `input`, `output`
 - [Optionen](#optionen) – welche Option für welchen Befehl
 - [Farben](#farben), [Standardwerte](#standardwerte), [Schlüsselwörter](#schlüsselwörter)
-- [Markdown-Seiten](#markdown-seiten) – Kopf und Abbildungen einer Buchseite in Markdown
+- Buchseiten in Markdown (`….geo.md`): eigene [Referenz der Buchseiten](REFERENZ-MARKDOWN.md)
 
 ## Grundregeln
 
@@ -166,7 +166,7 @@ Aktionen stehen in einem Schritt und laufen nacheinander. Die Optionen *Ablauf* 
 
 | Befehl | Schreibweisen | Optionen | Hinweise |
 |---|---|---|---|
-| `step` | `step Text …` · `step Text … #marke` | – | neuer Schritt; mit `|` fortsetzbar; `#marke` am Ende: sein Name für Abbildungen einer Markdown-Seite (eindeutig in der Datei, gehört nicht zum Text; ebenso bei `textstep`) |
+| `step` | `step Text …` · `step Text … #marke` | – | neuer Schritt; mit `|` fortsetzbar; `#marke` am Ende: sein Name für Abbildungen einer Buchseite (eindeutig in der Datei, gehört nicht zum Text; ebenso bei `textstep`; siehe [Referenz der Buchseiten](REFERENZ-MARKDOWN.md#abbildungen)) |
 | `textstep` | `textstep Text …` | – | Schritt nur mit Text: seine `info`-Texte stehen dort, wo sonst das Bild ist (bei langem Text scrollbar); erlaubt sind nur `info`, `keyword`, `pause` und Zahlen. Das Bild ist im nächsten Schritt wieder da, wie es war. Dauer beim Durchlaufen: eine `pause`, sonst eine Lesezeit (3 s + ¼ s je Wort) |
 | `info` | `info Text …` | – | Erklärung zum Schritt, linksbündig unter der Beschreibung; mit `|` fortsetzbar; ein weiteres `info` wird ein neuer Absatz; `info ## Titel` ist eine Zwischenüberschrift |
 | `show` | `show A B …` | *Ablauf* | zeigt Objekte (zeichnet versteckte, blendet ausgeblendete ein); schon sichtbare bleiben, wie sie sind |
@@ -255,20 +255,6 @@ Aktionen stehen in einem Schritt und laufen nacheinander. Die Optionen *Ablauf* 
 | `move`, `rotate`, `reflect` | | | 1000 ms, `ease` |
 | `pause` | | | 500 ms |
 | Schritt ohne Aktion | | | 500 ms |
-
-## Markdown-Seiten
-
-Eine Buchseite in Markdown (`….geo.md` neben den Skripten, im Aufbau; Erklärung in der [README](README.md#buchseiten-in-markdown-im-aufbau)).
-
-| Element | Schreibweise | Hinweise |
-|---|---|---|
-| Kopf | `---` · `title: …` · `description: …` · `keywords: [Punkt/e/en, …]` · `---` | am Dateianfang, alles freiwillig; ohne `title` gilt die erste `#`-Überschrift |
-| Formel | `$…$` · `$$` … `$$` auf eigenen Zeilen | AsciiMath; `\$` ist ein Dollarzeichen |
-| Abbildung | `![Unterschrift](datei.geo)` | die ganze Animation; allein im Absatz |
-| | `![…](datei.geo#2)` · `#gleich` · `#0` | Standbild am Ende eines Schritts (Nummer, Marke oder Name aus dem Schritttext); `#0` das Startbild |
-| | `![…](datei.geo#3..4)` · `#3-4` · `#von..bis` | Player nur für die Schritte von … bis (ab Schritt 1); im Buch die Bildfolge |
-| | `![…](#2)` · `#3..4` · `#name` · `![…](#)` | dasselbe aus dem eigenen Skript der Seite (`seite.geo` zu `seite.geo.md`); `#` allein: die ganze Animation |
-| Attribute | `{crop=no}` · `{float=left}` · `{float=right}` · `{width=40%}` · `{width=60mm}` | hinter dem Bild; `crop=no`: im Buch nicht auf den Inhalt zuschneiden; `float`/`width`: Text fließt um die Abbildung (noch nicht umgesetzt) |
 
 ## Schlüsselwörter
 

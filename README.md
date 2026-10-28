@@ -285,53 +285,27 @@ point D = use Prop1.geo A B draw offset 0 0.2
 
 Längere Texte eines Buchs schreibt man in Markdown statt in `info`-Zeilen: eine Datei `….geo.md` neben den Skripten, die
 ihre Abbildungen aus `.geo`-Dateien holt. So beschreibt das Skript nur noch Bild und Ablauf, das Markdown den Text –
-Grundlage für das Buch im Web, als E-Book und im Druck. Bisher gibt es die Vorschau in VS Code; der Export folgt. Die
-Doppelendung gibt den Seiten in VS Code eine eigene Sprache (ohne Konflikt mit der Markdown-Unterstützung von VS Code),
-während andere Programme (GitHub, Markdown-Editoren) sie weiter als Markdown anzeigen.
+Grundlage für das Buch im Web, als E-Book und im Druck. Bisher gibt es die Vorschau in VS Code (umschaltbar zwischen
+Buch und Web); der Export folgt.
 
 ```markdown
 ---
 title: Punkte und ihre Lage
-description: Was ein Punkt ist und wie wir ihn bezeichnen.
 keywords: [Punkt/e/en]
 ---
 
 # Punkte und ihre Lage
 
-![Punkte in der Ebene](10_Punkte.geo#2)
+![](#2)
 
 Ein **Punkt** beschreibt eine genaue Lage. Man schreibt $M != Q$, wenn …
 ```
 
-- **Kopf (Front Matter):** ein YAML-Block zwischen zwei `---`-Zeilen am Dateianfang, alles freiwillig: `title` (Name der
-  Seite in Menü, Inhaltsverzeichnis und Seitenkopf; ohne ihn gilt die erste `#`-Überschrift), `description`, `keywords`
-  (Schreibweise wie bei `keyword`, als Liste). Unbekannte Schlüssel sind eine Warnung.
-- **Text:** CommonMark mit Tabellen, Fußnoten und Attributen (`{#marke .klasse}`).
-- **Formeln:** AsciiMath zwischen `$…$` wie in den Skripten, auf eigenen Zeilen zwischen `$$` abgesetzt und zentriert;
-  `\$` ist ein Dollarzeichen. Ein `$`, das keine Formel beginnt (kein schließendes, oder ein Leerzeichen dahinter), ist ein
-  Fehler.
-- **Abbildungen:** ein Bild auf ein Skript, allein im Absatz: `![Bildunterschrift](datei.geo)` zeigt die ganze Animation
-  als Player (Bild, Schrittbeschreibung, Steuerleiste; ohne Titel, Menü und Erklärungen), `#2` ein Standbild am Ende von
-  Schritt 2 (`#0`: das Startbild), `#3..4` einen Player nur für die Schritte 3 bis 4, der mit dem Bild nach Schritt 2
-  beginnt (bei Zahlen auch `#3-4`). Statt Nummern gehen Namen: die Marke eines Schritts (`step Gleiche Punkte #gleich`
-  im Skript – `#name` am Ende des Schritttexts, gehört nicht zum Text) oder sein Text in Kleinbuchstaben mit `-` zwischen
-  den Wörtern (`#gleiche-punkte`; ä → ae usw., `$bar(AB)$` → `ab`). Marken bleiben beim Umbenennen eines Schritts gültig;
-  zwei Schritte mit demselben Namen brauchen eine. **Das eigene Skript** der Seite (`seite.geo` zu `seite.geo.md`) braucht
-  keinen Namen: `![](#2)`, `![](#3..4)`, `![](#gleich)`, `![](#)` für die ganze Animation – so bleiben die Verweise
-  richtig, wenn man beide Dateien umbenennt (für Links bleibt `[Text](#abschnitt)` eine Sprungmarke). Mehrere solche Bilder in einem Absatz stehen nebeneinander. Die
-  Bildunterschrift darf Markdown und Formeln enthalten. Ein fehlendes oder fehlerhaftes Skript, ein unbekannter Schritt
-  (die Meldung nennt die vorhandenen) und ein verkehrter Bereich sind Fehler. Spielt ein Player, halten die anderen der
-  Seite an. So erscheinen die Abbildungen im Web; im Buch wird `#3..4` zur Bildfolge (die Standbilder der Schritte
-  nebeneinander, mit Nummer und Schrittbeschreibung) und eine ganze Animation zu ihrem letzten Bild – die Vorschau in VS
-  Code zeigt beides (Schalter „Buch“/„Web“). Im Buch wird jede Abbildung auf ihren Inhalt zugeschnitten (was gezeichnet ist,
-  samt Beschriftungen, aber ohne Strahlen und Geraden, die ohnehin bis zum Rand reichen; dazu ein Rand von 5 %, mindestens
-  16 pt) und um so viel kleiner – Linien und Schrift behalten die Größe, die sie in der ganzen Ansicht hätten; die Bilder
-  einer Bildfolge bekommen denselben Ausschnitt.
-- **Attribute** in geschweiften Klammern hinter dem Bild: `{crop=no}` zeigt im Buch die ganze `view` statt des
-  Zuschnitts; `{float=left}` oder `{float=right}` mit `{width=40%}` (oder `width=60mm`) lässt den Text um die Abbildung
-  fließen – festgelegt, aber noch nicht umgesetzt; im Web und im E-Book kommt es später, im gedruckten Buch bleiben
-  Abbildungen zentriert. Mehrere Attribute: `{float=right width=40%}`; bei mehreren Bildern einer Abbildung gelten
-  `float` und `width` für die ganze Abbildung. Falsche Werte sind Fehler, unbekannte Attribute eine Warnung.
+Der Kopf gibt Titel, Beschreibung und Stichwörter; Formeln stehen wie in Skripten zwischen `$…$`. Ein Bild auf ein Skript
+wird zur Abbildung: `![](datei.geo)` die ganze Animation, `#2` ein Standbild am Ende von Schritt 2, `#3..4` die Schritte 3
+bis 4 (im Web als Player, im Buch als Bildfolge), Schritte auch über Marken (`step Gleiche Punkte #gleich`) oder ihren
+Namen; `![](#2)` meint das gleichnamige Skript der Seite. Im Buch werden Abbildungen auf ihren Inhalt zugeschnitten.
+Alles im Einzelnen: **[Referenz der Buchseiten](REFERENZ-MARKDOWN.md)**.
 
 ## C#
 
