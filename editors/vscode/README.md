@@ -84,7 +84,11 @@ mklink /J "%USERPROFILE%\.vscode\extensions\geoanim-geo" "%CD%\editors\vscode"
   sie zeigen die Skripte, wie sie gespeichert sind – nach dem Speichern eines Skripts aktualisiert sich die Seite. Fehler
   (eine Formel ohne schließendes `$`, ein fehlendes oder fehlerhaftes Skript, ein unbekannter Schritt, ein Fehler im Kopf)
   werden unterstrichen und stehen über der Seite. Ein Link auf eine andere Seite (`….geo.md`) öffnet diese. Die Marke
-  eines Schritts (`step … #marke`) ist im Skript hervorgehoben. Seiten haben ihre eigene Vorschau neben der
+  eines Schritts (`step … #marke`) ist im Skript hervorgehoben. **Verweise:** nach `§` bietet die Vervollständigung die
+  Marken des ganzen Buchs an (Abbildungen, Aussagen, Abschnitte – mit Nummer und Text), in `![](#` bzw.
+  `![](datei.geo#` (auch nach `..`) die Schritte des Skripts mit Nummer und Schrittbeschreibung; das Tooltip auf
+  `§name` zeigt das Ziel, F12 bzw. Strg+Klick springt zur Marke (auch auf eine andere Seite), ebenso ein Klick auf einen
+  Verweis in der Vorschau. Seiten haben ihre eigene Vorschau neben der
   der Skripte: Beide können gleichzeitig offen sein (etwa in zwei Fenstern), und jede folgt dem aktiven Editor ihrer Art.
 
 Die Arbeit macht `geoanim daemon`, einmal im Hintergrund gestartet (MathJax startet daher nur einmal). Gefunden wird

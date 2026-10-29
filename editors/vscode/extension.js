@@ -733,7 +733,13 @@ async function openLink (href, from) {
   const step = /#(\d+)(?:(?:\.\.|-)[^#]*)?$/.exec(href)
   if (/\.md$/i.test(target)) {
     if (fs.existsSync(target)) {
-      openBeside(await vscode.workspace.openTextDocument(target), from)
+      const page = await vscode.workspace.openTextDocument(target)
+      const editor = await openBeside(page, from)
+      // a reference to a mark on that page ("strecken.geo.md#def-strecke"): the cursor goes to the mark
+      const mark = /#([\p{L}\p{N}_-]+)$/u.exec(href)
+      if (mark) {
+        revealMark(editor, mark[1])
+      }
     } else {
       vscode.window.showInformationMessage(`GeoAnim: Die Seite ${href} gibt es nicht.`)
     }
@@ -984,6 +990,118 @@ function lastContentLine (document, start, end) {
   return end
 }
 
+// ------------------------------------------------------------------ pages (.geo.md): marks, references, steps
+
+// "§name" at the position (not "\§name"): the mark's name and the range of the reference
+function markReferenceAt (document, position) {
+  const range = document.getWordRangeAtPosition(position, /§§?[\p{L}\p{N}_](?:[\p{L}\p{N}_-]*[\p{L}\p{N}_])?/u)
+  if (!range) {
+    return null
+  }
+  if (range.start.character > 0 && document.lineAt(range.start.line).text[range.start.character - 1] === '\\') {
+    return null
+  }
+  return { name: document.getText(range).replace(/^§§?/, ''), range }
+}
+
+// the marks of the book, from the last answer for the page: [{ name, kind, label, text, file, line }]
+const marksOf = document => (lastResults.get(document.uri.toString()) || {}).marks || []
+
+function markAt (document, position) {
+  const reference = markReferenceAt(document, position)
+  return reference ? { reference, mark: marksOf(document).find(m => m.name === reference.name) } : null
+}
+
+function markLocation (document, mark) {
+  return new vscode.Location(mark.file ? vscode.Uri.file(mark.file) : document.uri, new vscode.Position(Math.max(0, mark.line - 1), 0))
+}
+
+// the cursor on the line with the mark ("{#name}")
+function revealMark (editor, name) {
+  // a name has only letters, digits, "_" and "-": nothing to escape
+  const pattern = new RegExp('\\{[^}]*#' + name + '(?![\\p{L}\\p{N}_-])', 'u')
+  for (let i = 0; i < editor.document.lineCount; i++) {
+    const match = pattern.exec(editor.document.lineAt(i).text)
+    if (match) {
+      const position = new vscode.Position(i, match.index)
+      editor.selection = new vscode.Selection(position, position)
+      editor.revealRange(new vscode.Range(position, position), vscode.TextEditorRevealType.InCenterIfOutsideViewport)
+      return
+    }
+  }
+}
+
+// the page's own script: seite.geo for seite.geo.md
+const ownScript = document => document.uri.scheme === 'file' && /\.geo\.md$/i.test(document.uri.fsPath) ? document.uri.fsPath.slice(0, -3) : null
+
+// completion: after "§" the marks of the book; in "![](#" or "![](datei.geo#" (also after "..") the steps of the script
+async function providePageCompletions (document, position) {
+  const before = document.lineAt(position.line).text.slice(0, position.character)
+  const reference = /(\\?)§§?([\p{L}\p{N}_-]*)$/u.exec(before)
+  if (reference && !reference[1]) {
+    const range = new vscode.Range(position.translate(0, -reference[2].length), position)
+    return marksOf(document).map(mark => {
+      const item = new vscode.CompletionItem({ label: mark.name, description: mark.label }, vscode.CompletionItemKind.Reference)
+      item.detail = mark.label + (mark.file && mark.file !== document.uri.fsPath ? ' · ' + path.basename(mark.file) : '')
+      item.documentation = mark.text || undefined
+      item.filterText = mark.name
+      item.range = range
+      return item
+    })
+  }
+  const figure = /!\[[^\]]*\]\(([^()\s#]*)#(?:[\p{L}\p{N}_-]+\.\.)?([\p{L}\p{N}_-]*)$/u.exec(before)
+  if (!figure) {
+    return []
+  }
+  const script = figure[1] ? (document.uri.scheme === 'file' ? path.resolve(path.dirname(document.uri.fsPath), decodeURIComponent(figure[1])) : null) : ownScript(document)
+  if (!script) {
+    return []
+  }
+  let answer
+  try {
+    answer = await request({ type: 'steps', file: script })
+  } catch (error) {
+    return []
+  }
+  const range = new vscode.Range(position.translate(0, -figure[2].length), position)
+  return (answer.steps || []).map(step => {
+    const name = step.mark || step.name || String(step.number)
+    const item = new vscode.CompletionItem({ label: name, description: 'Schritt ' + step.number }, step.mark ? vscode.CompletionItemKind.Constant : vscode.CompletionItemKind.Value)
+    item.detail = `Schritt ${step.number}: ${step.caption}` + (step.mark ? ' (Marke)' : '')
+    item.sortText = String(step.number).padStart(4, '0')
+    item.filterText = name + ' ' + step.number
+    item.range = range
+    return item
+  })
+}
+
+// the tooltip of a reference: what it refers to
+function providePageHover (document, position) {
+  const found = markAt(document, position)
+  if (!found) {
+    return null
+  }
+  const { reference, mark } = found
+  if (!mark) {
+    return new vscode.Hover(`Unbekannte Marke \`${reference.name}\``, reference.range)
+  }
+  const text = new vscode.MarkdownString()
+  text.appendMarkdown(`**${mark.label}**`)
+  if (mark.text) {
+    text.appendText(' · ' + mark.text)
+  }
+  if (mark.file && mark.file !== document.uri.fsPath) {
+    text.appendMarkdown(`\n\n${path.basename(mark.file)}, Zeile ${mark.line}`)
+  }
+  return new vscode.Hover(text, reference.range)
+}
+
+// F12 / Ctrl+click on a reference: the mark
+function providePageDefinition (document, position) {
+  const found = markAt(document, position)
+  return found && found.mark ? markLocation(document, found.mark) : null
+}
+
 // ------------------------------------------------------------------ pages (.geo.md): outline and folding
 
 // the parts of a page: the YAML block at the start, code blocks (``` or ~~~) and headings ("# …" to "###### …", not in
@@ -1204,6 +1322,9 @@ function activate (context) {
     vscode.languages.registerFoldingRangeProvider('geo', { provideFoldingRanges }),
     vscode.languages.registerDocumentSymbolProvider('geomd', { provideDocumentSymbols: providePageSymbols }, { label: 'GeoAnim' }),
     vscode.languages.registerFoldingRangeProvider('geomd', { provideFoldingRanges: providePageFoldingRanges }),
+    vscode.languages.registerCompletionItemProvider('geomd', { provideCompletionItems: providePageCompletions }, '§', '#', '.'),
+    vscode.languages.registerHoverProvider('geomd', { provideHover: providePageHover }),
+    vscode.languages.registerDefinitionProvider('geomd', { provideDefinition: providePageDefinition }),
     vscode.languages.registerColorProvider('geo', { provideDocumentColors, provideColorPresentations }),
     vscode.languages.registerCodeActionsProvider('geo', { provideCodeActions }, { providedCodeActionKinds: [vscode.CodeActionKind.RefactorRewrite] }),
     vscode.languages.registerHoverProvider('geo', { provideHover: hover }),

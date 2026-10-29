@@ -305,6 +305,9 @@ Der Kopf gibt Titel, Beschreibung und Stichwörter; Formeln stehen wie in Skript
 wird zur Abbildung: `![](datei.geo)` die ganze Animation, `#2` ein Standbild am Ende von Schritt 2, `#3..4` die Schritte 3
 bis 4 (im Web als Player, im Buch als Bildfolge), Schritte auch über Marken (`step Gleiche Punkte #gleich`) oder ihren
 Namen; `![](#2)` meint das gleichnamige Skript der Seite. Im Buch werden Abbildungen auf ihren Inhalt zugeschnitten.
+Abbildungen werden nummeriert; Aussagen stehen in Containern (`::: axiom {#ax-gerade} Geradenaxiom` … `:::`, ebenso
+`definition`/`def`, `theorem`, `lemma`, `corollary`, `proof`, `example`, `remark`); Marken (`{#name}` an Abbildungen,
+Aussagen und Überschriften) gelten im ganzen Buch, und `§name` im Text wird zum Verweis („Axiom 2“, „Abb. 3“).
 Alles im Einzelnen: **[Referenz der Buchseiten](REFERENZ-MARKDOWN.md)**.
 
 ## C#

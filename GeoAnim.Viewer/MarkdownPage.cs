@@ -39,6 +39,9 @@ public sealed record GeoReference(string File, string? From, string? To, string 
 /// </summary>
 public sealed record PageFigure(string Key, GeoReference Reference, string AnimationJson, int? From, int? To, bool Still, double Ratio)
 {
+    /// <summary>The description of the step a still shows (for a caption), or null.</summary>
+    public string? StepCaption { get; init; }
+
     /// <summary>Cut to what it shows (in the book).</summary>
     public bool Crop => Reference.Crop;
 }
@@ -57,6 +60,7 @@ public sealed partial class MarkdownPage
         .UseMathematics()
         .UsePipeTables()
         .UseFootnotes()
+        .UseCustomContainers()
         .UseGenericAttributes()
         .UsePreciseSourceLocation()
         .Build();
@@ -89,6 +93,9 @@ public sealed partial class MarkdownPage
     /// <summary>The figures with their animations (only with a loader for the scripts), in their order.</summary>
     public IReadOnlyList<PageFigure> PageFigures { get; private set; } = [];
 
+    /// <summary>The marks of the page (figures, statements, sections with "{#name}"), in their order.</summary>
+    public IReadOnlyList<PageMark> Marks { get; private set; } = [];
+
     /// <summary>The page body as HTML.</summary>
     public string Html { get; }
 
@@ -102,9 +109,16 @@ public sealed partial class MarkdownPage
     /// Reads a page. <paramref name="file"/> (its full path) is for the figures: their scripts are looked for beside it;
     /// without it they are not checked. <paramref name="loadScript"/> compiles a script (by its full path) for its figure;
     /// it throws <see cref="FormatException"/> with the message for a faulty one. Without it the figures stay
-    /// placeholders.
+    /// placeholders. <paramref name="bookMarks"/> are the marks of the book's other pages, for references to them.
     /// </summary>
-    public static MarkdownPage Parse(string text, string? file = null, Func<string, AnimationData>? loadScript = null)
+    public static MarkdownPage Parse(string text, string? file = null, Func<string, AnimationData>? loadScript = null,
+        IReadOnlyDictionary<string, BookMark>? bookMarks = null) => Build(text, file, loadScript, bookMarks, render: true);
+
+    /// <summary>The marks of a page (for the references of the other pages), without making its HTML.</summary>
+    public static IReadOnlyList<PageMark> ReadMarks(string text) => Build(text, null, null, null, render: false).Marks;
+
+    private static MarkdownPage Build(string text, string? file, Func<string, AnimationData>? loadScript,
+        IReadOnlyDictionary<string, BookMark>? bookMarks, bool render)
     {
         var errors = new List<MarkdownProblem>();
         var warnings = new List<MarkdownProblem>();
@@ -142,7 +156,7 @@ public sealed partial class MarkdownPage
                 GeoReference? reference = ReferenceOf(text, file, image, locate, errors, warnings, figureOptions);
                 if (reference == null)
                 {
-                    shown.Add(new FigureItem(image.Url!, null, null, Faulty: true));
+                    shown.Add(new FigureItem(image, image.Url!, null, null, Faulty: true));
                     continue;
                 }
                 references.Add(reference);
@@ -150,7 +164,7 @@ public sealed partial class MarkdownPage
                 if (script != null && !File.Exists(script))
                 {
                     errors.Add(new MarkdownProblem(reference.Line, reference.Column, $"The script \"{reference.File}\" does not exist."));
-                    shown.Add(new FigureItem(image.Url!, reference, null, Faulty: true));
+                    shown.Add(new FigureItem(image, image.Url!, reference, null, Faulty: true));
                     continue;
                 }
                 PageFigure? figure = null;
@@ -170,7 +184,7 @@ public sealed partial class MarkdownPage
                         errors.Add(new MarkdownProblem(reference.Line, reference.Column, $"{reference.File}: {e.Message}"));
                     }
                 }
-                shown.Add(new FigureItem(image.Url!, reference, figure, Faulty: figure == null && loadScript != null && script != null));
+                shown.Add(new FigureItem(image, image.Url!, reference, figure, Faulty: figure == null && loadScript != null && script != null));
             }
             figures.AddRange(references);
             ContainerBlock parent = paragraph.Parent!;
@@ -184,6 +198,16 @@ public sealed partial class MarkdownPage
             }
             parent.Insert(index, block);
         }
+
+        // numbers and marks of figures, statements and sections; then the references to them
+        List<PageMark> marks = Number(text, document, locate, errors, render);
+        if (!render)
+        {
+            return new MarkdownPage("") { Marks = marks };
+        }
+        string? page = file == null ? null : Path.GetFullPath(file);
+        CheckMarks(marks, page, bookMarks, errors);
+        ResolveReferences(document, locate, marks, page, bookMarks, errors);
 
         // a "$" that does not start a formula (no closing one, or a space after it): as in scripts a mistake
         foreach (LiteralInline literal in document.Descendants<LiteralInline>())
@@ -217,6 +241,8 @@ public sealed partial class MarkdownPage
         renderer.ObjectRenderers.Replace<HtmlMathInlineRenderer>(new FormulaInlineRenderer(errors, locate));
         renderer.ObjectRenderers.Replace<HtmlMathBlockRenderer>(new FormulaBlockRenderer(errors, locate));
         renderer.ObjectRenderers.Insert(0, new GeoFigureRenderer());
+        renderer.ObjectRenderers.Replace<Markdig.Extensions.CustomContainers.HtmlCustomContainerRenderer>(new StatementRenderer());
+        renderer.ObjectRenderers.Insert(0, new MarkReferenceRenderer());
         renderer.Render(document);
         writer.Flush();
 
@@ -228,6 +254,7 @@ public sealed partial class MarkdownPage
             Keywords = keywords,
             Figures = figures,
             PageFigures = pageFigures,
+            Marks = marks,
             Errors = errors.OrderBy(e => e.Line).ThenBy(e => e.Column).ToList(),
             Warnings = warnings,
         };
@@ -509,12 +536,15 @@ public sealed partial class MarkdownPage
 
     // the figures of a paragraph; a faulty address has no reference
     // a figure of a paragraph: its address, its reference (null: a faulty address) and its animation (null: none loaded)
-    private sealed record FigureItem(string Source, GeoReference? Reference, PageFigure? Figure, bool Faulty);
+    private sealed record FigureItem(LinkInline Image, string Source, GeoReference? Reference, PageFigure? Figure, bool Faulty);
 
     // the figures of a paragraph
     private sealed class GeoFigureBlock(List<FigureItem> items) : LeafBlock(null)
     {
         public List<FigureItem> Items { get; } = items;
+
+        /// <summary>"Abb. 3"</summary>
+        public string Label { get; set; } = "";
     }
 
     // the figures side by side, each an element for the player (data-figure: its key; --ratio: the picture's width by its
@@ -545,13 +575,18 @@ public sealed partial class MarkdownPage
                 }
             }
             renderer.WriteLine("</div>");
+            // without a caption of its own: a still's step description from the script
+            if (captions.Length == 0 && figure.Items is [{ Figure.StepCaption: { Length: > 0 } stepCaption }])
+            {
+                captions.Append(stepCaption);
+            }
+            renderer.Write("<figcaption><span class=\"figure-label\">").WriteEscape(figure.Label).Write("</span>");
             if (captions.Length > 0)
             {
                 // the caption is Markdown too (formulas, emphasis)
-                string html = Markdown.ToHtml(captions.ToString(), Pipeline).Trim();
-                html = Regex.Replace(html, "^<p>|</p>$", "");
-                renderer.Write("<figcaption>").Write(RenderFormulasIn(html)).WriteLine("</figcaption>");
+                renderer.Write(" ").Write(InlineHtml(captions.ToString()));
             }
+            renderer.WriteLine("</figcaption>");
             renderer.WriteLine("</figure>");
         }
     }
@@ -582,7 +617,8 @@ public sealed partial class MarkdownPage
             json + "|" + from + "|" + to + "|" + still + "|" + reference.Crop)))[..16].ToLowerInvariant();
         ViewWindow view = animation.View;
         double ratio = (view.XMax - view.XMin) / (view.YMax - view.YMin);
-        return new PageFigure(key, reference, json, from, to, still, ratio);
+        string? stepCaption = still && to >= 0 ? animation.Steps[to.Value].Caption : null;
+        return new PageFigure(key, reference, json, from, to, still, ratio) { StepCaption = stepCaption };
     }
 
     /// <summary>
@@ -642,6 +678,13 @@ public sealed partial class MarkdownPage
     // bar(AB) → AB (in names of steps)
     [GeneratedRegex(@"\b(bar|vec|hat|overline|ul|tilde|dot)\(([^()]*)\)")]
     private static partial Regex DecorationPattern();
+
+    // a line of Markdown (a caption, a title) as HTML within a paragraph, formulas as SVG
+    internal static string InlineHtml(string markdown)
+    {
+        string html = Markdown.ToHtml(markdown, Pipeline).Trim();
+        return RenderFormulasIn(Regex.Replace(html, "^<p>|</p>$", ""));
+    }
 
     // the formulas Markdig leaves in a caption (<span class="math">\(…\)</span>) as SVG
     private static string RenderFormulasIn(string html) => MathSpan().Replace(html, m =>

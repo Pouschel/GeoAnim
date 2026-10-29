@@ -202,6 +202,81 @@ svg.formula {
   font-size: 0.9em;
 }
 
+.geo-figure .figure-label {
+  font-weight: 700;
+}
+
+/* statements: axioms, definitions, theorems … with their label at the start; the body of theorems and axioms italic */
+.statement {
+  margin: 1em 0;
+  padding: 0.5em 0.9em;
+  border-left: 3px solid #9fb3cf;
+  background: #f6f8fb;
+}
+
+.statement > p:last-child {
+  margin-bottom: 0;
+}
+
+.statement-label {
+  font-style: normal;
+  font-weight: 700;
+}
+
+.statement-axiom,
+.statement-theorem,
+.statement-lemma,
+.statement-corollary {
+  font-style: italic;
+}
+
+.statement-definition {
+  border-left-color: #8fbf9a;
+  background: #f5faf6;
+}
+
+/* proofs, examples and remarks: no box, only the label */
+.statement-proof,
+.statement-example,
+.statement-remark {
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+.statement-proof .statement-label {
+  font-style: italic;
+  font-weight: 400;
+}
+
+.qed {
+  float: right;
+}
+
+.qed-line {
+  text-align: right;
+}
+
+.statement-unknown {
+  border-left-color: #c62828;
+}
+
+/* references to marks ("Abb. 3", "Axiom 2"); an unknown mark */
+a.ref {
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 1px dotted #9aa3af;
+}
+
+a.ref:hover {
+  color: #1565c0;
+}
+
+.ref-missing {
+  color: #c62828;
+  font-weight: 700;
+}
+
 .footnotes {
   margin-top: 2em;
   font-size: 0.9em;

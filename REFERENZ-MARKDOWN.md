@@ -13,6 +13,8 @@ Skriptsprache der `.geo`-Dateien steht in der [Referenz](REFERENZ.md), der Über
 - [Abbildungen](#abbildungen): Verweise, Schritte, eigenes Skript
 - [Buch und Web](#buch-und-web): Bildfolge, Zuschnitt
 - [Attribute](#attribute): `crop`, `float`, `width`
+- [Aussagen](#aussagen): Axiom, Definition, Satz, Beweis …
+- [Marken und Verweise](#marken-und-verweise): `{#name}`, `§name`
 - [Fehler und Warnungen](#fehler-und-warnungen)
 - [Beispiel](#beispiel)
 
@@ -55,8 +57,12 @@ Ein `$`, das keine Formel beginnt (kein schließendes, oder ein Leerzeichen dahi
 ## Abbildungen
 
 Ein **Bild** auf ein Skript, **allein im Absatz**; mehrere solche Bilder in einem Absatz bilden eine Abbildung und
-stehen nebeneinander. Der Text in den eckigen Klammern ist die Bildunterschrift (Markdown und Formeln erlaubt; bei
-mehreren Bildern mit `·` verbunden). Ein Bild mitten im Text bleibt ein gewöhnliches Bild.
+stehen nebeneinander. Ein Bild mitten im Text bleibt ein gewöhnliches Bild.
+
+**Unterschrift und Nummer:** Abbildungen werden nummeriert („Abb. 1“, „Abb. 2“ …); die Nummer steht vor der
+Unterschrift. Die Unterschrift ist der Text in den eckigen Klammern (Markdown und Formeln erlaubt; bei mehreren Bildern
+mit `·` verbunden); ist er leer, nimmt ein Standbild die Schrittbeschreibung aus dem Skript. Eine Bildfolge hat ihre
+Schrittbeschreibungen an den Einzelbildern. **Marke:** `![…](#bez){#abb-gerade}` (siehe [Marken und Verweise](#marken-und-verweise)).
 
 | Verweis | im Web | im Buch |
 |---|---|---|
@@ -98,7 +104,8 @@ Die Vorschau in VS Code zeigt beides; oben rechts schaltet „Buch“/„Web“ 
 
 ## Attribute
 
-In geschweiften Klammern direkt hinter dem Bild, mehrere mit Leerzeichen: `![](#2){float=right width=40%}`.
+In geschweiften Klammern direkt hinter dem Bild, mehrere mit Leerzeichen: `![](#2){float=right width=40%}`; dort
+steht auch die Marke: `![](#2){#abb-strahl crop=no}`.
 
 | Attribut | Werte | Bedeutung |
 |---|---|---|
@@ -107,6 +114,70 @@ In geschweiften Klammern direkt hinter dem Bild, mehrere mit Leerzeichen: `![](#
 | `width` | `40%` · `60mm` | Breite der Abbildung (zu `float`) – **festgelegt, noch nicht umgesetzt** |
 
 `float` und `width` gelten für die ganze Abbildung; haben zwei ihrer Bilder verschiedene Werte, ist das ein Fehler.
+
+## Aussagen
+
+Axiome, Definitionen, Sätze und Ähnliches stehen in Containern aus drei Doppelpunkten:
+
+```markdown
+::: axiom {#ax-gerade} Geradenaxiom
+Durch zwei verschiedene Punkte verläuft **genau eine Gerade**.
+:::
+```
+
+→ **Axiom 1 (Geradenaxiom).** *Durch zwei verschiedene Punkte verläuft genau eine Gerade.*
+
+| Container | Anzeige | nummeriert | Darstellung |
+|---|---|---|---|
+| `axiom` | Axiom | ja | Kasten, kursiv |
+| `definition` · `def` | Definition | ja | Kasten (grün) |
+| `theorem` | Satz | ja | Kasten, kursiv |
+| `lemma` | Hilfssatz | ja | Kasten, kursiv |
+| `corollary` | Folgerung | ja | Kasten, kursiv |
+| `proof` | Beweis | nein | ohne Kasten, endet mit ∎ |
+| `example` | Beispiel | ja | ohne Kasten |
+| `remark` | Bemerkung | nein | ohne Kasten |
+
+- **Eröffnungszeile:** `::: art`, dann freiwillig die Marke `{#name}` und ein Titel (Markdown und Formeln erlaubt; er
+  erscheint in Klammern) – in beliebiger Reihenfolge: `::: def Strecke {#def-strecke}` ist dasselbe wie
+  `::: def {#def-strecke} Strecke`.
+- **Inhalt:** beliebiges Markdown bis zur Zeile `:::` – Absätze, Formeln, Listen; die Bezeichnung steht am Anfang des
+  ersten Absatzes.
+- **Zählung:** vorerst je Seite, ein gemeinsamer Zähler für alle nummerierten Arten (Axiom 1, Definition 2, Satz 3 …).
+  Die Zählung über das ganze Buch (mit Kapitelnummern) und die Wahl der Zähler kommen mit der Buchstruktur.
+- Die deutschen Bezeichnungen sind vorerst fest; später kommen sie aus der Sprache des Buchs.
+
+## Marken und Verweise
+
+**Marke** – ein Name in geschweiften Klammern mit `#`, mindestens zwei Zeichen (Buchstaben, Ziffern, `-`, `_`):
+
+| an | Schreibweise | Verweis zeigt |
+|---|---|---|
+| Abbildung | `![…](#bez){#abb-gerade}` | Abb. 3 |
+| Aussage | `::: axiom {#ax-gerade} …` | Axiom 2 |
+| Abschnitt | `## Die Gerade {#abschnitt-gerade}` | Abschnitt 1.2 (`##` zählt 1, 2 …, `###` darunter 1.1, 1.2 …; die `#`-Überschrift ist der Seitentitel) |
+
+**Verweis** – `§name` irgendwo im Text: `Nach §ax-gerade ist die Gerade in §abb-gerade eindeutig.` → „Nach Axiom 2 ist
+die Gerade in Abb. 3 eindeutig.“ (im Web und im E-Book ein Link).
+
+| Schreibweise | Bedeutung |
+|---|---|
+| `§name` | Verweis: zeigt, was die Marke ist („Abb. 3“) |
+| `§§name` | ebenso, im gedruckten Buch zusätzlich mit Seitenzahl („Abb. 3 auf S. 14“; noch nicht umgesetzt) |
+| `[eigener Text](#name)` | gewöhnlicher Link mit eigenem Text |
+| `\§name`, `§ 5` | das Paragraphenzeichen selbst |
+
+- Der Name endet beim ersten Zeichen, das kein Buchstabe, keine Ziffer, kein `-` oder `_` ist (in „§abb-gerade.“ gehört
+  der Punkt nicht dazu); ein `-` am Ende gehört nicht dazu.
+- **Marken gelten im ganzen Buch** (alle `….geo.md` unter dem Ordner mit der `index.yaml`, ohne Buch im selben Ordner):
+  ein Verweis braucht keinen Dateinamen, und verschobene Aussagen bleiben erreichbar. Eine Marke darf im Buch nur einmal
+  vorkommen. Die anderen Seiten zählen, wie sie gespeichert sind.
+- Ein Verweis auf eine andere Seite zeigt vorerst die Nummer, die die Marke dort hat (die Zählung ist noch je Seite).
+- Eine unbekannte Marke ist ein Fehler; die Seite zeigt an der Stelle „??“.
+- **In VS Code:** nach `§` bietet die Vervollständigung alle Marken des Buchs an (mit Art, Nummer und Text), in
+  `![](#` bzw. `![](datei.geo#` (auch nach `..`) die Schritte des Skripts (Marke oder Name, mit Nummer und
+  Schrittbeschreibung); das Tooltip auf `§name` zeigt, worauf er verweist; F12 bzw. Strg+Klick springt zur Marke, auch
+  auf einer anderen Seite.
 
 ## Fehler und Warnungen
 
@@ -123,6 +194,11 @@ Fehler werden in VS Code rot unterstrichen und stehen in der Vorschau über der 
 | falsche Schrittangabe | `#3...4` |
 | eigenes Skript ohne passenden Namen | `![](#2)` in `seite.md` oder in einer noch nie gespeicherten Seite |
 | falscher Attributwert | `{crop=vielleicht}`, `{float=oben}`, `{width=breit}` |
+| unbekannte Art einer Aussage | `::: satz` (richtig: `::: theorem`) |
+| Marke doppelt | auf derselben Seite oder auf einer anderen Seite des Buchs |
+| Marke aus einem Zeichen | `{#a}` |
+| zwei Marken an einer Abbildung | `![](#1){#abb-a}` und `![](#2){#abb-b}` im selben Absatz |
+| unbekannte Marke in einem Verweis | `§nichts` |
 
 Warnungen (gelb): ein unbekannter Schlüssel im Kopf, ein unbekanntes Attribut.
 

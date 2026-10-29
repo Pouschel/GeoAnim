@@ -118,7 +118,7 @@ public sealed class MarkdownTests : IDisposable
         Assert.Equal(("3", "4"), (page.Figures[1].From, page.Figures[1].To));
         Assert.Equal(("2", "2"), (page.Figures[0].From, page.Figures[0].To));
         Assert.Equal("Punkte mit *Namen*", page.Figures[0].Caption);
-        Assert.Contains("<figcaption>Punkte mit <em>Namen</em></figcaption>", page.Html);
+        Assert.Contains("<figcaption><span class=\"figure-label\">Abb. 1</span> Punkte mit <em>Namen</em></figcaption>", page.Html);
         // two references in one paragraph: one figure
         Assert.Equal(5, page.Html.Split("<figure").Length - 1);
         Assert.Contains("geo-faulty", page.Html);
@@ -299,5 +299,128 @@ public sealed class MarkdownTests : IDisposable
             e => Assert.Contains("float=left or float=right", e.Message),
             e => Assert.Contains("width=40%", e.Message));
         Assert.Contains("farbe", Assert.Single(page.Warnings).Message);
+    }
+
+    [Fact]
+    public void StatementsAreNumberedAndLabelled()
+    {
+        MarkdownPage page = MarkdownPage.Parse("""
+            ::: axiom {#ax-gerade} Geradenaxiom
+            Durch zwei verschiedene Punkte verläuft **genau eine Gerade**.
+            :::
+
+            ::: def Strecke $bar(AB)$ {#def-strecke}
+            Die gerade Verbindung.
+
+            Zweiter Absatz.
+            :::
+
+            ::: proof
+            Klar.
+            :::
+
+            ::: theorem
+            $$
+            a^2 + b^2 = c^2
+            $$
+            :::
+
+            ::: unsinn
+            x
+            :::
+            """);
+
+        Assert.Equal(["ax-gerade", "def-strecke"], page.Marks.Select(m => m.Name));
+        Assert.Equal(("axiom", "Axiom 1", "Geradenaxiom"), (page.Marks[0].Kind, page.Marks[0].Label, page.Marks[0].Text));
+        Assert.Equal(("definition", "Definition 2", 5), (page.Marks[1].Kind, page.Marks[1].Label, page.Marks[1].Line));
+        Assert.Contains("<div class=\"statement statement-axiom\" id=\"ax-gerade\"", page.Html);
+        Assert.Contains("<span class=\"statement-label\">Axiom 1 (Geradenaxiom).</span> Durch zwei", page.Html);
+        Assert.Contains("<span class=\"statement-label\">Definition 2 (Strecke <svg", page.Html);
+        Assert.Contains("<span class=\"statement-label\">Beweis.</span> Klar. <span class=\"qed\">∎</span>", page.Html);
+        Assert.Contains("<p><span class=\"statement-label\">Satz 3.</span></p>", page.Html);
+        Assert.Contains("\"unsinn\" is no kind of statement", Assert.Single(page.Errors).Message);
+    }
+
+    [Fact]
+    public void ReferencesShowWhatTheMarkIs()
+    {
+        File.WriteAllText(Path.Combine(folder, "punkte.geo"), "point A = 0 0\nstep Eins\n");
+        string file = Path.Combine(folder, "punkte.geo.md");
+        var other = new Dictionary<string, BookMark>
+        {
+            ["def-strecke"] = new BookMark(Path.Combine(folder, "sub", "strecken.geo.md"), new PageMark("def-strecke", "definition", "Definition 4", "", 3, 1)),
+        };
+        MarkdownPage page = MarkdownPage.Parse("""
+            ## Grundlagen
+
+            ### Die Gerade {#abschnitt-gerade}
+
+            ![Die Gerade](#1){#abb-gerade}
+
+            ![](#1)
+
+            In §abb-gerade, nach §§ax-gerade und §def-strecke, siehe §abschnitt-gerade. Kein Verweis: \§abb und § 5. Fehlt: §nichts.
+
+            ::: axiom {#ax-gerade}
+            Text.
+            :::
+            """, file, ScriptCompiler.CompileFile, other);
+
+        Assert.Equal(["abschnitt-gerade", "abb-gerade", "ax-gerade"], page.Marks.Select(m => m.Name));
+        Assert.Equal("Abschnitt 1.1", page.Marks[0].Label);
+        Assert.Contains("<a class=\"ref\" href=\"#abb-gerade\">Abb. 1</a>", page.Html);
+        Assert.Contains("<a class=\"ref\" href=\"#ax-gerade\">Axiom 1</a>", page.Html);
+        Assert.Contains("<a class=\"ref\" href=\"sub/strecken.geo.md#def-strecke\">Definition 4</a>", page.Html);
+        Assert.Contains("<a class=\"ref\" href=\"#abschnitt-gerade\">Abschnitt 1.1</a>", page.Html);
+        Assert.Contains("Kein Verweis: §abb und § 5.", page.Html);
+        Assert.Contains("<span class=\"ref-missing\" title=\"nichts\">??</span>", page.Html);
+        Assert.Contains("<figure class=\"geo-figure\" id=\"abb-gerade\"", page.Html);
+        Assert.Contains("<span class=\"figure-label\">Abb. 1</span> Die Gerade</figcaption>", page.Html);
+        // without a caption: the still's step description
+        Assert.Contains("<span class=\"figure-label\">Abb. 2</span> Eins</figcaption>", page.Html);
+        MarkdownProblem error = Assert.Single(page.Errors);
+        Assert.Contains("no mark \"nichts\"", error.Message);
+        Assert.Equal(9, error.Line);
+    }
+
+    [Fact]
+    public void MarksAreUniqueInTheBook()
+    {
+        var other = new Dictionary<string, BookMark>
+        {
+            ["ax"] = new BookMark(Path.Combine(folder, "andere.geo.md"), new PageMark("ax", "axiom", "Axiom 1", "", 3, 1)),
+        };
+        MarkdownPage page = MarkdownPage.Parse("## A {#ab}\n\n## B {#ab}\n\n::: axiom {#ax}\nx\n:::\n", Path.Combine(folder, "seite.geo.md"), null, other);
+
+        Assert.Collection(page.Errors,
+            e => Assert.Equal((3, "The mark \"ab\" is in line 1 already."), (e.Line, e.Message)),
+            e => Assert.Equal((5, "The mark \"ax\" is on andere.geo.md already (line 3)."), (e.Line, e.Message)));
+        Assert.Contains("at least two characters", Assert.Single(MarkdownPage.Parse("## A {#a}\n").Errors).Message);
+        Assert.Equal(["ab", "ab", "ax"], MarkdownPage.ReadMarks("## A {#ab}\n\n## B {#ab}\n\n::: axiom {#ax}\nx\n:::\n").Select(m => m.Name));
+    }
+
+    [Fact]
+    public void DaemonFindsTheMarksOfTheBookAndTheStepsOfAScript()
+    {
+        File.WriteAllText(Path.Combine(folder, "index.yaml"), "title: Buch\n");
+        Directory.CreateDirectory(Path.Combine(folder, "kapitel"));
+        File.WriteAllText(Path.Combine(folder, "kapitel", "a.geo.md"), "::: axiom {#ax-a}\nx\n:::\n");
+        File.WriteAllText(Path.Combine(folder, "kapitel", "b.geo"), "point A = 0 0\nstep Gleiche Punkte #gleich\nstep Zwei\n");
+        string file = Path.Combine(folder, "kapitel", "b.geo.md");
+        JsonElement answer = JsonDocument.Parse(Daemon.Handle(JsonSerializer.Serialize(new
+        {
+            id = 1, type = "markdown", file, text = "Nach §ax-a.\n\n![](#gleich){#abb-b}\n",
+        }))).RootElement;
+
+        Assert.Empty(answer.GetProperty("errors").EnumerateArray());
+        Assert.Contains("href=\"a.geo.md#ax-a\">Axiom 1</a>", answer.GetProperty("html").GetString());
+        Assert.Equal(["abb-b", "ax-a"], answer.GetProperty("marks").EnumerateArray().Select(m => m.GetProperty("name").GetString()));
+
+        JsonElement steps = JsonDocument.Parse(Daemon.Handle(JsonSerializer.Serialize(new
+        {
+            id = 2, type = "steps", file = Path.Combine(folder, "kapitel", "b.geo"),
+        }))).RootElement;
+        Assert.Equal(["gleich", null], steps.GetProperty("steps").EnumerateArray().Select(s => s.GetProperty("mark").GetString()));
+        Assert.Equal("zwei", steps.GetProperty("steps")[1].GetProperty("name").GetString());
     }
 }

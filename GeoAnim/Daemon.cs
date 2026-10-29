@@ -20,9 +20,14 @@ namespace GeoAnim.Cli;
 /// <item>{"id": 3, "type": "keywords"} → {"id": 3, "keywords": ["angle", …], "colors": {"red": "#d32f2f", …}} – the words that
 /// cannot be names, and the colour names.</item>
 /// <item>{"id": 4, "type": "markdown", "file": "C:\\…\\a.geo.md", "text": "…"} → {"id": 4, "html": "…", "title": "…" or null,
-/// "figures": {"key": {"animation": {…}, "from": 2 or null, "to": 3 or null, "still": false, "crop": true}, …}, "errors": […],
-/// "warnings": […] (as for "compile")} – a page of a book in Markdown, its figures from the scripts beside the file (as
-/// saved; compiled scripts are kept while their files stay the same).</item>
+/// "figures": {"key": {"animation": {…}, "from": 2 or null, "to": 3 or null, "still": false, "crop": true}, …}, "marks":
+/// [{"name": "ax-gerade", "kind": "axiom", "label": "Axiom 2", "text": "…", "file": "C:\\…", "line": 4}, …] (of all pages of
+/// the book: completion and "go to definition" for "§name"), "errors": […], "warnings": […] (as for "compile")} – a page
+/// of a book in Markdown, its figures from the scripts beside the file (as saved; compiled scripts are kept while their
+/// files stay the same), its references to the marks of the book's pages (the other pages as saved).</item>
+/// <item>{"id": 6, "type": "steps", "file": "C:\\…\\a.geo"} → {"id": 6, "steps": [{"number": 1, "mark": "gleich" or null,
+/// "name": "gleiche-punkte", "caption": "…"}, …], "error": "…" or null} – the steps of a script, for the completion of
+/// figures.</item>
 /// <item>{"id": 5, "type": "page"} → {"id": 5, "html": "…"} – the page for the preview of a Markdown page.</item>
 /// </list>
 /// A request that fails completely gets {"id": …, "fatal": "…"}.
@@ -58,6 +63,7 @@ internal static class Daemon
                 "player" => Answer(id, json => json.WriteString("html", HtmlExporter.ExportPlayer())),
                 "markdown" => RenderMarkdown(id, root.GetProperty("file").GetString() ?? "", root.GetProperty("text").GetString() ?? ""),
                 "page" => Answer(id, json => json.WriteString("html", HtmlExporter.ExportPagePreview())),
+                "steps" => Steps(id, root.GetProperty("file").GetString() ?? ""),
                 "keywords" => Answer(id, json =>
                 {
                     json.WriteStartArray("keywords");
@@ -181,7 +187,13 @@ internal static class Daemon
     private static string RenderMarkdown(JsonElement id, string file, string text)
     {
         string? path = Path.IsPathRooted(file) ? Path.GetFullPath(file) : null;
-        MarkdownPage page = MarkdownPage.Parse(text, path, LoadScript);
+        List<BookMark> others = path == null ? [] : OtherPagesMarks(path);
+        var bookMarks = new Dictionary<string, BookMark>(StringComparer.Ordinal);
+        foreach (BookMark other in others)
+        {
+            bookMarks.TryAdd(other.Mark.Name, other);
+        }
+        MarkdownPage page = MarkdownPage.Parse(text, path, LoadScript, bookMarks);
         return Answer(id, json =>
         {
             json.WriteString("html", page.Html);
@@ -224,10 +236,92 @@ internal static class Daemon
                 }
                 json.WriteEndArray();
             }
+            json.WriteStartArray("marks");
+            foreach (BookMark mark in page.Marks.Select(m => new BookMark(path ?? "", m)).Concat(others))
+            {
+                json.WriteStartObject();
+                json.WriteString("name", mark.Mark.Name);
+                json.WriteString("kind", mark.Mark.Kind);
+                json.WriteString("label", mark.Mark.Label);
+                json.WriteString("text", mark.Mark.Text);
+                json.WriteString("file", mark.File.Length > 0 ? mark.File : null);
+                json.WriteNumber("line", mark.Mark.Line);
+                json.WriteEndObject();
+            }
+            json.WriteEndArray();
             Problems("errors", page.Errors);
             Problems("warnings", page.Warnings);
         });
     }
+
+    // the marks of the other pages of the book (the pages "*.geo.md" below the folder with index.yaml, else beside the
+    // page), as saved; read again when a page has changed
+    private static readonly Dictionary<string, (DateTime Written, IReadOnlyList<PageMark> Marks)> PageMarks =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    private static List<BookMark> OtherPagesMarks(string page)
+    {
+        string root = BookKeywords.RootOf(page) ?? Path.GetDirectoryName(page)!;
+        var found = new List<BookMark>();
+        IEnumerable<string> files;
+        try
+        {
+            files = Directory.EnumerateFiles(root, "*.geo.md", SearchOption.AllDirectories).Order(StringComparer.Ordinal).ToList();
+        }
+        catch (IOException)
+        {
+            return found;
+        }
+        foreach (string other in files)
+        {
+            if (string.Equals(other, page, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+            DateTime written = File.GetLastWriteTimeUtc(other);
+            if (!PageMarks.TryGetValue(other, out var known) || known.Written != written)
+            {
+                try
+                {
+                    known = (written, MarkdownPage.ReadMarks(File.ReadAllText(other)));
+                }
+                catch (IOException)
+                {
+                    continue;
+                }
+                PageMarks[other] = known;
+            }
+            found.AddRange(known.Marks.Select(m => new BookMark(other, m)));
+        }
+        return found;
+    }
+
+    // the steps of a script, for the completion of a figure's steps
+    private static string Steps(JsonElement id, string file) => Answer(id, json =>
+    {
+        json.WriteStartArray("steps");
+        string? error = null;
+        try
+        {
+            AnimationData animation = LoadScript(Path.GetFullPath(file));
+            int number = 0;
+            foreach (AnimationStep step in animation.Steps)
+            {
+                json.WriteStartObject();
+                json.WriteNumber("number", ++number);
+                json.WriteString("mark", step.Mark);
+                json.WriteString("name", MarkdownPage.StepName(step.Caption));
+                json.WriteString("caption", step.Caption);
+                json.WriteEndObject();
+            }
+        }
+        catch (Exception e) when (e is FormatException or IOException or ArgumentException)
+        {
+            error = e.Message;
+        }
+        json.WriteEndArray();
+        json.WriteString("error", error);
+    });
 
     // the scripts of the figures, compiled, with the files they read and when those were written
     private static readonly Dictionary<string, (List<(string File, DateTime Written)> Files, AnimationData Animation)> Scripts =
