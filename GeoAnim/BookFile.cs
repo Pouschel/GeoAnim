@@ -1,3 +1,5 @@
+using System.Globalization;
+using GeoAnim.Figures;
 using GeoAnim.Viewer;
 using YamlDotNet.Core;
 using YamlDotNet.RepresentationModel;
@@ -16,13 +18,20 @@ namespace GeoAnim.Cli;
 ///   title: mathepedia.de
 ///   url: https://mathepedia.de/
 /// footer: © … · [Impressum](https://mathepedia.de/impressum)
+/// print:                            # the figures of the book (E-book, print)
+///   scale: 5mm                      # a coordinate unit (mm, cm, pt, in)
+///   labels: 9pt                     # the font size of the labels …
+///   labelsize: 34                   # … of this size in the scripts (all sizes in the same ratio)
+/// numbering:                        # (not used yet)
 /// </code>
 /// </summary>
 internal static class BookFile
 {
     public const string Name = "index.yaml";
 
-    private static readonly string[] Keys = ["title", "description", "icon", "language", "url", "home", "footer"];
+    private static readonly string[] Keys = ["title", "description", "icon", "language", "url", "home", "footer", "print", "numbering"];
+
+    private static readonly string[] PrintKeys = ["scale", "labels", "labelsize"];
 
     /// <summary>
     /// The settings of the book in <paramref name="root"/>: none without index.yaml. Unknown keys and a missing icon are
@@ -107,6 +116,7 @@ internal static class BookFile
                 warn($"{Name}: the icon {icon} should be an svg, png or ico file.");
             }
         }
+        (double? figureUnit, double? figureSize) = ReadPrint(map, warn);
         string? url = Text("url");
         if (url != null)
         {
@@ -129,6 +139,61 @@ internal static class BookFile
             Home = home,
             Footer = Text("footer"),
             IconFile = iconFile,
+            FigureUnit = figureUnit,
+            FigureSize = figureSize,
         };
+    }
+
+    // "print:" with "scale: 5mm", "labels: 9pt" and "labelsize: 34": points per unit and per size of the scripts
+    private static (double? Unit, double? Size) ReadPrint(YamlMappingNode map, Action<string> warn)
+    {
+        if (!map.Children.TryGetValue(new YamlScalarNode("print"), out YamlNode? node))
+        {
+            return (null, null);
+        }
+        if (node is not YamlMappingNode print)
+        {
+            warn($"{Name}: \"print\" needs \"scale\", \"labels\" and \"labelsize\" below it.");
+            return (null, null);
+        }
+        string? Value(string key) =>
+            print.Children.TryGetValue(new YamlScalarNode(key), out YamlNode? value) && value is YamlScalarNode { Value: { } text } ? text.Trim() : null;
+        foreach (YamlNode key in print.Children.Keys)
+        {
+            if (key is YamlScalarNode { Value: { } name } && !PrintKeys.Contains(name))
+            {
+                warn($"{Name}: unknown entry \"print: {name}\" (possible: {string.Join(", ", PrintKeys)}).");
+            }
+        }
+        double? unit = null, size = null;
+        if (Value("scale") is { } scale)
+        {
+            unit = FigureStyle.ParseLength(scale);
+            if (unit == null)
+            {
+                warn($"{Name}: \"print: scale\" must be a length like 5mm (mm, cm, pt or in).");
+            }
+        }
+        double? labels = null;
+        if (Value("labels") is { } labelText)
+        {
+            labels = FigureStyle.ParseLength(labelText);
+            if (labels == null)
+            {
+                warn($"{Name}: \"print: labels\" must be a font size like 9pt.");
+            }
+        }
+        double labelSize = 34;
+        if (Value("labelsize") is { } sizeText
+            && !(double.TryParse(sizeText, NumberStyles.Float, CultureInfo.InvariantCulture, out labelSize) && labelSize > 0))
+        {
+            warn($"{Name}: \"print: labelsize\" must be a size of the scripts like 34.");
+            labelSize = 34;
+        }
+        if (labels != null)
+        {
+            size = labels / labelSize;
+        }
+        return (unit, size);
     }
 }

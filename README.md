@@ -23,10 +23,15 @@ Animierte geometrische Konstruktionen aus einer kleinen Skriptsprache (oder aus 
       title: mathepedia.de
       url: https://mathepedia.de/
     footer: © … · [Impressum](https://…) · [Datenschutz](https://…)   # unter der Übersicht und am Ende des Menüs
+    print:                                     # Abbildungen im Buch (E-Book, Druck), siehe geoanim figure
+      scale: 5mm                               # eine Koordinateneinheit (mm, cm, pt, in)
+      labels: 9pt                              # Schriftgröße der Beschriftungen …
+      labelsize: 34                            # … mit dieser Größe im Skript (alle Größen im selben Verhältnis)
     ```
     Das Icon steckt ohne `-assets` in jeder Seite (als Daten-URL), mit `-assets` liegt es in `assets/`. Mit `url` bekommt jede Seite ihre Adresse als `canonical`-Link und eine Vorschau für das Teilen in Messengern und sozialen Netzen (Open Graph: Titel, Beschreibung, Name des Buchs), und es entsteht eine `sitemap.xml` mit allen Seiten (Datum: letzte Änderung des Skripts) für Suchmaschinen. Kapitelüberschriften der Übersicht kommen weiter aus den Ordnernamen.
   - Seiten mit alten Namen im Ausgabeordner (etwa nach dem Umbenennen) löscht der Export nicht.
-               
+- **`geoanim figure datei.geo[#schritte] [-o bild.svg] [-nocrop]`** schreibt die Abbildung, wie sie ins Buch kommt: eine SVG-Datei mit fester Größe in pt. Eine Koordinateneinheit ist `print: scale` lang, und alle Größen des Skripts (Schrift, Linien, Punkte) stehen im Verhältnis `labels` zu `labelsize` (beides aus der `index.yaml` des Buchs, der nächsten im Ordner des Skripts oder darüber; ohne sie 5 mm und Größe 34 = 9 pt). Texte und Formeln sind Pfade, das Bild braucht also keine Schrift. Zugeschnitten wird auf den Inhalt wie in der Buchansicht der Vorschau (Strahlen und Geraden zählen nicht mit; Rand 5 % des Inhalts, mindestens 16 Größen); `-nocrop` zeigt den ganzen `view`. `#3` ist das Bild nach Schritt 3 (`#0` das Startbild, `#gleich` der Schritt mit dieser Marke oder diesem Namen), `#2..4` eine Bildfolge: eine Datei je Schritt (`bild-2.svg`, `bild-3.svg`, …), alle gleich zugeschnitten. Ohne `#` das letzte Bild. Die Konsole zeigt die Größe in mm.
+
 Gezeichnet wird mit SVG, also in jeder Größe scharf. Formeln stehen in AsciiMath zwischen `$…$` und werden beim Übersetzen mit MathJax zu SVG-Pfaden; der Export enthält nur die Zeichen, die vorkommen. Die Schrift ist STIX Two (Text und Formeln aus einer Familie). Abhängigkeiten: siehe [Lizenz](#lizenz).
 
 ## Schnellstart

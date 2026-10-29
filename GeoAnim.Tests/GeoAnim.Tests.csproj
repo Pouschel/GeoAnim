@@ -17,6 +17,7 @@
   <ItemGroup>
     <ProjectReference Include="..\GeoAnim\GeoAnim.csproj" />
     <ProjectReference Include="..\GeoAnim.Core\GeoAnim.Core.csproj" />
+    <ProjectReference Include="..\GeoAnim.Figures\GeoAnim.Figures.csproj" />
     <ProjectReference Include="..\GeoAnim.Script\GeoAnim.Script.csproj" />
     <ProjectReference Include="..\GeoAnim.Viewer\GeoAnim.Viewer.csproj" />
   </ItemGroup>

@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Figures for the book: a picture of an animation at a moment as SVG (everything as paths: texts with the STIX Two
+    Text glyphs, formulas as MathJax made them) in a fixed size, and as PNG. The fonts (fonts/, from the player's,
+    as TrueType) are embedded resources.
+  -->
+
+  <ItemGroup>
+    <EmbeddedResource Include="fonts\*.ttf" LogicalName="fonts/%(Filename)%(Extension)" WithCulture="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Svg.Skia" Version="5.2.3" />
+    <!-- Skia's native library for Linux (Windows and macOS come with SkiaSharp) -->
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="4.148.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="GeoAnim.Tests" />
+  </ItemGroup>
+
+</Project>

@@ -1,5 +1,6 @@
 <Solution>
   <Project Path="GeoAnim.Core/GeoAnim.Core.csproj" />
+  <Project Path="GeoAnim.Figures/GeoAnim.Figures.csproj" />
   <Project Path="GeoAnim.Formulas/GeoAnim.Formulas.csproj" />
   <Project Path="GeoAnim.Script/GeoAnim.Script.csproj" />
   <Project Path="GeoAnim.Viewer/GeoAnim.Viewer.csproj" />

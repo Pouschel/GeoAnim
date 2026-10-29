@@ -26,6 +26,15 @@ public sealed record BookSettings
     /// <summary>The icon file (full path), png or svg.</summary>
     public string? IconFile { get; init; }
 
+    /// <summary>
+    /// The figures of the book (E-book, print; "print:" in index.yaml): the length of a coordinate unit in points (pt);
+    /// null: 5 mm.
+    /// </summary>
+    public double? FigureUnit { get; init; }
+
+    /// <summary>What a size of the scripts (texts, lines, points) is in the book's figures, in points; null: size 34 as 9 pt.</summary>
+    public double? FigureSize { get; init; }
+
     public static BookSettings None { get; } = new();
 
     /// <summary>The absolute address of a page of the book (path relative to its root, with "/"), or null without <see cref="Url"/>.</summary>

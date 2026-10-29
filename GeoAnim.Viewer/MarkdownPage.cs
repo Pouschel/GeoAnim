@@ -667,7 +667,7 @@ public sealed partial class MarkdownPage
     /// The index (from 0) of a step by its number (from 1; 0: the starting picture, -1), its mark ("step … #gleich") or
     /// its name (the step's text in small letters, with "-" between the words: "Gleiche Punkte" → "gleiche-punkte").
     /// </summary>
-    internal static int StepIndex(GeoReference reference, AnimationData animation, string step)
+    public static int StepIndex(GeoReference reference, AnimationData animation, string step)
     {
         IReadOnlyList<AnimationStep> steps = animation.Steps;
         if (step.All(char.IsAsciiDigit))

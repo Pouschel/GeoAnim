@@ -9,6 +9,7 @@ namespace GeoAnim.Cli;
 /// geoanim serve &lt;file.geo&gt; [--port N] [--no-browser]: live preview in the browser, updated on every save.<br/>
 /// geoanim export &lt;file.geo&gt; [-o file.html]: one self-contained HTML file.<br/>
 /// geoanim exportdir &lt;dir&gt; [-o dir]: the folder as a book of pages with an overview and navigation.<br/>
+/// geoanim figure &lt;file.geo&gt;[#steps] [-o file.svg]: the picture as in the book (SVG in pt).<br/>
 /// geoanim daemon: compiles for an editor over standard input and output (see <see cref="Daemon"/>).
 /// </summary>
 internal static partial class Program
@@ -26,6 +27,11 @@ internal static partial class Program
               order). Each page has everything inside; with -assets the pages link to the player's files in assets/
               instead (for a web server). -sheet also writes kontaktbogen.html: the pictures after every step of all
               pages at a glance. With -serve it then serves the book on http://localhost:8080/ (or the port given).
+          geoanim figure <file.geo>[#steps] [-o <file.svg>] [-nocrop]
+              Writes the picture as in the book: SVG with its size in pt (from "print:" in the book's index.yaml),
+              texts and formulas as paths, cut to its content. #3: after step 3 (#0: the starting picture, #gleich: the
+              step by its mark or name), #2..4: one picture for each step (file-2.svg …), all cut alike; without: the
+              last picture.
           geoanim daemon
               Compiles for an editor (the VS Code extension): JSON requests on standard input, answers on standard output.
         """;
@@ -37,6 +43,19 @@ internal static partial class Program
         {
             Console.InputEncoding = Encoding.UTF8;
             return Daemon.Run(Console.In, Console.Out);
+        }
+        if (args.Length >= 2 && args[0] == "figure")
+        {
+            try
+            {
+                return Figure(args.Skip(1).ToList());
+            }
+            catch (ArgumentException e)
+            {
+                Console.Error.WriteLine(e.Message);
+                Console.WriteLine(Usage);
+                return 1;
+            }
         }
         if (args.Length < 2 || args[0] is not ("serve" or "export" or "exportdir"))
         {
