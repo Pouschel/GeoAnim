@@ -700,6 +700,9 @@ function openPagePreview (document) {
     if (message && message.type === 'open') {
       openLink(message.href, pageDocument)
     }
+    if (message && message.type === 'reveal' && typeof message.line === 'number') {
+      revealInPage(message)
+    }
     if (message && message.type === 'ready') {
       pageReady = true
       if (pageDocument) {
@@ -785,6 +788,10 @@ function topLine (document) {
 }
 
 function followScrolling (editor) {
+  // not while the editor goes to a place clicked in the preview (the preview stays where it is)
+  if (Date.now() < keepPagePosition) {
+    return
+  }
   if (pagePreview && pageReady && editor.document === pageDocument) {
     const line = topLine(editor.document)
     if (line !== undefined) {
@@ -988,6 +995,104 @@ function lastContentLine (document, start, end) {
     end--
   }
   return end
+}
+
+// ------------------------------------------------------------------ pages (.geo.md): editor and preview together
+
+let keepPagePosition = 0
+let selectionTimer = null
+
+// markup that the preview does not show as text: emphasis, code marks; formulas are no text there at all
+const plainText = text => text.replace(/\\([*_`$§])/g, '$1').replace(/[*_`]/g, '')
+
+// the line where the paragraph of a line begins (after an empty line, a heading or a container line)
+function paragraphStart (document, line) {
+  let start = line
+  while (start > 0) {
+    const before = document.lineAt(start - 1).text
+    if (/^\s*$/.test(before) || /^\s*(#{1,6}\s|:{3,}|\$\$\s*$|```|~~~|---\s*$)/.test(before)) {
+      break
+    }
+    start--
+  }
+  return start
+}
+
+// the cursor of a page's editor: its block marked in the preview, a selected text (on one line, without formulas)
+// highlighted there – as the how-manyth time it is in its paragraph
+function sendSelection (editor) {
+  clearTimeout(selectionTimer)
+  selectionTimer = setTimeout(() => {
+    if (!pagePreview || !pageReady || editor.document !== pageDocument) {
+      return
+    }
+    const selected = editor.selection
+    const line = selected.start.line
+    let text = null
+    let occurrence = 0
+    if (!selected.isEmpty && selected.isSingleLine) {
+      const raw = editor.document.getText(selected)
+      const wanted = plainText(raw).trim()
+      if (wanted && !raw.includes('$') && wanted.length <= 200) {
+        text = wanted
+        const start = paragraphStart(editor.document, line)
+        const before = plainText(editor.document.getText(new vscode.Range(start, 0, line, selected.start.character)).replace(/\$[^$]*\$/g, ' '))
+        occurrence = before.split(wanted).length - 1
+      }
+    }
+    pagePreview.webview.postMessage({ type: 'select', line: line + 1, text, occurrence })
+  }, 80)
+}
+
+// a word (or formula) double-clicked in the preview: the cursor goes to it in the editor, in the paragraph of its line
+// – the how-manyth time it is there, not counting formulas
+async function revealInPage (message) {
+  const document = pageDocument
+  if (!document) {
+    return
+  }
+  const shown = (vscode.window.visibleTextEditors || []).find(e => e.document === document)
+  keepPagePosition = Date.now() + 800
+  const editor = await vscode.window.showTextDocument(document, { viewColumn: shown ? shown.viewColumn : vscode.ViewColumn.One, preserveFocus: false })
+  const first = Math.max(0, message.line - 1)
+  let last = first
+  while (last + 1 < document.lineCount && !/^\s*$/.test(document.lineAt(last + 1).text)) {
+    last++
+  }
+  let range = null
+  if (message.formula) {
+    const wanted = message.formula.trim()
+    for (let i = first; i <= last && !range; i++) {
+      const text = document.lineAt(i).text
+      const pattern = /\$\$?([^$]+)\$\$?/g
+      for (let found = pattern.exec(text); found; found = pattern.exec(text)) {
+        if (found[1].trim() === wanted) {
+          range = new vscode.Range(i, found.index, i, found.index + found[0].length)
+          break
+        }
+      }
+    }
+  } else if (message.word) {
+    const pattern = new RegExp('(?<![\\p{L}\\p{N}_-])' + message.word + '(?![\\p{L}\\p{N}_-])', 'gu')
+    let count = 0
+    let firstFound = null
+    for (let i = first; i <= last && !range; i++) {
+      // formulas do not count (the preview shows them as pictures); emphasis marks stay where they are
+      const text = document.lineAt(i).text.replace(/\$[^$]*\$/g, m => ' '.repeat(m.length))
+      for (let found = pattern.exec(text); found; found = pattern.exec(text)) {
+        const here = new vscode.Range(i, found.index, i, found.index + found[0].length)
+        firstFound = firstFound || here
+        if (count++ === (message.occurrence || 0)) {
+          range = here
+          break
+        }
+      }
+    }
+    range = range || firstFound
+  }
+  range = range || new vscode.Range(first, 0, first, 0)
+  editor.selection = new vscode.Selection(range.start, range.end)
+  editor.revealRange(range, vscode.TextEditorRevealType.InCenterIfOutsideViewport)
 }
 
 // ------------------------------------------------------------------ pages (.geo.md): marks, references, steps
@@ -1363,7 +1468,12 @@ function activate (context) {
         showPage(editor.document)
       }
     }),
-    vscode.window.onDidChangeTextEditorSelection(event => followCursor(event.textEditor)),
+    vscode.window.onDidChangeTextEditorSelection(event => {
+      followCursor(event.textEditor)
+      if (isPage(event.textEditor.document)) {
+        sendSelection(event.textEditor)
+      }
+    }),
     vscode.window.onDidChangeTextEditorVisibleRanges(event => followScrolling(event.textEditor)),
     vscode.workspace.onDidChangeConfiguration(event => { if (event.affectsConfiguration('geoanim.path')) restart() }),
     { dispose: () => { stopDaemon(); watchBuilds([]) } })

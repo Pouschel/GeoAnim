@@ -289,6 +289,16 @@ a.ref:hover {
   font-weight: 700;
 }
 
+/* the editor's cursor: its block marked at the left, a selected text highlighted */
+.geo-cursor {
+  box-shadow: -10px 0 0 -6px #f2c94c;
+}
+
+::highlight(geo-selection) {
+  background-color: #ffe08a;
+  color: inherit;
+}
+
 .footnotes {
   margin-top: 2em;
   font-size: 0.9em;

@@ -88,7 +88,11 @@ mklink /J "%USERPROFILE%\.vscode\extensions\geoanim-geo" "%CD%\editors\vscode"
   Marken des ganzen Buchs an (Abbildungen, Aussagen, Abschnitte – mit Nummer und Text), in `![](#` bzw.
   `![](datei.geo#` (auch nach `..`) die Schritte des Skripts mit Nummer und Schrittbeschreibung; das Tooltip auf
   `§name` zeigt das Ziel, F12 bzw. Strg+Klick springt zur Marke (auch auf eine andere Seite), ebenso ein Klick auf einen
-  Verweis in der Vorschau. Seiten haben ihre eigene Vorschau neben der
+  Verweis in der Vorschau. **Editor und Vorschau gemeinsam:** Der Absatz, in dem der Cursor steht, ist in der Vorschau
+  links gelb markiert; ein markierter Text (auf einer Zeile, ohne Formeln) ist dort gelb hinterlegt – genau die Stelle,
+  auch wenn das Wort im Absatz mehrmals vorkommt – und die Vorschau blättert hin, wenn sie nicht zu sehen ist.
+  Umgekehrt setzt ein Doppelklick (oder Strg+Klick) auf ein Wort oder eine Formel in der Vorschau den Cursor im Editor
+  genau dorthin (markiert); die Vorschau bleibt dabei stehen. Seiten haben ihre eigene Vorschau neben der
   der Skripte: Beide können gleichzeitig offen sein (etwa in zwei Fenstern), und jede folgt dem aktiven Editor ihrer Art.
 
 Die Arbeit macht `geoanim daemon`, einmal im Hintergrund gestartet (MathJax startet daher nur einmal). Gefunden wird

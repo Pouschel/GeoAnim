@@ -1,6 +1,9 @@
 // A page of a book in Markdown, in an editor's preview (VS Code): the editor sends the page made by "geoanim daemon"
-// ({ type: "page", html, figures, error }) and the line at the top of the editor ({ type: "line", line }); links go
-// back to the editor ({ type: "open", href }), which opens scripts and pages itself.
+// ({ type: "page", html, figures, error }), the line at the top of the editor ({ type: "line", line }) and where its
+// cursor is ({ type: "select", line, text, occurrence }: the block of the line is marked, a selected text in it
+// highlighted); links go back to the editor ({ type: "open", href }), which opens scripts and pages itself, and so does
+// a double-click or Ctrl+click on the text ({ type: "reveal", line, word, occurrence } or { type: "reveal", line,
+// formula }: the editor puts the cursor there).
 // The figures are players in frames (window.GEO_FIGURE_PLAYER with the figure's animation and part): a frame stays as
 // long as its figure does not change, so that writing does not restart the animations.
 'use strict'
@@ -74,7 +77,155 @@
     shownHtml = html
     startFigures()
     window.scrollTo({ top })
+    // the cursor's place again, in the new blocks
+    if (selection) {
+      markSelection(selection, false)
+    }
   }
+
+  // ------------------------------------------------------------------ the editor's cursor and selection
+
+  let selection = null
+  let markedBlock = null
+
+  // the text of an element (without formulas and figures) with the text nodes it comes from
+  function textOf (element) {
+    const nodes = []
+    let text = ''
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, {
+      acceptNode: node => node.parentElement.closest('svg, iframe, .figure-label') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT
+    })
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      nodes.push({ node, start: text.length })
+      text += node.nodeValue
+    }
+    return { text, nodes }
+  }
+
+  // the place in the text nodes of a position in the text
+  function pointAt (nodes, position) {
+    for (let i = nodes.length - 1; i >= 0; i--) {
+      if (nodes[i].start <= position) {
+        return { node: nodes[i].node, offset: Math.min(position - nodes[i].start, nodes[i].node.nodeValue.length) }
+      }
+    }
+    return null
+  }
+
+  const escape = text => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+  // the occurrence-th place of the text in the element (spaces match any white space), as a range; else the first
+  function findText (element, wanted, occurrence) {
+    const { text, nodes } = textOf(element)
+    const pattern = new RegExp(escape(wanted).replace(/\s+/g, '\\s+'), 'g')
+    let match = null
+    let first = null
+    for (let count = 0, found = pattern.exec(text); found; found = pattern.exec(text), count++) {
+      first = first || found
+      if (count === occurrence) {
+        match = found
+        break
+      }
+    }
+    match = match || first
+    if (!match) {
+      return null
+    }
+    const start = pointAt(nodes, match.index)
+    const end = pointAt(nodes, match.index + match[0].length)
+    const range = document.createRange()
+    range.setStart(start.node, start.offset)
+    range.setEnd(end.node, end.offset)
+    return range
+  }
+
+  // the block of the cursor's line marked, the selected text highlighted; scrolled into view if it is not
+  function markSelection (wanted, scroll) {
+    selection = wanted
+    if (markedBlock) {
+      markedBlock.classList.remove('geo-cursor')
+    }
+    if (window.CSS && CSS.highlights) {
+      CSS.highlights.delete('geo-selection')
+    }
+    markedBlock = elementOf(wanted.line)
+    if (!markedBlock) {
+      return
+    }
+    markedBlock.classList.add('geo-cursor')
+    let target = markedBlock
+    if (wanted.text) {
+      const range = findText(markedBlock, wanted.text, wanted.occurrence || 0)
+      if (range && window.CSS && CSS.highlights && typeof Highlight === 'function') {
+        CSS.highlights.set('geo-selection', new Highlight(range))
+        target = range
+      }
+    }
+    if (scroll) {
+      const box = target.getBoundingClientRect()
+      if (box.bottom < 0 || box.top > window.innerHeight) {
+        window.scrollBy({ top: box.top - window.innerHeight / 3 })
+      }
+    }
+  }
+
+  // a double-click or Ctrl+click on the text: the editor goes to that word (or formula)
+  function revealFrom (event) {
+    if (!host || event.target.closest('a[href], iframe, button')) {
+      return false
+    }
+    const block = event.target.closest('[data-line]')
+    if (!block) {
+      return false
+    }
+    const line = Number(block.dataset.line)
+    const formula = event.target.closest('svg.formula')
+    if (formula) {
+      host.postMessage({ type: 'reveal', line, formula: formula.getAttribute('aria-label') })
+      return true
+    }
+    const caret = document.caretRangeFromPoint ? document.caretRangeFromPoint(event.clientX, event.clientY) : null
+    if (!caret || caret.startContainer.nodeType !== Node.TEXT_NODE) {
+      host.postMessage({ type: 'reveal', line })
+      return true
+    }
+    // the word at the click, and how many times it is in the block before
+    const { text, nodes } = textOf(block)
+    const entry = nodes.find(n => n.node === caret.startContainer)
+    if (!entry) {
+      host.postMessage({ type: 'reveal', line })
+      return true
+    }
+    const position = entry.start + caret.startOffset
+    const isWordChar = c => c !== undefined && /[\p{L}\p{N}_-]/u.test(c)
+    let start = position
+    let end = position
+    while (isWordChar(text[start - 1])) {
+      start--
+    }
+    while (isWordChar(text[end])) {
+      end++
+    }
+    const word = text.slice(start, end)
+    if (!word) {
+      host.postMessage({ type: 'reveal', line })
+      return true
+    }
+    const before = text.slice(0, start).match(new RegExp('(?<![\\p{L}\\p{N}_-])' + escape(word) + '(?![\\p{L}\\p{N}_-])', 'gu'))
+    host.postMessage({ type: 'reveal', line, word, occurrence: before ? before.length : 0 })
+    return true
+  }
+
+  document.addEventListener('dblclick', event => {
+    if (revealFrom(event)) {
+      window.getSelection().removeAllRanges()
+    }
+  })
+  document.addEventListener('click', event => {
+    if ((event.ctrlKey || event.metaKey) && revealFrom(event)) {
+      event.preventDefault()
+    }
+  }, true)
 
   function copyLines (from, to) {
     const source = [from, ...from.querySelectorAll('[data-line]')]
@@ -224,6 +375,8 @@
       }
     } else if (message.type === 'line') {
       scrollToLine(message.line)
+    } else if (message.type === 'select') {
+      markSelection({ line: message.line, text: message.text, occurrence: message.occurrence }, true)
     }
   })
 
