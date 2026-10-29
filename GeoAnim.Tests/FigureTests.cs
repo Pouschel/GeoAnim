@@ -115,4 +115,52 @@ public sealed class FigureTests : IDisposable
         Assert.True(File.Exists(Path.Combine(folder, "a.svg")));
         Assert.Equal(1, Program.Figure([script + "#vier"]));
     }
+
+    // width, height and colour type of a PNG (2: RGB without alpha)
+    private static (int Width, int Height, int ColorType) PngHeader(byte[] png)
+    {
+        Assert.Equal([137, 80, 78, 71, 13, 10, 26, 10], png[..8]);
+        int Int(int at) => png[at] << 24 | png[at + 1] << 16 | png[at + 2] << 8 | png[at + 3];
+        return (Int(16), Int(20), png[25]);
+    }
+
+    [Fact]
+    public void AFigureAsPngHasItsSizeAtTheResolutionAndNoTransparency()
+    {
+        FigureAnimation animation = Animation("view x -5 .. 5 y -2 .. 2\npoint A = 0 0\nstep Eins");
+        FigureImage image = FigureRenderer.Render(animation, animation.EndOf(0), new FigureStyle(7.2, 0.25));
+        (int width, int height, int colorType) = PngHeader(FigurePng.Render(image, 300));
+        Assert.Equal(300, width);
+        Assert.Equal(120, height);
+        Assert.Equal(2, colorType);
+    }
+
+    [Fact]
+    public void AFormulaIsAPictureWithItsDepthAndItsSourceAsAlternativeText()
+    {
+        FormulaImage formula = FormulaImage.Render("x_1^2", 10);
+        Assert.Equal("x_1^2", formula.AltText);
+        Assert.Contains("aria-label=\"x_1^2\"", formula.Svg);
+        Assert.DoesNotContain("currentColor", formula.Svg);
+        // about a font size high, partly below the baseline (the index)
+        Assert.InRange(formula.Height, 8, 20);
+        Assert.InRange(formula.Depth, 1, formula.Height / 2);
+        Assert.Equal(2, formula.Width / FormulaImage.Render("x_1^2", 5).Width, 3);
+        (int width, int _, int colorType) = PngHeader(formula.Png(720));
+        Assert.Equal((int)Math.Ceiling(formula.Width * 10), width);
+        Assert.Equal(2, colorType);
+    }
+
+    [Fact]
+    public void TheCommandsWritePngs()
+    {
+        string script = Path.Combine(folder, "a.geo");
+        File.WriteAllText(script, "view x -5 .. 5 y -5 .. 5\npoint A = 0 0\nstep Eins");
+        Assert.Equal(0, Program.Figure([script, "-png", "-dpi", "150"]));
+        PngHeader(File.ReadAllBytes(Path.Combine(folder, "a.png")));
+        string formula = Path.Combine(folder, "f.png");
+        Assert.Equal(0, Program.Formula(["abs(A-B)", "-o", formula, "-size", "12pt"]));
+        PngHeader(File.ReadAllBytes(formula));
+        Assert.Throws<ArgumentException>(() => Program.Figure([script, "-dpi", "1"]));
+    }
 }

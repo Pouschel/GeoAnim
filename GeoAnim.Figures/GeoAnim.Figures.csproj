@@ -17,6 +17,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\GeoAnim.Formulas\GeoAnim.Formulas.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <InternalsVisibleTo Include="GeoAnim.Tests" />
   </ItemGroup>
 

@@ -7,8 +7,8 @@ namespace GeoAnim.Cli;
 internal static partial class Program
 {
     /// <summary>
-    /// geoanim figure &lt;file.geo&gt;[#steps] [-o file.svg] [-nocrop]: the picture of a script as in the book, as SVG in
-    /// points – after a step ("#3", "#0" the starting picture, "#gleich" by its mark or name), a row of pictures ("#2..4",
+    /// geoanim figure &lt;file.geo&gt;[#steps] [-o file.svg|file.png] [-png] [-dpi 300] [-nocrop]: the picture of a script as
+    /// in the book, as SVG in points (or PNG on white with -png or a .png name) – after a step ("#3", "#0" the starting picture, "#gleich" by its mark or name), a row of pictures ("#2..4",
     /// one file for each step, all cut alike) or without steps the last picture. The size comes from "print:" in the
     /// index.yaml of the book (the nearest one in the script's folder or above it).
     /// </summary>
@@ -17,6 +17,8 @@ internal static partial class Program
         string source = arguments[0];
         string? output = null;
         bool crop = true;
+        bool png = false;
+        double dpi = FigurePng.DefaultDpi;
         for (int i = 1; i < arguments.Count; i++)
         {
             if (arguments[i] is "-o" or "--output" && i + 1 < arguments.Count)
@@ -26,6 +28,14 @@ internal static partial class Program
             else if (arguments[i] is "-nocrop" or "--nocrop")
             {
                 crop = false;
+            }
+            else if (arguments[i] is "-png" or "--png")
+            {
+                png = true;
+            }
+            else if (arguments[i] is "-dpi" or "--dpi" && i + 1 < arguments.Count)
+            {
+                dpi = Dpi(arguments[++i]);
             }
             else
             {
@@ -60,7 +70,8 @@ internal static partial class Program
         }
         var figure = FigureAnimation.Parse(animation.ToJson());
         List<double> times = shown.Select(figure.EndOf).ToList();
-        string baseName = output ?? Path.ChangeExtension(Path.GetFullPath(file), ".svg");
+        png |= output != null && Path.GetExtension(output).Equals(".png", StringComparison.OrdinalIgnoreCase);
+        string baseName = output ?? Path.ChangeExtension(Path.GetFullPath(file), png ? ".png" : ".svg");
         for (int i = 0; i < shown.Count; i++)
         {
             FigureImage image = FigureRenderer.Render(figure, times[i], style, crop ? times : null);
@@ -69,10 +80,74 @@ internal static partial class Program
                 ? baseName
                 : Path.Combine(Path.GetDirectoryName(baseName)!,
                     Path.GetFileNameWithoutExtension(baseName) + "-" + (shown[i] + 1).ToString(CultureInfo.InvariantCulture) + Path.GetExtension(baseName));
-            File.WriteAllText(target, image.Svg);
-            Console.WriteLine($"{target} ({Millimetres(image.Width)} × {Millimetres(image.Height)} mm)");
+            Write(target, image.Svg, image.Width, image.Height, png, dpi);
         }
         return 0;
+    }
+
+    /// <summary>
+    /// geoanim formula "abs(A-B)" [-o file.png|file.svg] [-size 11pt] [-dpi 300]: a formula as a picture of its own, as
+    /// the book shows it in readers without SVG (Kindle): PNG on white (or SVG) in the font size.
+    /// </summary>
+    internal static int Formula(List<string> arguments)
+    {
+        string asciiMath = arguments[0];
+        string output = Path.GetFullPath("formula.png");
+        double size = 11;
+        double dpi = FigurePng.DefaultDpi;
+        for (int i = 1; i < arguments.Count; i++)
+        {
+            if (arguments[i] is "-o" or "--output" && i + 1 < arguments.Count)
+            {
+                output = Path.GetFullPath(arguments[++i]);
+            }
+            else if (arguments[i] is "-size" or "--size" && i + 1 < arguments.Count)
+            {
+                size = FigureStyle.ParseLength(arguments[++i]) ?? throw new ArgumentException("-size needs a font size like 11pt.");
+            }
+            else if (arguments[i] is "-dpi" or "--dpi" && i + 1 < arguments.Count)
+            {
+                dpi = Dpi(arguments[++i]);
+            }
+            else
+            {
+                throw new ArgumentException("Unknown option " + arguments[i]);
+            }
+        }
+        FormulaImage formula;
+        try
+        {
+            formula = FormulaImage.Render(asciiMath, size);
+        }
+        catch (FormatException e)
+        {
+            Console.Error.WriteLine(e.Message);
+            return 1;
+        }
+        bool png = !Path.GetExtension(output).Equals(".svg", StringComparison.OrdinalIgnoreCase);
+        Write(output, formula.Svg, formula.Width, formula.Height, png, dpi);
+        return 0;
+    }
+
+    private static double Dpi(string text) =>
+        double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out double dpi) && dpi is >= 36 and <= 2400
+            ? dpi
+            : throw new ArgumentException("-dpi needs a resolution from 36 to 2400 (pixels per inch).");
+
+    // the picture as SVG or as PNG, and its size on the console
+    private static void Write(string target, string svg, double width, double height, bool png, double dpi)
+    {
+        string size = $"{Millimetres(width)} × {Millimetres(height)} mm";
+        if (png)
+        {
+            File.WriteAllBytes(target, FigurePng.Render(svg, width, height, dpi));
+            size += $", {Math.Ceiling(width * dpi / 72)} × {Math.Ceiling(height * dpi / 72)} px";
+        }
+        else
+        {
+            File.WriteAllText(target, svg);
+        }
+        Console.WriteLine($"{target} ({size})");
     }
 
     private static string Millimetres(double points) => (points * 25.4 / 72).ToString("0.0", CultureInfo.InvariantCulture);
