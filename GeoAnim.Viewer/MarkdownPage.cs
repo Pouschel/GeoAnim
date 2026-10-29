@@ -143,6 +143,7 @@ public sealed partial class MarkdownPage
             front.Parent?.Remove(front);
         }
 
+        RescueAttributes(document);
         string? heading = document.Descendants<HeadingBlock>().FirstOrDefault(h => h.Level == 1) is { } first
             ? Regex.Replace(HeadingText(text, first), @"\s*\{[^{}]*\}\s*$", "")
             : null;

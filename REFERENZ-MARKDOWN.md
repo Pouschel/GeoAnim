@@ -204,6 +204,8 @@ Die gerade Verbindung heißt **Strecke**{kw}. Ein **Haus**{kw=/es/e,Häuser/n} �
 | `**Geraden**{kw=Gerade/n}` | Gerade, Geraden – ohne `/` am Anfang ausgeschrieben, wenn das fette Wort selbst gebeugt ist |
 | `**rechter Winkel**{kw=rechte/r/n Winkel/s}` | mehrere Wörter wie bei `keyword` in Skripten |
 
+- Werte mit Leerzeichen gehen ohne Anführungszeichen: `## Metrische Räume {kw=Metrik/en, metrische/r Raum}` (der Wert
+  reicht bis zum nächsten Attribut oder zur schließenden Klammer).
 - Der **Begriff** (der Name im Stichwortverzeichnis) ist die erste Form: das fette Wort bzw. das erste ausgeschriebene.
 - Ebenso an einer **Überschrift** (`## Der Kreis {kw=Kreis/es/e}`) oder einer **Aussage**
   (`::: def Strecke {#def-strecke kw=Strecke/n}`): der Link führt dann dorthin. Ohne Wert nimmt sie ihren Text bzw.

@@ -81,6 +81,75 @@ public sealed partial class MarkdownPage
         return found;
     }
 
+    // attributes that Markdig leaves as text because a value has spaces ("## Metrische Räume {kw=Metrik/en, metrische/r
+    // Raum}", "**Haus**{kw=/es, Häuser/n}"): read here, at the end of a heading and right after an emphasis
+    private static void RescueAttributes(MarkdownDocument document)
+    {
+        foreach (MarkdownObject element in document.Descendants().ToList())
+        {
+            if (element is HeadingBlock { Inline.LastChild: LiteralInline last } heading)
+            {
+                string content = last.Content.ToString();
+                Match match = TrailingAttributes().Match(content);
+                if (match.Success && ParseAttributes(match.Groups[1].Value, heading.GetAttributes()))
+                {
+                    last.Content = new Markdig.Helpers.StringSlice(content.Substring(0, match.Index).TrimEnd());
+                }
+            }
+            else if (element is EmphasisInline { NextSibling: LiteralInline next } emphasis)
+            {
+                string content = next.Content.ToString();
+                Match match = LeadingAttributes().Match(content);
+                if (match.Success && ParseAttributes(match.Groups[1].Value, emphasis.GetAttributes()))
+                {
+                    next.Content = new Markdig.Helpers.StringSlice(content.Substring(match.Length));
+                }
+            }
+        }
+    }
+
+    [GeneratedRegex(@"\s*\{([^{}]*)\}\s*$")]
+    private static partial Regex TrailingAttributes();
+
+    [GeneratedRegex(@"^\{([^{}]*)\}")]
+    private static partial Regex LeadingAttributes();
+
+    // "#name", ".class", "key=value" (a value up to the next attribute, spaces and commas allowed; or in quotes), "kw";
+    // false if it does not look like attributes (then it stays text)
+    private static bool ParseAttributes(string text, HtmlAttributes attributes)
+    {
+        MatchCollection parts = AttributeStart().Matches(text);
+        if (parts.Count == 0 || text.Substring(0, parts[0].Index).Trim().Length > 0)
+        {
+            return false;
+        }
+        for (int i = 0; i < parts.Count; i++)
+        {
+            Match part = parts[i];
+            int end = i + 1 < parts.Count ? parts[i + 1].Index : text.Length;
+            string token = part.Groups[1].Value;
+            string value = text.Substring(part.Index + part.Length, end - part.Index - part.Length).Trim().Trim('"');
+            if (token.StartsWith('#'))
+            {
+                attributes.Id ??= token.Substring(1);
+            }
+            else if (token.StartsWith('.'))
+            {
+                attributes.AddClass(token.Substring(1));
+            }
+            else
+            {
+                string key = token.TrimEnd('=');
+                attributes.Properties?.RemoveAll(p => p.Key == key);
+                attributes.AddProperty(key, token.EndsWith('=') ? value : "");
+            }
+        }
+        return true;
+    }
+
+    [GeneratedRegex(@"(?:^|\s)(#[\p{L}\p{N}_-]+|\.[\p{L}\p{N}_-]+|[\p{L}]+=|kw(?=\s|$))")]
+    private static partial Regex AttributeStart();
+
     // the term and its forms from the marked word and the attribute's value
     private static (string Term, List<string> Forms) KeywordForms(string word, string value)
     {

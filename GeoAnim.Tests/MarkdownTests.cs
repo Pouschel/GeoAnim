@@ -551,4 +551,22 @@ public sealed class MarkdownTests : IDisposable
         JsonElement warning = Assert.Single(answer.GetProperty("warnings").EnumerateArray());
         Assert.Contains("already the keyword of 10_Punkte.geo.md", warning.GetProperty("message").GetString());
     }
+
+    [Fact]
+    public void KeywordValuesMayHaveSpaces()
+    {
+        MarkdownPage page = MarkdownPage.Parse("""
+            ## Metrische Räume{kw=Metrik/en, metrische/r Raum}
+
+            Ein **Haus**{kw=/es, Häuser/n} steht. **Ort**{#ort-mark kw} auch.
+            """);
+
+        Assert.Equal(["Metrik", "Haus", "Ort"], page.KeywordDefinitions.Select(k => k.Term));
+        Assert.Equal(["Metrik", "Metriken", "metrische Raum", "metrischer Raum"], page.KeywordDefinitions[0].Forms);
+        Assert.Equal(["Haus", "Hauses", "Häuser", "Häusern"], page.KeywordDefinitions[1].Forms);
+        Assert.Equal("ort-mark", page.KeywordDefinitions[2].Anchor);
+        Assert.Contains("<h2 id=\"kw-metrik\" data-line=\"1\">Metrische Räume</h2>", page.Html);
+        Assert.Contains("<strong id=\"kw-haus\">Haus</strong> steht.", page.Html);
+        Assert.Empty(page.Errors);
+    }
 }
