@@ -199,6 +199,8 @@ public sealed partial class MarkdownPage
             parent.Insert(index, block);
         }
 
+        MovePunctuation(document);
+
         // numbers and marks of figures, statements and sections; then the references to them
         List<PageMark> marks = Number(text, document, locate, errors, render);
         if (!render)
@@ -498,6 +500,12 @@ public sealed partial class MarkdownPage
         protected override void Write(HtmlRenderer renderer, MathInline math)
         {
             string source = math.Content.ToString().Trim();
+            // "$$…$$" in a paragraph: centred on a line of its own, with the punctuation after it ("$$…$$.")
+            bool display = math.DelimiterCount == 2;
+            if (display)
+            {
+                renderer.Write("<span class=\"formula-display\">");
+            }
             try
             {
                 renderer.Write(FormulaSvg(source));
@@ -507,6 +515,26 @@ public sealed partial class MarkdownPage
                 (int line, int column) = locate(math.Span.Start);
                 errors.Add(new MarkdownProblem(line, column, e.Message));
                 renderer.Write(FaultyFormula(source));
+            }
+            if (display)
+            {
+                renderer.WriteEscape(math.GetData(typeof(DisplayPunctuation)) as string ?? "").Write("</span>");
+            }
+        }
+    }
+
+    // the punctuation that follows a "$$…$$" in a paragraph and is shown with it
+    private sealed class DisplayPunctuation;
+
+    // moves a full stop, comma … right after a "$$…$$" into the formula's line
+    private static void MovePunctuation(MarkdownDocument document)
+    {
+        foreach (MathInline math in document.Descendants<MathInline>())
+        {
+            if (math.DelimiterCount == 2 && math.NextSibling is LiteralInline next && next.Content.Length > 0 && ".,;:!?".Contains(next.Content.CurrentChar))
+            {
+                math.SetData(typeof(DisplayPunctuation), next.Content.CurrentChar.ToString());
+                next.Content.Start++;
             }
         }
     }

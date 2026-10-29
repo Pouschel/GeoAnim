@@ -97,9 +97,15 @@ svg.formula {
   fill: currentColor;
 }
 
-.formula-block {
+.formula-block,
+.formula-display {
   margin: 0.6em 0 0.9em;
   text-align: center;
+}
+
+/* "$$…$$" within a paragraph: a line of its own */
+.formula-display {
+  display: block;
 }
 
 .formula-error {

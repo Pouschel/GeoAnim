@@ -2,19 +2,31 @@
   "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
   "name": "GeoAnim-Markdown formulas",
   "scopeName": "geomd.math.injection",
-  "comment": "Formulas in a page of a book: $…$ in the text and $$ … $$ on lines of their own – not in code. \\$ is a dollar sign.",
-  "injectionSelector": "L:text.geomd -markup.fenced_code -markup.inline.raw -markup.raw -comment",
+  "comment": "Formulas in a page of a book: $…$ and $$…$$ in the text, $$ … $$ on lines of their own – not in code (and not again inside a formula). \\$ is a dollar sign.",
+  "injectionSelector": "L:text.geomd -markup.fenced_code -markup.inline.raw -markup.raw -comment -constant.character.math",
   "patterns": [
-    {
-      "name": "constant.character.math.block.geomd",
-      "begin": "^\\s*\\$\\$",
-      "end": "\\$\\$\\s*$",
-      "beginCaptures": { "0": { "name": "punctuation.definition.math.begin.geomd" } },
-      "endCaptures": { "0": { "name": "punctuation.definition.math.end.geomd" } }
-    },
     {
       "name": "constant.character.escape.geomd",
       "match": "\\\\\\$"
+    },
+    {
+      "name": "constant.character.math.display.geomd",
+      "match": "\\$\\$(?:[^$\\\\]|\\\\.)+?\\$\\$"
+    },
+    {
+      "name": "constant.character.math.block.geomd",
+      "begin": "^\\s*\\$\\$\\s*$",
+      "end": "^\\s*\\$\\$",
+      "beginCaptures": {
+        "0": {
+          "name": "punctuation.definition.math.begin.geomd"
+        }
+      },
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.definition.math.end.geomd"
+        }
+      }
     },
     {
       "name": "constant.character.math.geomd",

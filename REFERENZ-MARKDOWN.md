@@ -47,7 +47,7 @@ Ein unbekannter Schlüssel ist eine Warnung, ein Fehler im YAML ein Fehler (mit 
 | Fußnoten | `Text[^1]` · `[^1]: Anmerkung` | |
 | Attribute | `{#marke .klasse}` hinter einem Element | |
 | Formel im Text | `$bar(AB)$` | AsciiMath wie in Skripten; kein Leerzeichen direkt nach dem ersten und vor dem letzten `$` |
-| abgesetzte Formel | `$$` … `$$` auf eigenen Zeilen | zentriert auf einer Zeile für sich |
+| abgesetzte Formel | `$$…$$` im Absatz · `$$` … `$$` auf eigenen Zeilen | zentriert auf einer Zeile für sich; ein Satzzeichen direkt dahinter (`$$…$$.`) steht mit auf der Formelzeile |
 | Dollarzeichen | `\$` | |
 | Sprungmarke | `[nach oben](#oben)` | ein Link mit `#…` bleibt ein Link auf eine Stelle der Seite |
 | andere Seite | `[Strecken](20_Strecken.geo.md)` | öffnet in der Vorschau diese Seite |

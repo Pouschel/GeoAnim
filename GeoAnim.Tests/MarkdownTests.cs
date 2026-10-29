@@ -436,4 +436,14 @@ public sealed class MarkdownTests : IDisposable
         Assert.Empty(page.Marks);
         Assert.Contains("A box has no number", Assert.Single(page.Errors).Message);
     }
+
+    [Fact]
+    public void ADisplayFormulaInAParagraphStandsOnItsOwnLine()
+    {
+        MarkdownPage page = MarkdownPage.Parse("Eine Abbildung\n\n$$d: cc E xx cc E -> RR_(>=0)$$.\n\nund $$x$$, weiter.\n");
+
+        Assert.Empty(page.Errors);
+        Assert.Matches("<span class=\"formula-display\"><svg[^>]*aria-label=\"d: cc E xx cc E -&gt; RR_\\(&gt;=0\\)\"[^>]*>.*?</svg>\\.</span></p>", page.Html);
+        Assert.Matches("</svg>,</span> weiter\\.</p>", page.Html);
+    }
 }
