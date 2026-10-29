@@ -15,6 +15,7 @@ Skriptsprache der `.geo`-Dateien steht in der [Referenz](REFERENZ.md), der Über
 - [Attribute](#attribute): `crop`, `float`, `width`
 - [Aussagen](#aussagen): Axiom, Definition, Satz, Beweis …
 - [Marken und Verweise](#marken-und-verweise): `{#name}`, `§name`
+- [Stichwörter](#stichwörter): `{kw}` am Begriff, Links auf andere Seiten
 - [Fehler und Warnungen](#fehler-und-warnungen)
 - [Beispiel](#beispiel)
 
@@ -34,7 +35,7 @@ Ein YAML-Block zwischen zwei `---`-Zeilen ganz am Anfang der Datei; alle Einträ
 |---|---|---|
 | `title` | `title: Punkte und ihre Lage` | Name der Seite in Menü, Inhaltsverzeichnis und Seitenkopf; ohne ihn gilt die erste `#`-Überschrift (so kann der Name kürzer sein als die Überschrift) |
 | `description` | `description: Was ein Punkt ist …` | Kurzbeschreibung (Übersicht, Suchmaschinen) |
-| `keywords` | `keywords: [Punkt/e/en, Lage]` | Stichwörter, Schreibweise wie bei `keyword` in Skripten; auch eines allein oder eines je Zeile mit `- ` |
+| `keywords` | `keywords: [Punkt/e/en, Lage]` | Stichwörter der ganzen Seite (Links führen an den Seitenanfang), Schreibweise wie bei `keyword` in Skripten; auch eines allein oder eines je Zeile mit `- `; Stichwörter an einer bestimmten Stelle: siehe [Stichwörter](#stichwörter) |
 
 Ein unbekannter Schlüssel ist eine Warnung, ein Fehler im YAML ein Fehler (mit Zeile).
 
@@ -185,6 +186,40 @@ die Gerade in Abb. 3 eindeutig.“ (im Web und im E-Book ein Link).
   Schrittbeschreibung); das Tooltip auf `§name` zeigt, worauf er verweist; F12 bzw. Strg+Klick springt zur Marke, auch
   auf einer anderen Seite.
 
+## Stichwörter
+
+Ein Stichwort steht dort, wo der Begriff eingeführt wird – am fett (oder kursiv) gesetzten Begriff, mit `kw` in
+geschweiften Klammern direkt dahinter. Links auf das Stichwort führen genau an diese Stelle.
+
+```markdown
+So entsteht ein **Strahl**{kw=/s/en}, auch **Halbgerade**{kw=/n} genannt.
+Die gerade Verbindung heißt **Strecke**{kw}. Ein **Haus**{kw=/es/e,Häuser/n} …
+```
+
+| Schreibweise | Stichwort mit den Formen |
+|---|---|
+| `**Strecke**{kw}` | Strecke |
+| `**Strahl**{kw=/s/en}` | Strahl, Strahls, Strahlen – Endungen (mit `/` am Anfang) zum fetten Wort |
+| `**Haus**{kw=/es/e,Häuser/n}` | Haus, Hauses, Hause, Häuser, Häusern – nach dem Komma weitere Formen desselben Begriffs, ausgeschrieben (Umlaute, unregelmäßige Formen) |
+| `**Geraden**{kw=Gerade/n}` | Gerade, Geraden – ohne `/` am Anfang ausgeschrieben, wenn das fette Wort selbst gebeugt ist |
+| `**rechter Winkel**{kw=rechte/r/n Winkel/s}` | mehrere Wörter wie bei `keyword` in Skripten |
+
+- Der **Begriff** (der Name im Stichwortverzeichnis) ist die erste Form: das fette Wort bzw. das erste ausgeschriebene.
+- Ebenso an einer **Überschrift** (`## Der Kreis {kw=Kreis/es/e}`) oder einer **Aussage**
+  (`::: def Strecke {#def-strecke kw=Strecke/n}`): der Link führt dann dorthin. Ohne Wert nimmt sie ihren Text bzw.
+  Titel.
+- Stichwörter der **ganzen Seite** stehen im Kopf (`keywords:`).
+
+**Links:** Die Stichwörter aller Seiten und aller Skripte des Buchs bilden eine Liste; in den anderen Seiten wird das
+**erste Vorkommen je Abschnitt** (bis zur nächsten Überschrift) zum Link auf seine Stelle – nur ganze Wörter, mit Groß-
+und Kleinschreibung wie angegeben, die längste Form zuerst („rechter Winkel“ vor „Winkel“). Nicht verlinkt wird in
+Überschriften, in Links, in Formeln und Code und an der Stelle eines Stichworts selbst; die eigenen Stichwörter einer
+Seite nicht auf ihr selbst. `\Wort` verhindert den Link (der Backslash erscheint nicht). Haben zwei Seiten dasselbe
+Stichwort, behält es die erste in Buchreihenfolge, die andere bekommt eine Warnung. Hat ein Skript eine gleichnamige
+Seite (`seite.geo` neben `seite.geo.md`), zählen nur die Stichwörter der Seite. **In der Vorschau** sind die Links
+blau, das Tooltip nennt Stichwort und Zielseite, ein Klick öffnet die Seite (oder das Skript am Schritt) im Editor an
+der Stelle.
+
 ## Fehler und Warnungen
 
 Fehler werden in VS Code rot unterstrichen und stehen in der Vorschau über der Seite; die Seite wird trotzdem gezeigt.
@@ -206,8 +241,10 @@ Fehler werden in VS Code rot unterstrichen und stehen in der Vorschau über der 
 | Marke aus einem Zeichen | `{#a}` |
 | zwei Marken an einer Abbildung | `![](#1){#abb-a}` und `![](#2){#abb-b}` im selben Absatz |
 | unbekannte Marke in einem Verweis | `§nichts` |
+| falsches Stichwort | `**Haus**{kw=/1}` (Endungen aus Buchstaben), `{kw}` ohne Wort |
 
-Warnungen (gelb): ein unbekannter Schlüssel im Kopf, ein unbekanntes Attribut.
+Warnungen (gelb): ein unbekannter Schlüssel im Kopf, ein unbekanntes Attribut, ein Stichwort, das eine andere Seite oder
+ein Skript des Buchs schon hat.
 
 ## Beispiel
 

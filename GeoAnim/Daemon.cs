@@ -22,7 +22,9 @@ namespace GeoAnim.Cli;
 /// <item>{"id": 4, "type": "markdown", "file": "C:\\…\\a.geo.md", "text": "…"} → {"id": 4, "html": "…", "title": "…" or null,
 /// "figures": {"key": {"animation": {…}, "from": 2 or null, "to": 3 or null, "still": false, "crop": true}, …}, "marks":
 /// [{"name": "ax-gerade", "kind": "axiom", "label": "Axiom 2", "text": "…", "file": "C:\\…", "line": 4}, …] (of all pages of
-/// the book: completion and "go to definition" for "§name"), "errors": […], "warnings": […] (as for "compile")} – a page
+/// the book: completion and "go to definition" for "§name"), "keywords": [{"term": "Strahl", "anchor": "kw-strahl" or
+/// null, "file": "C:\\…", "line": 3, "column": 17}, …] (of all pages of the book: where a keyword link leads), "errors":
+/// […], "warnings": […] (as for "compile"; a keyword of two pages is a warning)} – a page
 /// of a book in Markdown, its figures from the scripts beside the file (as saved; compiled scripts are kept while their
 /// files stay the same), its references to the marks of the book's pages (the other pages as saved).</item>
 /// <item>{"id": 6, "type": "steps", "file": "C:\\…\\a.geo"} → {"id": 6, "steps": [{"number": 1, "mark": "gleich" or null,
@@ -187,13 +189,14 @@ internal static class Daemon
     private static string RenderMarkdown(JsonElement id, string file, string text)
     {
         string? path = Path.IsPathRooted(file) ? Path.GetFullPath(file) : null;
-        (List<BookMark> others, int axiomsBefore) = path == null ? ([], 0) : OtherPagesMarks(path, text);
+        BookOfPage book = path == null ? new BookOfPage([], 0, new Dictionary<string, KeywordLink>(), []) : ReadBook(path, text);
+        List<BookMark> others = book.Marks;
         var bookMarks = new Dictionary<string, BookMark>(StringComparer.Ordinal);
         foreach (BookMark other in others)
         {
             bookMarks.TryAdd(other.Mark.Name, other);
         }
-        MarkdownPage page = MarkdownPage.Parse(text, path, LoadScript, bookMarks, axiomsBefore);
+        MarkdownPage page = MarkdownPage.Parse(text, path, LoadScript, bookMarks, book.AxiomsBefore, book.KeywordLinks);
         return Answer(id, json =>
         {
             json.WriteString("html", page.Html);
@@ -249,68 +252,164 @@ internal static class Daemon
                 json.WriteEndObject();
             }
             json.WriteEndArray();
+            // the keywords of the book's pages: where a link to one leads in the editor
+            json.WriteStartArray("keywords");
+            foreach ((string keywordFile, PageKeywordDefinition keyword) in book.Definitions)
+            {
+                json.WriteStartObject();
+                json.WriteString("term", keyword.Term);
+                json.WriteString("anchor", keyword.Anchor);
+                json.WriteString("file", keywordFile);
+                json.WriteNumber("line", keyword.Line);
+                json.WriteNumber("column", keyword.Column);
+                json.WriteEndObject();
+            }
+            json.WriteEndArray();
             Problems("errors", page.Errors);
-            Problems("warnings", page.Warnings);
+            Problems("warnings", page.Warnings.Concat(book.Warnings));
         });
     }
 
-    // the marks of the other pages of the book (the pages "*.geo.md" below the folder with index.yaml, else beside the
-    // page; not in folders or files starting with "_"), as saved, read again when a page has changed; and the number of
-    // axioms on the pages before this one in book order (axioms are counted through the book)
+    // what a page needs of its book: the marks of the other pages, the number of axioms before it, the links of the other
+    // pages' keywords (form → link) and warnings for its own keywords that other pages have too
+    private sealed record BookOfPage(List<BookMark> Marks, int AxiomsBefore, IReadOnlyDictionary<string, KeywordLink> KeywordLinks,
+        List<MarkdownProblem> Warnings)
+    {
+        // the keywords of the book's pages (not of its scripts), for the editor to find the place of one
+        public List<(string File, PageKeywordDefinition Keyword)> Definitions { get; } = [];
+    }
+
+    // the marks and keywords of a page "*.geo.md", as saved; read again when it has changed
     private static readonly Dictionary<string, (DateTime Written, MarksOfPage Marks)> PageMarks =
         new(StringComparer.OrdinalIgnoreCase);
 
-    private static (List<BookMark> Marks, int AxiomsBefore) OtherPagesMarks(string page, string text)
+    private static MarksOfPage? ReadPage(string file)
     {
-        string root = BookKeywords.RootOf(page) ?? Path.GetDirectoryName(page)!;
-        var found = new List<BookMark>();
-        List<string> pages;
+        DateTime written = File.GetLastWriteTimeUtc(file);
+        if (PageMarks.TryGetValue(file, out var known) && known.Written == written)
+        {
+            return known.Marks;
+        }
         try
         {
-            pages = Directory.EnumerateFiles(root, "*.geo.md", SearchOption.AllDirectories)
+            known = (written, MarkdownPage.ReadMarks(File.ReadAllText(file)));
+        }
+        catch (IOException)
+        {
+            return null;
+        }
+        PageMarks[file] = known;
+        return known.Marks;
+    }
+
+    // the book of a page: its pages "*.geo.md" and scripts "*.geo" below the folder with index.yaml (else beside the page;
+    // not in folders or files starting with "_") in book order, the other pages as saved, the page itself as in the editor
+    private static BookOfPage ReadBook(string page, string text)
+    {
+        string root = BookKeywords.RootOf(page) ?? Path.GetDirectoryName(page)!;
+        var marks = new List<BookMark>();
+        var warnings = new List<MarkdownProblem>();
+        List<string> files;
+        try
+        {
+            files = Directory.EnumerateFiles(root, "*.geo*", SearchOption.AllDirectories)
+                .Where(file => file.EndsWith(".geo.md", StringComparison.OrdinalIgnoreCase) || file.EndsWith(".geo", StringComparison.OrdinalIgnoreCase))
                 .Select(file => Path.GetRelativePath(root, file).Replace('\\', '/'))
                 .Where(relative => !relative.Split('/').Any(part => part.StartsWith('_')))
                 .ToList();
         }
         catch (IOException)
         {
-            return (found, 0);
+            return new BookOfPage(marks, 0, new Dictionary<string, KeywordLink>(), warnings);
         }
         string own = Path.GetRelativePath(root, page).Replace('\\', '/');
-        if (!pages.Contains(own, StringComparer.OrdinalIgnoreCase))
+        if (!files.Contains(own, StringComparer.OrdinalIgnoreCase))
         {
-            pages.Add(own);
+            files.Add(own);
         }
-        pages.Sort(Program.BookOrder.Instance);
+        files.Sort(Program.BookOrder.Instance);
+        MarksOfPage ownMarks = MarkdownPage.ReadMarks(text);
+        string folder = Path.GetDirectoryName(page)!;
+        string Href(string file, string? anchor) => Path.GetRelativePath(folder, file).Replace('\\', '/') + (anchor != null ? "#" + anchor : "");
+        // the keywords in book order: the first page with a form keeps it (as in the export)
+        var keywords = new Dictionary<string, (string File, KeywordLink Link)>(StringComparer.Ordinal);
+        var ownForms = new Dictionary<string, PageKeywordDefinition>(StringComparer.Ordinal);
+        var definitions = new List<(string File, PageKeywordDefinition Keyword)>();
         int axioms = 0, axiomsBefore = 0;
-        foreach (string relative in pages)
+        foreach (string relative in files)
         {
-            string other = Path.GetFullPath(Path.Combine(root, relative));
-            if (string.Equals(other, page, StringComparison.OrdinalIgnoreCase))
+            string file = Path.GetFullPath(Path.Combine(root, relative));
+            bool isOwn = string.Equals(file, page, StringComparison.OrdinalIgnoreCase);
+            if (relative.EndsWith(".geo", StringComparison.OrdinalIgnoreCase))
             {
-                // this page as it is in the editor
-                axiomsBefore = axioms;
-                axioms += MarkdownPage.ReadMarks(text).Axioms;
-                continue;
-            }
-            DateTime written = File.GetLastWriteTimeUtc(other);
-            if (!PageMarks.TryGetValue(other, out var known) || known.Written != written)
-            {
-                try
-                {
-                    known = (written, MarkdownPage.ReadMarks(File.ReadAllText(other)));
-                }
-                catch (IOException)
+                // a script with a page of its own (seite.geo beside seite.geo.md): the page's keywords count, not the script's
+                if (files.Contains(relative + ".md", StringComparer.OrdinalIgnoreCase))
                 {
                     continue;
                 }
-                PageMarks[other] = known;
+                // a script: its keywords lead to its page, or to the step they stand at
+                string title = Program.DisplayName(Path.GetFileNameWithoutExtension(relative));
+                foreach (PageKeyword keyword in BookKeywords.Read(file))
+                {
+                    AddKeyword(keyword.Form, file, new KeywordLink(Href(file, keyword.Step > 0 ? keyword.Step.ToString(System.Globalization.CultureInfo.InvariantCulture) : null), title), null);
+                }
+                continue;
+            }
+            MarksOfPage? read = isOwn ? ownMarks : ReadPage(file);
+            if (read == null)
+            {
+                continue;
             }
             int before = axioms;
-            found.AddRange(known.Marks.Marks.Select(m => new BookMark(other, MarkdownPage.AfterAxioms(m, before))));
-            axioms += known.Marks.Axioms;
+            if (isOwn)
+            {
+                axiomsBefore = axioms;
+            }
+            else
+            {
+                marks.AddRange(read.Marks.Select(m => new BookMark(file, MarkdownPage.AfterAxioms(m, before))));
+            }
+            axioms += read.Axioms;
+            string pageTitle = read.Title ?? Path.GetFileName(file);
+            foreach (PageKeywordDefinition keyword in read.Keywords)
+            {
+                definitions.Add((file, keyword));
+                foreach (string form in keyword.Forms)
+                {
+                    AddKeyword(form, file, new KeywordLink(Href(file, keyword.Anchor), pageTitle), isOwn ? keyword : null);
+                }
+            }
         }
-        return (found, axiomsBefore);
+        // the own page's keywords are not linked on it
+        var links = keywords.Where(k => !string.Equals(k.Value.File, page, StringComparison.OrdinalIgnoreCase))
+            .ToDictionary(k => k.Key, k => k.Value.Link, StringComparer.Ordinal);
+        var book = new BookOfPage(marks, axiomsBefore, links, warnings);
+        book.Definitions.AddRange(definitions);
+        return book;
+
+        void AddKeyword(string form, string file, KeywordLink link, PageKeywordDefinition? ownKeyword)
+        {
+            if (!keywords.TryGetValue(form, out var first))
+            {
+                keywords[form] = (file, link);
+                if (ownKeyword != null)
+                {
+                    ownForms[form] = ownKeyword;
+                }
+                return;
+            }
+            if (ownKeyword != null)
+            {
+                warnings.Add(new MarkdownProblem(ownKeyword.Line, ownKeyword.Column,
+                    string.Equals(first.File, page, StringComparison.OrdinalIgnoreCase) && ownForms.TryGetValue(form, out PageKeywordDefinition? earlier)
+                        ? $"The keyword {form} is on this page already (line {earlier.Line})."
+                        : $"The keyword {form} is already the keyword of {Path.GetFileName(first.File)} (links go there)."));
+            }
+            else if (string.Equals(first.File, page, StringComparison.OrdinalIgnoreCase) && ownForms.TryGetValue(form, out PageKeywordDefinition? mine))
+            {
+                warnings.Add(new MarkdownProblem(mine.Line, mine.Column, $"The keyword {form} is also the keyword of {Path.GetFileName(file)}."));
+            }
+        }
     }
 
     // the steps of a script, for the completion of a figure's steps

@@ -92,7 +92,10 @@ mklink /J "%USERPROFILE%\.vscode\extensions\geoanim-geo" "%CD%\editors\vscode"
   links gelb markiert; ein markierter Text (auf einer Zeile, ohne Formeln) ist dort gelb hinterlegt – genau die Stelle,
   auch wenn das Wort im Absatz mehrmals vorkommt – und die Vorschau blättert hin, wenn sie nicht zu sehen ist.
   Umgekehrt setzt ein Doppelklick (oder Strg+Klick) auf ein Wort oder eine Formel in der Vorschau den Cursor im Editor
-  genau dorthin (markiert); die Vorschau bleibt dabei stehen. Seiten haben ihre eigene Vorschau neben der
+  genau dorthin (markiert); die Vorschau bleibt dabei stehen. **Stichwörter** (`**Strahl**{kw=/s/en}`) der anderen
+  Seiten und Skripte sind in der Vorschau blau verlinkt (erstes Vorkommen je Abschnitt; Tooltip: Stichwort und Zielseite);
+  ein Klick öffnet die Zielseite im Editor an der Stelle des Stichworts (ein Skript an seinem Schritt). Ein Stichwort, das
+  eine andere Seite schon hat, ist gelb unterstrichen. Seiten haben ihre eigene Vorschau neben der
   der Skripte: Beide können gleichzeitig offen sein (etwa in zwei Fenstern), und jede folgt dem aktiven Editor ihrer Art.
 
 Die Arbeit macht `geoanim daemon`, einmal im Hintergrund gestartet (MathJax startet daher nur einmal). Gefunden wird

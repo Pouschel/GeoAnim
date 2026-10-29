@@ -18,7 +18,14 @@ namespace GeoAnim.Viewer;
 public sealed record PageMark(string Name, string Kind, string Label, string Text, int Line, int Column);
 
 /// <summary>The marks of a page and the number of its axioms (which are counted through the book).</summary>
-public sealed record MarksOfPage(IReadOnlyList<PageMark> Marks, int Axioms);
+public sealed record MarksOfPage(IReadOnlyList<PageMark> Marks, int Axioms)
+{
+    /// <summary>The keywords of the page.</summary>
+    public IReadOnlyList<PageKeywordDefinition> Keywords { get; init; } = [];
+
+    /// <summary>The title of the page (front matter, else the first heading).</summary>
+    public string? Title { get; init; }
+}
 
 /// <summary>A mark on another page of the book (its full path).</summary>
 public sealed record BookMark(string File, PageMark Mark);

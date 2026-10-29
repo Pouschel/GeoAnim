@@ -472,4 +472,83 @@ public sealed class MarkdownTests : IDisposable
         Assert.Contains(">Axiom 4</a>", html);
         Assert.Equal(["Axiom 3", "Axiom 1", "Axiom 2", "Axiom 4"], answer.GetProperty("marks").EnumerateArray().Select(m => m.GetProperty("label").GetString()));
     }
+
+    [Fact]
+    public void KeywordsStandAtTheirTerms()
+    {
+        MarkdownPage page = MarkdownPage.Parse("""
+            ---
+            keywords: [Lage]
+            ---
+            Ein **Haus**{kw=/es/e,Häuser/n} und ein **Strahl**{kw}, *Halbgerade*{kw=/n} und **Geraden**{kw=Gerade/n}.
+
+            ## Der Kreis {kw=Kreis/es/e}
+
+            ::: def Strecke {#def-strecke kw=Strecke/n}
+            x
+            :::
+
+            **Fehler**{kw=/1}
+            """);
+
+        Assert.Equal(["Lage", "Haus", "Strahl", "Halbgerade", "Gerade", "Kreis", "Strecke"], page.KeywordDefinitions.Select(k => k.Term));
+        Assert.Equal(["Haus", "Hauses", "Hause", "Häuser", "Häusern"], page.KeywordDefinitions[1].Forms);
+        Assert.Equal(["Halbgerade", "Halbgeraden"], page.KeywordDefinitions[3].Forms);
+        Assert.Equal([null, "kw-haus", "kw-strahl", "kw-halbgerade", "kw-gerade", "kw-kreis", "def-strecke"], page.KeywordDefinitions.Select(k => k.Anchor));
+        Assert.Contains("<strong id=\"kw-haus\">Haus</strong>", page.Html);
+        Assert.Contains("<h2 id=\"kw-kreis\" data-line=\"6\">Der Kreis</h2>", page.Html);
+        Assert.DoesNotContain("kw=", page.Html);
+        MarkdownProblem error = Assert.Single(page.Errors);
+        Assert.Equal(12, error.Line);
+    }
+
+    [Fact]
+    public void KeywordsOfOtherPagesAreLinkedOncePerSection()
+    {
+        var links = new Dictionary<string, KeywordLink>
+        {
+            ["Punkt"] = new KeywordLink("punkte.geo.md#kw-punkt", "Punkte"),
+            ["Punkte"] = new KeywordLink("punkte.geo.md#kw-punkt", "Punkte"),
+            ["rechter Winkel"] = new KeywordLink("winkel.geo#3", "Winkel"),
+            ["Winkel"] = new KeywordLink("winkel.geo", "Winkel"),
+        };
+        MarkdownPage page = MarkdownPage.Parse("""
+            Ein Punkt, noch ein Punkt und Punkte; ein rechter Winkel ist ein Winkel. \Winkel bleibt Text, \Wort auch.
+
+            ## Punkt im Titel
+
+            Wieder ein Punkt, [ein Punkt](x.md), **Punkt**{kw} und $Punkt$.
+            """, null, null, null, 0, links);
+
+        // once per section and target: Punkt, rechter Winkel, Winkel; after the heading Punkt again
+        Assert.Equal(4, page.Html.Split("class=\"keyword\"").Length - 1);
+        Assert.Contains("Ein <a href=\"punkte.geo.md#kw-punkt\" class=\"keyword\" title=\"Punkt – Punkte\">Punkt</a>, noch ein Punkt und Punkte;", page.Html);
+        Assert.Contains("ein <a href=\"winkel.geo#3\" class=\"keyword\" title=\"rechter Winkel – Winkel\">rechter Winkel</a> ist ein <a href=\"winkel.geo\"", page.Html);
+        Assert.Contains("Winkel bleibt Text, Wort auch.", page.Html);
+        Assert.Contains("<h2 data-line=\"3\">Punkt im Titel</h2>", page.Html);
+        Assert.Contains("Wieder ein <a href=\"punkte.geo.md#kw-punkt\"", page.Html);
+    }
+
+    [Fact]
+    public void DaemonLinksTheKeywordsOfTheBook()
+    {
+        File.WriteAllText(Path.Combine(folder, "index.yaml"), "title: Buch\n");
+        File.WriteAllText(Path.Combine(folder, "10_Punkte.geo.md"), "Ein **Punkt**{kw=/e/en} ist da.\n");
+        File.WriteAllText(Path.Combine(folder, "20_Winkel.geo"), "keyword Winkel/s\npoint A = 0 0\nstep Rechte\nkeyword rechter Winkel\n");
+        // a script with a page of its own: only the page's keywords count
+        File.WriteAllText(Path.Combine(folder, "30_Kreis.geo"), "keyword Kreis\npoint A = 0 0\n");
+        string file = Path.Combine(folder, "30_Kreis.geo.md");
+        JsonElement answer = JsonDocument.Parse(Daemon.Handle(JsonSerializer.Serialize(new
+        {
+            id = 1, type = "markdown", file, text = "Ein Punkt, ein rechter Winkel und ein Winkel. Auch ein **Punkt**{kw}. Ein Kreis.\n",
+        }))).RootElement;
+
+        string html = answer.GetProperty("html").GetString()!;
+        Assert.Contains("<a href=\"10_Punkte.geo.md#kw-punkt\" class=\"keyword\" title=\"Punkt – 10_Punkte.geo.md\">Punkt</a>", html);
+        Assert.Contains("<a href=\"20_Winkel.geo#1\" class=\"keyword\" title=\"rechter Winkel – Winkel\">rechter Winkel</a>", html);
+        Assert.Contains("<a href=\"20_Winkel.geo\" class=\"keyword\" title=\"Winkel – Winkel\"", html);
+        Assert.DoesNotContain("30_Kreis.geo", html);
+        JsonElement warning = Assert.Single(answer.GetProperty("warnings").EnumerateArray());
+        Assert.Contains("already the keyword of 10_Punkte.geo.md", warning.GetProperty("message").GetString());
+    }
 }

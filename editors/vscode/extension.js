@@ -740,8 +740,8 @@ async function openLink (href, from) {
       const editor = await openBeside(page, from)
       // a reference to a mark on that page ("strecken.geo.md#def-strecke"): the cursor goes to the mark
       const mark = /#([\p{L}\p{N}_-]+)$/u.exec(href)
-      if (mark) {
-        revealMark(editor, mark[1])
+      if (mark && !revealMark(editor, mark[1])) {
+        revealKeyword(editor, from, mark[1])
       }
     } else {
       vscode.window.showInformationMessage(`GeoAnim: Die Seite ${href} gibt es nicht.`)
@@ -1131,8 +1131,21 @@ function revealMark (editor, name) {
       const position = new vscode.Position(i, match.index)
       editor.selection = new vscode.Selection(position, position)
       editor.revealRange(new vscode.Range(position, position), vscode.TextEditorRevealType.InCenterIfOutsideViewport)
-      return
+      return true
     }
+  }
+  return false
+}
+
+// the cursor on the term of a keyword ("kw-strahl": **Strahl**{kw=…}), from what the daemon said about the book of the
+// page the link was in
+function revealKeyword (editor, from, anchor) {
+  const result = from ? lastResults.get(from.uri.toString()) : null
+  const keyword = ((result && result.keywords) || []).find(k => k.anchor === anchor && k.file && k.file.toLowerCase() === editor.document.uri.fsPath.toLowerCase())
+  if (keyword) {
+    const position = new vscode.Position(Math.max(0, keyword.line - 1), Math.max(0, keyword.column - 1))
+    editor.selection = new vscode.Selection(position, position)
+    editor.revealRange(new vscode.Range(position, position), vscode.TextEditorRevealType.InCenterIfOutsideViewport)
   }
 }
 

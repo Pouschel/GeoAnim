@@ -88,7 +88,7 @@ internal static class BookKeywords
     }
 
     // the keywords of another script, as saved; a script that cannot be read has none
-    private static List<PageKeyword> Read(string path)
+    internal static List<PageKeyword> Read(string path)
     {
         DateTime changed = File.GetLastWriteTimeUtc(path);
         lock (Cache)

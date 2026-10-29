@@ -284,6 +284,16 @@ a.ref:hover {
   color: #1565c0;
 }
 
+/* a keyword of another page: a link like in the web book */
+a.keyword {
+  color: #1565c0;
+  text-decoration: none;
+}
+
+a.keyword:hover {
+  text-decoration: underline;
+}
+
 .ref-missing {
   color: #c62828;
   font-weight: 700;

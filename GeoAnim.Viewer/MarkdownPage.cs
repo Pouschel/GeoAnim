@@ -113,20 +113,21 @@ public sealed partial class MarkdownPage
     /// <paramref name="axiomsBefore"/> the number of axioms on the pages before (axioms are counted through the book).
     /// </summary>
     public static MarkdownPage Parse(string text, string? file = null, Func<string, AnimationData>? loadScript = null,
-        IReadOnlyDictionary<string, BookMark>? bookMarks = null, int axiomsBefore = 0) => Build(text, file, loadScript, bookMarks, axiomsBefore, render: true);
+        IReadOnlyDictionary<string, BookMark>? bookMarks = null, int axiomsBefore = 0, IReadOnlyDictionary<string, KeywordLink>? keywordLinks = null) =>
+        Build(text, file, loadScript, bookMarks, axiomsBefore, keywordLinks, render: true);
 
     /// <summary>The marks of a page (for the references of the other pages), without making its HTML.</summary>
     public static MarksOfPage ReadMarks(string text)
     {
-        MarkdownPage page = Build(text, null, null, null, 0, render: false);
-        return new MarksOfPage(page.Marks, page.Axioms);
+        MarkdownPage page = Build(text, null, null, null, 0, null, render: false);
+        return new MarksOfPage(page.Marks, page.Axioms) { Keywords = page.KeywordDefinitions, Title = page.Title };
     }
 
     /// <summary>The number of axioms on the page (they are counted through the book).</summary>
     public int Axioms { get; private set; }
 
     private static MarkdownPage Build(string text, string? file, Func<string, AnimationData>? loadScript,
-        IReadOnlyDictionary<string, BookMark>? bookMarks, int axiomsBefore, bool render)
+        IReadOnlyDictionary<string, BookMark>? bookMarks, int axiomsBefore, IReadOnlyDictionary<string, KeywordLink>? keywordLinks, bool render)
     {
         var errors = new List<MarkdownProblem>();
         var warnings = new List<MarkdownProblem>();
@@ -143,8 +144,9 @@ public sealed partial class MarkdownPage
         }
 
         string? heading = document.Descendants<HeadingBlock>().FirstOrDefault(h => h.Level == 1) is { } first
-            ? HeadingText(text, first)
+            ? Regex.Replace(HeadingText(text, first), @"\s*\{[^{}]*\}\s*$", "")
             : null;
+        List<PageKeywordDefinition> keywordDefinitions = ReadKeywords(text, document, keywords, locate, errors);
 
         // paragraphs of figures only become figure blocks
         var figures = new List<GeoReference>();
@@ -213,11 +215,12 @@ public sealed partial class MarkdownPage
         List<PageMark> marks = Number(text, document, locate, errors, axiomsBefore, out int axioms);
         if (!render)
         {
-            return new MarkdownPage("") { Marks = marks, Axioms = axioms };
+            return new MarkdownPage("") { Marks = marks, Axioms = axioms, KeywordDefinitions = keywordDefinitions, FrontTitle = title, Heading = heading };
         }
         string? page = file == null ? null : Path.GetFullPath(file);
         CheckMarks(marks, page, bookMarks, errors);
         ResolveReferences(document, locate, marks, page, bookMarks, errors);
+        LinkKeywords(document, keywordLinks ?? new Dictionary<string, KeywordLink>());
 
         // a "$" that does not start a formula (no closing one, or a space after it): as in scripts a mistake
         foreach (LiteralInline literal in document.Descendants<LiteralInline>())
@@ -266,6 +269,7 @@ public sealed partial class MarkdownPage
             PageFigures = pageFigures,
             Marks = marks,
             Axioms = axioms,
+            KeywordDefinitions = keywordDefinitions,
             Errors = errors.OrderBy(e => e.Line).ThenBy(e => e.Column).ToList(),
             Warnings = warnings,
         };

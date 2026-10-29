@@ -308,6 +308,8 @@ Namen; `![](#2)` meint das gleichnamige Skript der Seite. Im Buch werden Abbildu
 Abbildungen werden nummeriert; Aussagen stehen in Containern (`::: axiom {#ax-gerade} Geradenaxiom` … `:::`, ebenso
 `definition`/`def`, `theorem`, `lemma`, `corollary`, `proof`, `example`, `remark`, dazu `box` als neutraler Kasten); Marken (`{#name}` an Abbildungen,
 Aussagen und Überschriften) gelten im ganzen Buch, und `§name` im Text wird zum Verweis („Axiom 2“, „Abb. 3“).
+Stichwörter stehen am eingeführten Begriff (`**Strahl**{kw=/s/en}`); ihr erstes Vorkommen je Abschnitt wird in den
+anderen Seiten zum Link dorthin – zusammen mit den Stichwörtern der Skripte.
 Alles im Einzelnen: **[Referenz der Buchseiten](REFERENZ-MARKDOWN.md)**.
 
 ## C#
