@@ -29,18 +29,19 @@ internal static partial class Program
               order). Each page has everything inside; with -assets the pages link to the player's files in assets/
               instead (for a web server). -sheet also writes kontaktbogen.html: the pictures after every step of all
               pages at a glance. With -serve it then serves the book on http://localhost:8080/ (or the port given).
-          geoanim figure <file.geo>[#steps] [-o <file.svg|file.png>] [-png] [-dpi 300] [-nocrop]
+          geoanim figure <file.geo>[#steps] [-o <file.svg|file.png>] [-png] [-dpi 300] [-nocrop] [-player 1280]
               Writes the picture as in the book: SVG with its size in pt (from "print:" in the book's index.yaml),
               texts and formulas as paths, cut to its content. #3: after step 3 (#0: the starting picture, #gleich: the
               step by its mark or name), #2..4: one picture for each step (file-2.svg …), all cut alike; without: the
-              last picture. With -png (or a .png name): PNG on white with 300 pixels per inch (or -dpi).
+              last picture. With -png (or a .png name): PNG on white with 300 pixels per inch (or -dpi). -player 1280:
+              in the sizes of the player that many pixels wide (the whole view), to compare with it.
           geoanim formula "<asciimath>" [-o <file.png|file.svg>] [-size 11pt] [-dpi 300]
               Writes a formula as a picture of its own, as for readers without SVG (Kindle): PNG on white (default
               formula.png) or SVG, in the font size.
           geoanim epub <dir> [-o <book.epub>] [-svg]
               Writes the pages of the book in dir (*.geo.md below the folder with index.yaml) as an e-book (EPUB 3):
-              figures and formulas as PNG on white (for Kindle), with -svg as SVG; sized in em, so that they grow with
-              the reader's font size. Default: dir.epub next to the folder.
+              figures and formulas as PNG on white (for Kindle), with -svg as SVG; figures as wide as the page, formulas
+              sized in em, so that they grow with the reader's font size. Default: dir.epub next to the folder.
           geoanim daemon
               Compiles for an editor (the VS Code extension): JSON requests on standard input, answers on standard output.
         """;

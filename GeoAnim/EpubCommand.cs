@@ -18,8 +18,8 @@ internal static partial class Program
     /// <summary>
     /// geoanim epub &lt;dir&gt; [-o book.epub] [-svg]: the pages of a book ("*.geo.md" below the folder with index.yaml, in
     /// book order) as an e-book (EPUB 3, with a table of contents for older readers too). Figures and formulas are pictures:
-    /// PNG on white (Kindle shows no SVG in the text), or SVG with -svg. They are sized in em, so they grow with the
-    /// reader's font size: a figure is as wide as in print ("print:" in index.yaml) next to text of "print: text" (11 pt).
+    /// PNG on white (Kindle shows no SVG in the text), or SVG with -svg. A figure is as wide as the page (pictures side by
+    /// side share it); formulas are sized in em, so they grow with the reader's font size (made for "print: text", 11 pt).
     /// </summary>
     internal static int Epub(List<string> arguments)
     {
@@ -226,6 +226,7 @@ internal static partial class Program
             string alt = caption == null ? "Abbildung" : TextOf(caption).Trim();
             IElement row = document.CreateElement("div");
             row.SetAttribute("class", "figure-row");
+            var pictures = new List<IElement>();
             foreach (IElement item in figure.QuerySelectorAll(".geo-item, .geo-placeholder"))
             {
                 if (item.GetAttribute("data-figure") is { } key && figures.TryGetValue(key, out PageFigure? shown))
@@ -236,7 +237,7 @@ internal static partial class Program
                         IElement picture = document.CreateElement("img");
                         picture.SetAttribute("src", "../" + href);
                         picture.SetAttribute("alt", alt);
-                        picture.SetAttribute("style", $"width: {Em(image.Width)}");
+                        pictures.Add(picture);
                         row.AppendChild(picture);
                     }
                 }
@@ -247,6 +248,18 @@ internal static partial class Program
                     missing.TextContent = item.TextContent.Trim();
                     row.AppendChild(missing);
                 }
+            }
+            // as wide as the page (readers make pictures that wide anyway, whatever else is asked); two or more side by side
+            // share it, at most three in a row
+            string style = pictures.Count switch
+            {
+                1 => "width: 100%; margin-left: 0; margin-right: 0",
+                2 => "width: 49%",
+                _ => "width: 32%",
+            };
+            foreach (IElement picture in pictures)
+            {
+                picture.SetAttribute("style", style);
             }
             block.AppendChild(row);
             if (caption != null)
@@ -660,7 +673,7 @@ internal static partial class Program
 
                 .figure-row img {
                   max-width: 100%;
-                  margin: 0 0.2em 0.3em;
+                  margin: 0 0.4% 0.3em;
                   vertical-align: top;
                 }
 

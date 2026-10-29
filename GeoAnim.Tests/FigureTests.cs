@@ -208,6 +208,9 @@ public sealed class EpubTests : IDisposable
         Assert.Matches("<img src=\"../images/a-[0-9a-f]+.png\" alt=\"Abb. 1 Ein Punkt\"", first);
         // the row of two steps: two pictures, the still one
         Assert.Equal(3, System.Text.RegularExpressions.Regex.Matches(first, "images/a-").Count);
+        // as wide as the page; two side by side share it
+        Assert.Contains("style=\"width: 100%; margin-left: 0; margin-right: 0\"", first);
+        Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(first, "style=\"width: 49%\"").Count);
         // references and keywords lead to the other file
         Assert.Contains("href=\"p01-Erste.xhtml#ax\"", second);
         Assert.Matches("<a href=\"p01-Erste.xhtml#[^\"]+\"[^>]*>Punkt</a>", second);

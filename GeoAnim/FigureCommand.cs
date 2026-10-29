@@ -17,6 +17,7 @@ internal static partial class Program
         string source = arguments[0];
         string? output = null;
         bool crop = true;
+        double? playerWidth = null;
         bool png = false;
         double dpi = FigurePng.DefaultDpi;
         for (int i = 1; i < arguments.Count; i++)
@@ -27,6 +28,13 @@ internal static partial class Program
             }
             else if (arguments[i] is "-nocrop" or "--nocrop")
             {
+                crop = false;
+            }
+            else if (arguments[i] is "-player" or "--player" && i + 1 < arguments.Count)
+            {
+                // as the player draws it this many pixels wide (to compare): its sizes, the whole view
+                playerWidth = double.TryParse(arguments[++i], NumberStyles.Float, CultureInfo.InvariantCulture, out double w) && w > 0
+                    ? w : throw new ArgumentException("-player needs a width in pixels.");
                 crop = false;
             }
             else if (arguments[i] is "-png" or "--png")
@@ -56,7 +64,9 @@ internal static partial class Program
         {
             return 1;
         }
-        FigureStyle style = StyleOf(Path.GetDirectoryName(Path.GetFullPath(file))!);
+        FigureStyle style = playerWidth is double pixels
+            ? new FigureStyle(pixels / (animation.View.XMax - animation.View.XMin), pixels / 1280)
+            : StyleOf(Path.GetDirectoryName(Path.GetFullPath(file))!);
         // the steps shown: indices from 0 (-1: the starting picture)
         List<int> shown;
         try
