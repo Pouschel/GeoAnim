@@ -11,6 +11,7 @@ namespace GeoAnim.Cli;
 /// geoanim exportdir &lt;dir&gt; [-o dir]: the folder as a book of pages with an overview and navigation.<br/>
 /// geoanim figure &lt;file.geo&gt;[#steps] [-o file.svg]: the picture as in the book (SVG in pt, or PNG).<br/>
 /// geoanim formula "abs(A-B)" [-o file.png]: a formula as a picture (PNG on white, or SVG).<br/>
+/// geoanim epub &lt;dir&gt; [-o book.epub]: the pages of a book as an e-book (EPUB 3).<br/>
 /// geoanim daemon: compiles for an editor over standard input and output (see <see cref="Daemon"/>).
 /// </summary>
 internal static partial class Program
@@ -36,6 +37,10 @@ internal static partial class Program
           geoanim formula "<asciimath>" [-o <file.png|file.svg>] [-size 11pt] [-dpi 300]
               Writes a formula as a picture of its own, as for readers without SVG (Kindle): PNG on white (default
               formula.png) or SVG, in the font size.
+          geoanim epub <dir> [-o <book.epub>] [-svg]
+              Writes the pages of the book in dir (*.geo.md below the folder with index.yaml) as an e-book (EPUB 3):
+              figures and formulas as PNG on white (for Kindle), with -svg as SVG; sized in em, so that they grow with
+              the reader's font size. Default: dir.epub next to the folder.
           geoanim daemon
               Compiles for an editor (the VS Code extension): JSON requests on standard input, answers on standard output.
         """;
@@ -48,11 +53,17 @@ internal static partial class Program
             Console.InputEncoding = Encoding.UTF8;
             return Daemon.Run(Console.In, Console.Out);
         }
-        if (args.Length >= 2 && args[0] is "figure" or "formula")
+        if (args.Length >= 2 && args[0] is "figure" or "formula" or "epub")
         {
             try
             {
-                return args[0] == "figure" ? Figure(args.Skip(1).ToList()) : Formula(args.Skip(1).ToList());
+                List<string> rest = args.Skip(1).ToList();
+                return args[0] switch
+                {
+                    "figure" => Figure(rest),
+                    "formula" => Formula(rest),
+                    _ => Epub(rest),
+                };
             }
             catch (ArgumentException e)
             {

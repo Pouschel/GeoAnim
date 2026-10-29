@@ -530,6 +530,14 @@ public sealed class MarkdownTests : IDisposable
     }
 
     [Fact]
+    public void KeywordsAreLinkedAfterAReference()
+    {
+        var links = new Dictionary<string, KeywordLink> { ["Punkt"] = new KeywordLink("punkte.geo.md#kw-punkt", "Punkte") };
+        MarkdownPage page = MarkdownPage.Parse("::: axiom {#ax}\nText.\n:::\n\nNach §ax gilt es für jeden Punkt.\n", null, null, null, 0, links);
+        Assert.Contains("für jeden <a href=\"punkte.geo.md#kw-punkt\" class=\"keyword\"", page.Html);
+    }
+
+    [Fact]
     public void DaemonLinksTheKeywordsOfTheBook()
     {
         File.WriteAllText(Path.Combine(folder, "index.yaml"), "title: Buch\n");

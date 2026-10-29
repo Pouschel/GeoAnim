@@ -267,12 +267,21 @@ public sealed partial class MarkdownPage
             {
                 pieces.Add(new LiteralInline(unescaped));
             }
-            foreach (Inline piece in pieces)
-            {
-                literal.InsertBefore(piece);
-            }
-            literal.Remove();
+            ReplaceBy(literal, pieces);
         }
+    }
+
+    // an inline replaced by others, in their order (each after the one before it: InsertBefore leaves the links between the
+    // inlines broken when it is used again on an inline that was put in that way)
+    internal static void ReplaceBy(Inline inline, List<Inline> pieces)
+    {
+        Inline current = inline;
+        foreach (Inline piece in pieces)
+        {
+            current.InsertAfter(piece);
+            current = piece;
+        }
+        inline.Remove();
     }
 
     // in a heading, a link or the marked term of a keyword

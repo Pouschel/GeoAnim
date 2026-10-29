@@ -20,33 +20,39 @@ public static partial class FigureRenderer
 {
     /// <summary>
     /// The picture at <paramref name="time"/> (ms). With <paramref name="cropTimes"/> it shows only what is drawn at those
-    /// times (all pictures of a row of stills alike), else the whole view.
+    /// times (all pictures of a row of stills alike), else the whole view – larger where something drawn reaches out of
+    /// it (labels are larger next to the geometry in the book than in the player): nothing is cut off.
     /// </summary>
     public static FigureImage Render(FigureAnimation animation, double time, FigureStyle style, IReadOnlyList<double>? cropTimes = null)
     {
         var full = new View(animation.XMin, animation.XMax, animation.YMin, animation.YMax);
         View view = full;
-        if (cropTimes is { Count: > 0 })
+        double scale = style.PointsPerUnit;
+        double least = 16 * style.SizeFactor / scale;
+        SKRect? content = null;
+        foreach (double t in cropTimes is { Count: > 0 } ? cropTimes : [time])
         {
-            SKRect? content = null;
-            foreach (double t in cropTimes)
+            var measure = new Scene(animation, style, full);
+            measure.Draw(t);
+            if (measure.Content is { } box)
             {
-                var measure = new Scene(animation, style, full);
-                measure.Draw(t);
-                if (measure.Content is { } box)
-                {
-                    content = content is { } known ? SKRect.Union(known, box) : box;
-                }
+                content = content is { } known ? SKRect.Union(known, box) : box;
             }
-            if (content is { } c)
+        }
+        if (content is { } c)
+        {
+            double xmin = full.XMin + c.Left / scale, xmax = full.XMin + c.Right / scale;
+            double ymax = full.YMax - c.Top / scale, ymin = full.YMax - c.Bottom / scale;
+            if (cropTimes is { Count: > 0 })
             {
-                double scale = style.PointsPerUnit;
-                double xmin = full.XMin + c.Left / scale, xmax = full.XMin + c.Right / scale;
-                double ymax = full.YMax - c.Top / scale, ymin = full.YMax - c.Bottom / scale;
-                // a margin of 5 % of the content, at least 16 sizes
-                double margin = Math.Max(0.05 * Math.Max(xmax - xmin, ymax - ymin), 16 * style.SizeFactor / scale);
-                view = new View(Math.Max(full.XMin, xmin - margin), Math.Min(full.XMax, xmax + margin),
-                    Math.Max(full.YMin, ymin - margin), Math.Min(full.YMax, ymax + margin));
+                // a margin of 5 % of the content, at least 16 sizes; beyond the script's view if the content reaches out
+                double margin = Math.Max(0.05 * Math.Max(xmax - xmin, ymax - ymin), least);
+                view = new View(xmin - margin, xmax + margin, ymin - margin, ymax + margin);
+            }
+            else
+            {
+                view = new View(Math.Min(full.XMin, xmin - least), Math.Max(full.XMax, xmax + least),
+                    Math.Min(full.YMin, ymin - least), Math.Max(full.YMax, ymax + least));
             }
         }
         var scene = new Scene(animation, style, view);

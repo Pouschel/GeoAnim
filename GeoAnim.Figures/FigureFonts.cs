@@ -54,3 +54,26 @@ internal static class FigureFonts
         }
     }
 }
+
+/// <summary>The fonts of the figures as files (TrueType), e.g. to embed them in an e-book, and their licence.</summary>
+public static class BookFonts
+{
+    /// <summary>The font files: name ("stix-two-text-400-normal.ttf"), weight (400, 700), italic, content.</summary>
+    public static IReadOnlyList<(string Name, int Weight, bool Italic, byte[] Data)> Files()
+    {
+        (string Name, int Weight, bool Italic)[] fonts =
+        [
+            ("stix-two-text-400-normal.ttf", 400, false),
+            ("stix-two-text-400-italic.ttf", 400, true),
+            ("stix-two-text-700-normal.ttf", 700, false),
+        ];
+        return fonts.Select(font =>
+        {
+            using Stream stream = typeof(BookFonts).Assembly.GetManifestResourceStream("fonts/" + font.Name)
+                ?? throw new InvalidOperationException("Font not found: " + font.Name);
+            using var memory = new MemoryStream();
+            stream.CopyTo(memory);
+            return (font.Name, font.Weight, font.Italic, memory.ToArray());
+        }).ToList();
+    }
+}

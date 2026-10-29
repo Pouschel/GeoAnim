@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="GeoAnim.Tests" />
+    <InternalsVisibleTo Include="geoanim" />
   </ItemGroup>
 
   <!-- the pages of a book in Markdown (with a YAML block at the start) -->

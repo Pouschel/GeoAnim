@@ -272,7 +272,7 @@ internal static class Daemon
 
     // what a page needs of its book: the marks of the other pages, the number of axioms before it, the links of the other
     // pages' keywords (form → link) and warnings for its own keywords that other pages have too
-    private sealed record BookOfPage(List<BookMark> Marks, int AxiomsBefore, IReadOnlyDictionary<string, KeywordLink> KeywordLinks,
+    internal sealed record BookOfPage(List<BookMark> Marks, int AxiomsBefore, IReadOnlyDictionary<string, KeywordLink> KeywordLinks,
         List<MarkdownProblem> Warnings)
     {
         // the keywords of the book's pages (not of its scripts), for the editor to find the place of one
@@ -304,7 +304,7 @@ internal static class Daemon
 
     // the book of a page: its pages "*.geo.md" and scripts "*.geo" below the folder with index.yaml (else beside the page;
     // not in folders or files starting with "_") in book order, the other pages as saved, the page itself as in the editor
-    private static BookOfPage ReadBook(string page, string text)
+    internal static BookOfPage ReadBook(string page, string text)
     {
         string root = BookKeywords.RootOf(page) ?? Path.GetDirectoryName(page)!;
         var marks = new List<BookMark>();
@@ -444,7 +444,7 @@ internal static class Daemon
         new(StringComparer.OrdinalIgnoreCase);
 
     // a script for a figure: compiled once, again when it or a file it reads has changed
-    private static AnimationData LoadScript(string path)
+    internal static AnimationData LoadScript(string path)
     {
         if (Scripts.TryGetValue(path, out var known) && known.Files.All(f => File.Exists(f.File) && File.GetLastWriteTimeUtc(f.File) == f.Written))
         {

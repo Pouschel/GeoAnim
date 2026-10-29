@@ -295,11 +295,7 @@ public sealed partial class MarkdownPage
             {
                 pieces.Add(new LiteralInline(content.Substring(position)));
             }
-            foreach (Inline piece in pieces)
-            {
-                literal.InsertBefore(piece);
-            }
-            literal.Remove();
+            ReplaceBy(literal, pieces);
         }
     }
 

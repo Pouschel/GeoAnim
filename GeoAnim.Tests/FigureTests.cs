@@ -164,3 +164,65 @@ public sealed class FigureTests : IDisposable
         Assert.Throws<ArgumentException>(() => Program.Figure([script, "-dpi", "1"]));
     }
 }
+
+public sealed class EpubTests : IDisposable
+{
+    private readonly string folder = Directory.CreateTempSubdirectory("geoanim-epub").FullName;
+
+    public void Dispose() => Directory.Delete(folder, recursive: true);
+
+    private void Write(string name, string content)
+    {
+        string path = Path.Combine(folder, name);
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, content);
+    }
+
+    private static string Read(System.IO.Compression.ZipArchive zip, string name)
+    {
+        using var reader = new StreamReader(zip.GetEntry(name)!.Open());
+        return reader.ReadToEnd();
+    }
+
+    [Fact]
+    public void TheBookBecomesAnEpubWithPicturesAndLinksBetweenItsPages()
+    {
+        Write("index.yaml", "title: Buch\nauthor: Thomas\nlanguage: de\n");
+        Write("10_Kapitel/10_Erste.geo", "view x -5 .. 5 y -5 .. 5\nstep Eins #eins\npoint A = 0 0\nstep Zwei\npoint B = 2 2");
+        Write("10_Kapitel/10_Erste.geo.md", "# Erste Seite\n\nDer **Punkt**{kw} $A$ und $$x^2$$.\n\n![Ein Punkt](#eins)\n\n![](#1..2)\n\n::: axiom {#ax} Eins\nText.\n:::\n");
+        Write("10_Kapitel/20_Zweite.geo.md", "# Zweite Seite\n\nNach §ax gilt es für jeden Punkt.\n");
+        string output = Path.Combine(folder, "buch.epub");
+        Assert.Equal(0, Program.Epub([folder, "-o", output]));
+        using System.IO.Compression.ZipArchive zip = System.IO.Compression.ZipFile.OpenRead(output);
+        // the mimetype first and stored
+        Assert.Equal("mimetype", zip.Entries[0].FullName);
+        Assert.Equal(zip.Entries[0].Length, zip.Entries[0].CompressedLength);
+        string first = Read(zip, "OEBPS/text/p01-Erste.xhtml");
+        string second = Read(zip, "OEBPS/text/p02-Zweite.xhtml");
+        // well-formed XHTML
+        System.Xml.Linq.XDocument.Parse(first);
+        System.Xml.Linq.XDocument.Parse(second);
+        Assert.DoesNotContain("<svg", first);
+        Assert.DoesNotContain("data-line", first);
+        Assert.Contains("alt=\"A\" class=\"formula\"", first);
+        Assert.Matches("<img src=\"../images/a-[0-9a-f]+.png\" alt=\"Abb. 1 Ein Punkt\"", first);
+        // the row of two steps: two pictures, the still one
+        Assert.Equal(3, System.Text.RegularExpressions.Regex.Matches(first, "images/a-").Count);
+        // references and keywords lead to the other file
+        Assert.Contains("href=\"p01-Erste.xhtml#ax\"", second);
+        Assert.Matches("<a href=\"p01-Erste.xhtml#[^\"]+\"[^>]*>Punkt</a>", second);
+        string package = Read(zip, "OEBPS/content.opf");
+        Assert.Contains("<dc:creator>Thomas</dc:creator>", package);
+        Assert.Contains("properties=\"nav\"", package);
+        Assert.Contains("Kapitel", Read(zip, "OEBPS/nav.xhtml"));
+        Assert.NotNull(zip.GetEntry("OEBPS/toc.ncx"));
+        Assert.NotNull(zip.GetEntry("OEBPS/fonts/stix-two-text-400-normal.ttf"));
+    }
+
+    [Fact]
+    public void AFolderWithoutIndexYamlIsNoBook()
+    {
+        Write("a.geo.md", "# A");
+        Assert.Equal(1, Program.Epub([folder]));
+    }
+}

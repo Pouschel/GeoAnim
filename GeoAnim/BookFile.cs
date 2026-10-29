@@ -10,6 +10,7 @@ namespace GeoAnim.Cli;
 /// index.yaml in the source folder of a book: what the book says about itself (see <see cref="BookSettings"/>).
 /// <code>
 /// title: Ebene Geometrie Schritt für Schritt
+/// author: Thomas Steinfeld              # for the e-book
 /// description: Von Punkten und Strecken bis zu den Kongruenzsätzen.
 /// icon: icons/winkel.svg            # relative to index.yaml; png or svg
 /// language: de
@@ -22,6 +23,7 @@ namespace GeoAnim.Cli;
 ///   scale: 5mm                      # a coordinate unit (mm, cm, pt, in)
 ///   labels: 9pt                     # the font size of the labels …
 ///   labelsize: 34                   # … of this size in the scripts (all sizes in the same ratio)
+///   text: 11pt                      # the font size of the text the figures go with
 /// numbering:                        # (not used yet)
 /// </code>
 /// </summary>
@@ -29,9 +31,9 @@ internal static class BookFile
 {
     public const string Name = "index.yaml";
 
-    private static readonly string[] Keys = ["title", "description", "icon", "language", "url", "home", "footer", "print", "numbering"];
+    private static readonly string[] Keys = ["title", "author", "description", "icon", "language", "url", "home", "footer", "print", "numbering"];
 
-    private static readonly string[] PrintKeys = ["scale", "labels", "labelsize"];
+    private static readonly string[] PrintKeys = ["scale", "labels", "labelsize", "text"];
 
     /// <summary>
     /// The settings of the book in <paramref name="root"/>: none without index.yaml. Unknown keys and a missing icon are
@@ -116,7 +118,7 @@ internal static class BookFile
                 warn($"{Name}: the icon {icon} should be an svg, png or ico file.");
             }
         }
-        (double? figureUnit, double? figureSize) = ReadPrint(map, warn);
+        (double? figureUnit, double? figureSize, double? textSize) = ReadPrint(map, warn);
         string? url = Text("url");
         if (url != null)
         {
@@ -141,20 +143,23 @@ internal static class BookFile
             IconFile = iconFile,
             FigureUnit = figureUnit,
             FigureSize = figureSize,
+            TextSize = textSize,
+            Author = Text("author"),
         };
     }
 
-    // "print:" with "scale: 5mm", "labels: 9pt" and "labelsize: 34": points per unit and per size of the scripts
-    private static (double? Unit, double? Size) ReadPrint(YamlMappingNode map, Action<string> warn)
+    // "print:" with "scale: 5mm", "labels: 9pt", "labelsize: 34" and "text: 11pt": points per unit, per size of the scripts
+    // and the font size of the text
+    private static (double? Unit, double? Size, double? Text) ReadPrint(YamlMappingNode map, Action<string> warn)
     {
         if (!map.Children.TryGetValue(new YamlScalarNode("print"), out YamlNode? node))
         {
-            return (null, null);
+            return (null, null, null);
         }
         if (node is not YamlMappingNode print)
         {
-            warn($"{Name}: \"print\" needs \"scale\", \"labels\" and \"labelsize\" below it.");
-            return (null, null);
+            warn($"{Name}: \"print\" needs \"scale\", \"labels\", \"labelsize\" and \"text\" below it.");
+            return (null, null, null);
         }
         string? Value(string key) =>
             print.Children.TryGetValue(new YamlScalarNode(key), out YamlNode? value) && value is YamlScalarNode { Value: { } text } ? text.Trim() : null;
@@ -194,6 +199,15 @@ internal static class BookFile
         {
             size = labels / labelSize;
         }
-        return (unit, size);
+        double? text = null;
+        if (Value("text") is { } textSize)
+        {
+            text = FigureStyle.ParseLength(textSize);
+            if (text == null)
+            {
+                warn($"{Name}: \"print: text\" must be a font size like 11pt.");
+            }
+        }
+        return (unit, size, text);
     }
 }

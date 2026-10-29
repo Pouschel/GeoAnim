@@ -9,6 +9,9 @@ public sealed record BookSettings
 {
     public string? Title { get; init; }
 
+    /// <summary>Who wrote the book (for the e-book).</summary>
+    public string? Author { get; init; }
+
     public string? Description { get; init; }
 
     /// <summary>The language of the pages ("de"); without it the player's own.</summary>
@@ -34,6 +37,12 @@ public sealed record BookSettings
 
     /// <summary>What a size of the scripts (texts, lines, points) is in the book's figures, in points; null: size 34 as 9 pt.</summary>
     public double? FigureSize { get; init; }
+
+    /// <summary>
+    /// The font size of the text the figures are made for, in points ("print: text"); null: 11 pt. In an e-book the
+    /// figures and formulas grow with the reader's font size from there.
+    /// </summary>
+    public double? TextSize { get; init; }
 
     public static BookSettings None { get; } = new();
 
