@@ -109,16 +109,24 @@ public sealed partial class MarkdownPage
     /// Reads a page. <paramref name="file"/> (its full path) is for the figures: their scripts are looked for beside it;
     /// without it they are not checked. <paramref name="loadScript"/> compiles a script (by its full path) for its figure;
     /// it throws <see cref="FormatException"/> with the message for a faulty one. Without it the figures stay
-    /// placeholders. <paramref name="bookMarks"/> are the marks of the book's other pages, for references to them.
+    /// placeholders. <paramref name="bookMarks"/> are the marks of the book's other pages, for references to them;
+    /// <paramref name="axiomsBefore"/> the number of axioms on the pages before (axioms are counted through the book).
     /// </summary>
     public static MarkdownPage Parse(string text, string? file = null, Func<string, AnimationData>? loadScript = null,
-        IReadOnlyDictionary<string, BookMark>? bookMarks = null) => Build(text, file, loadScript, bookMarks, render: true);
+        IReadOnlyDictionary<string, BookMark>? bookMarks = null, int axiomsBefore = 0) => Build(text, file, loadScript, bookMarks, axiomsBefore, render: true);
 
     /// <summary>The marks of a page (for the references of the other pages), without making its HTML.</summary>
-    public static IReadOnlyList<PageMark> ReadMarks(string text) => Build(text, null, null, null, render: false).Marks;
+    public static MarksOfPage ReadMarks(string text)
+    {
+        MarkdownPage page = Build(text, null, null, null, 0, render: false);
+        return new MarksOfPage(page.Marks, page.Axioms);
+    }
+
+    /// <summary>The number of axioms on the page (they are counted through the book).</summary>
+    public int Axioms { get; private set; }
 
     private static MarkdownPage Build(string text, string? file, Func<string, AnimationData>? loadScript,
-        IReadOnlyDictionary<string, BookMark>? bookMarks, bool render)
+        IReadOnlyDictionary<string, BookMark>? bookMarks, int axiomsBefore, bool render)
     {
         var errors = new List<MarkdownProblem>();
         var warnings = new List<MarkdownProblem>();
@@ -202,10 +210,10 @@ public sealed partial class MarkdownPage
         MovePunctuation(document);
 
         // numbers and marks of figures, statements and sections; then the references to them
-        List<PageMark> marks = Number(text, document, locate, errors, render);
+        List<PageMark> marks = Number(text, document, locate, errors, axiomsBefore, out int axioms);
         if (!render)
         {
-            return new MarkdownPage("") { Marks = marks };
+            return new MarkdownPage("") { Marks = marks, Axioms = axioms };
         }
         string? page = file == null ? null : Path.GetFullPath(file);
         CheckMarks(marks, page, bookMarks, errors);
@@ -257,6 +265,7 @@ public sealed partial class MarkdownPage
             Figures = figures,
             PageFigures = pageFigures,
             Marks = marks,
+            Axioms = axioms,
             Errors = errors.OrderBy(e => e.Line).ThenBy(e => e.Column).ToList(),
             Warnings = warnings,
         };

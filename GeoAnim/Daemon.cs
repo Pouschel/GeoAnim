@@ -187,13 +187,13 @@ internal static class Daemon
     private static string RenderMarkdown(JsonElement id, string file, string text)
     {
         string? path = Path.IsPathRooted(file) ? Path.GetFullPath(file) : null;
-        List<BookMark> others = path == null ? [] : OtherPagesMarks(path);
+        (List<BookMark> others, int axiomsBefore) = path == null ? ([], 0) : OtherPagesMarks(path, text);
         var bookMarks = new Dictionary<string, BookMark>(StringComparer.Ordinal);
         foreach (BookMark other in others)
         {
             bookMarks.TryAdd(other.Mark.Name, other);
         }
-        MarkdownPage page = MarkdownPage.Parse(text, path, LoadScript, bookMarks);
+        MarkdownPage page = MarkdownPage.Parse(text, path, LoadScript, bookMarks, axiomsBefore);
         return Answer(id, json =>
         {
             json.WriteString("html", page.Html);
@@ -255,27 +255,42 @@ internal static class Daemon
     }
 
     // the marks of the other pages of the book (the pages "*.geo.md" below the folder with index.yaml, else beside the
-    // page), as saved; read again when a page has changed
-    private static readonly Dictionary<string, (DateTime Written, IReadOnlyList<PageMark> Marks)> PageMarks =
+    // page; not in folders or files starting with "_"), as saved, read again when a page has changed; and the number of
+    // axioms on the pages before this one in book order (axioms are counted through the book)
+    private static readonly Dictionary<string, (DateTime Written, MarksOfPage Marks)> PageMarks =
         new(StringComparer.OrdinalIgnoreCase);
 
-    private static List<BookMark> OtherPagesMarks(string page)
+    private static (List<BookMark> Marks, int AxiomsBefore) OtherPagesMarks(string page, string text)
     {
         string root = BookKeywords.RootOf(page) ?? Path.GetDirectoryName(page)!;
         var found = new List<BookMark>();
-        IEnumerable<string> files;
+        List<string> pages;
         try
         {
-            files = Directory.EnumerateFiles(root, "*.geo.md", SearchOption.AllDirectories).Order(StringComparer.Ordinal).ToList();
+            pages = Directory.EnumerateFiles(root, "*.geo.md", SearchOption.AllDirectories)
+                .Select(file => Path.GetRelativePath(root, file).Replace('\\', '/'))
+                .Where(relative => !relative.Split('/').Any(part => part.StartsWith('_')))
+                .ToList();
         }
         catch (IOException)
         {
-            return found;
+            return (found, 0);
         }
-        foreach (string other in files)
+        string own = Path.GetRelativePath(root, page).Replace('\\', '/');
+        if (!pages.Contains(own, StringComparer.OrdinalIgnoreCase))
         {
+            pages.Add(own);
+        }
+        pages.Sort(Program.BookOrder.Instance);
+        int axioms = 0, axiomsBefore = 0;
+        foreach (string relative in pages)
+        {
+            string other = Path.GetFullPath(Path.Combine(root, relative));
             if (string.Equals(other, page, StringComparison.OrdinalIgnoreCase))
             {
+                // this page as it is in the editor
+                axiomsBefore = axioms;
+                axioms += MarkdownPage.ReadMarks(text).Axioms;
                 continue;
             }
             DateTime written = File.GetLastWriteTimeUtc(other);
@@ -291,9 +306,11 @@ internal static class Daemon
                 }
                 PageMarks[other] = known;
             }
-            found.AddRange(known.Marks.Select(m => new BookMark(other, m)));
+            int before = axioms;
+            found.AddRange(known.Marks.Marks.Select(m => new BookMark(other, MarkdownPage.AfterAxioms(m, before))));
+            axioms += known.Marks.Axioms;
         }
-        return found;
+        return (found, axiomsBefore);
     }
 
     // the steps of a script, for the completion of a figure's steps

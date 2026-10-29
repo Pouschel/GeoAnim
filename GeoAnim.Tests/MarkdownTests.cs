@@ -332,12 +332,13 @@ public sealed class MarkdownTests : IDisposable
 
         Assert.Equal(["ax-gerade", "def-strecke"], page.Marks.Select(m => m.Name));
         Assert.Equal(("axiom", "Axiom 1", "Geradenaxiom"), (page.Marks[0].Kind, page.Marks[0].Label, page.Marks[0].Text));
-        Assert.Equal(("definition", "Definition 2", 5), (page.Marks[1].Kind, page.Marks[1].Label, page.Marks[1].Line));
+        Assert.Equal(("definition", "Definition 1", 5), (page.Marks[1].Kind, page.Marks[1].Label, page.Marks[1].Line));
         Assert.Contains("<div id=\"ax-gerade\" class=\"statement statement-axiom\" data-line=\"1\">", page.Html);
         Assert.Contains("<span class=\"statement-label\">Axiom 1 (Geradenaxiom).</span> Durch zwei", page.Html);
-        Assert.Contains("<span class=\"statement-label\">Definition 2 (Strecke <svg", page.Html);
+        Assert.Contains("<span class=\"statement-label\">Definition 1 (Strecke <svg", page.Html);
         Assert.Contains("<span class=\"statement-label\">Beweis.</span> Klar. <span class=\"qed\">∎</span>", page.Html);
-        Assert.Contains("<p><span class=\"statement-label\">Satz 3.</span></p>", page.Html);
+        // axioms count for themselves, the other kinds together
+        Assert.Contains("<p><span class=\"statement-label\">Satz 2.</span></p>", page.Html);
         Assert.Contains("\"unsinn\" is no kind of statement", Assert.Single(page.Errors).Message);
     }
 
@@ -396,7 +397,9 @@ public sealed class MarkdownTests : IDisposable
             e => Assert.Equal((3, "The mark \"ab\" is in line 1 already."), (e.Line, e.Message)),
             e => Assert.Equal((5, "The mark \"ax\" is on andere.geo.md already (line 3)."), (e.Line, e.Message)));
         Assert.Contains("at least two characters", Assert.Single(MarkdownPage.Parse("## A {#a}\n").Errors).Message);
-        Assert.Equal(["ab", "ab", "ax"], MarkdownPage.ReadMarks("## A {#ab}\n\n## B {#ab}\n\n::: axiom {#ax}\nx\n:::\n").Select(m => m.Name));
+        MarksOfPage read = MarkdownPage.ReadMarks("## A {#ab}\n\n## B {#ab}\n\n::: axiom {#ax}\nx\n:::\n");
+        Assert.Equal(["ab", "ab", "ax"], read.Marks.Select(m => m.Name));
+        Assert.Equal(1, read.Axioms);
     }
 
     [Fact]
@@ -445,5 +448,28 @@ public sealed class MarkdownTests : IDisposable
         Assert.Empty(page.Errors);
         Assert.Matches("<span class=\"formula-display\"><svg[^>]*aria-label=\"d: cc E xx cc E -&gt; RR_\\(&gt;=0\\)\"[^>]*>.*?</svg>\\.</span></p>", page.Html);
         Assert.Matches("</svg>,</span> weiter\\.</p>", page.Html);
+    }
+
+    [Fact]
+    public void AxiomsAreCountedThroughTheBook()
+    {
+        File.WriteAllText(Path.Combine(folder, "index.yaml"), "title: Buch\n");
+        Directory.CreateDirectory(Path.Combine(folder, "10_Erstes"));
+        Directory.CreateDirectory(Path.Combine(folder, "20_Zweites"));
+        File.WriteAllText(Path.Combine(folder, "10_Erstes", "10_a.geo.md"), "::: axiom {#ax-eins}\nx\n:::\n\n::: def\ny\n:::\n\n::: axiom {#ax-zwei}\nz\n:::\n");
+        File.WriteAllText(Path.Combine(folder, "20_Zweites", "10_c.geo.md"), "::: axiom {#ax-vier}\nx\n:::\n");
+        File.WriteAllText(Path.Combine(folder, "_entwurf.geo.md"), "::: axiom\nnicht gezählt\n:::\n");
+        // between them (book order: 10_Erstes/10_a, 10_Erstes/20_b, 20_Zweites/10_c), not saved yet
+        string file = Path.Combine(folder, "10_Erstes", "20_b.geo.md");
+        JsonElement answer = JsonDocument.Parse(Daemon.Handle(JsonSerializer.Serialize(new
+        {
+            id = 1, type = "markdown", file, text = "::: axiom {#ax-drei}\nx\n:::\n\nNach §ax-zwei und §ax-vier.\n",
+        }))).RootElement;
+
+        string html = answer.GetProperty("html").GetString()!;
+        Assert.Contains("Axiom 3.", html);
+        Assert.Contains(">Axiom 2</a>", html);
+        Assert.Contains(">Axiom 4</a>", html);
+        Assert.Equal(["Axiom 3", "Axiom 1", "Axiom 2", "Axiom 4"], answer.GetProperty("marks").EnumerateArray().Select(m => m.GetProperty("label").GetString()));
     }
 }

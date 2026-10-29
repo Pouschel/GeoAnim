@@ -17,6 +17,9 @@ namespace GeoAnim.Viewer;
 /// </summary>
 public sealed record PageMark(string Name, string Kind, string Label, string Text, int Line, int Column);
 
+/// <summary>The marks of a page and the number of its axioms (which are counted through the book).</summary>
+public sealed record MarksOfPage(IReadOnlyList<PageMark> Marks, int Axioms);
+
 /// <summary>A mark on another page of the book (its full path).</summary>
 public sealed record BookMark(string File, PageMark Mark);
 
@@ -44,18 +47,25 @@ public sealed partial class MarkdownPage
     private const string FigureName = "Abb.";
     private const string SectionName = "Abschnitt";
 
+    /// <summary>A mark read with <see cref="ReadMarks"/>, for a page with <paramref name="axiomsBefore"/> axioms before it.</summary>
+    public static PageMark AfterAxioms(PageMark mark, int axiomsBefore) =>
+        mark.Kind == "axiom" && axiomsBefore > 0 && mark.Label.Split(' ') is [_, var number] && int.TryParse(number, CultureInfo.InvariantCulture, out int n)
+            ? mark with { Label = StatementKinds["axiom"].Name + " " + (n + axiomsBefore).ToString(CultureInfo.InvariantCulture) }
+            : mark;
+
     // a statement as read: its kind, title (Markdown) and what references show
     private sealed record Statement(string Kind, string? Title, string Label);
 
     // ------------------------------------------------------------------ numbers and marks
 
-    // numbers figures ("Abb. 1" …), statements (one counter for the numbered kinds) and sections (## → 1, ### → 1.1 …) in
-    // the order of the page, and collects the marks; with render, puts the labels where the page shows them
+    // numbers figures ("Abb. 1" …), statements (axioms after those of the pages before, the other numbered kinds with one
+    // counter) and sections (## → 1, ### → 1.1 …) in the order of the page, and collects the marks
     private static List<PageMark> Number(string text, MarkdownDocument document, Func<int, (int, int)> locate,
-        List<MarkdownProblem> errors, bool render)
+        List<MarkdownProblem> errors, int axiomsBefore, out int axioms)
     {
         var marks = new List<PageMark>();
         int figures = 0, statements = 0;
+        axioms = 0;
         var sections = new int[7];
         string[] lines = text.Split('\n');
         foreach (Block block in document.Descendants<Block>().ToList())
@@ -112,7 +122,9 @@ public sealed partial class MarkdownPage
                             break;
                         }
                         (string name, bool numbered) = StatementKinds[statement.Kind];
-                        string label = numbered ? name + " " + (++statements).ToString(CultureInfo.InvariantCulture) : name;
+                        // axioms have a counter of their own, through the book; the other kinds share one
+                        int number = !numbered ? 0 : statement.Kind == "axiom" ? axiomsBefore + ++axioms : ++statements;
+                        string label = numbered ? name + " " + number.ToString(CultureInfo.InvariantCulture) : name;
                         statement = statement with { Label = label };
                         container.SetData(typeof(Statement), statement);
                         if (container.TryGetAttributes()?.Id is { } id)

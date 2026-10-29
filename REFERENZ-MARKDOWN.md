@@ -147,8 +147,10 @@ Durch zwei verschiedene Punkte verläuft **genau eine Gerade**.
 - **`box`** ist der neutrale Kasten für Hervorhebungen ohne Bedeutung als Aussage – etwa eine Leitfrage. Ohne Titel
   nur der Kasten, mit Titel (`::: box Merke`) steht „**Merke.**“ am Anfang. Ein Kasten wird nicht gezählt und hat keine
   Marke; `>` bleibt für Zitate.
-- **Zählung:** vorerst je Seite, ein gemeinsamer Zähler für alle nummerierten Arten (Axiom 1, Definition 2, Satz 3 …).
-  Die Zählung über das ganze Buch (mit Kapitelnummern) und die Wahl der Zähler kommen mit der Buchstruktur.
+- **Zählung:** Axiome haben einen eigenen Zähler, der durch das ganze Buch läuft (in Buchreihenfolge der Seiten, wie
+  bei `exportdir`; Seiten und Ordner mit `_` zählen nicht): Axiom 1, 2, 3 … – sie bilden die überschaubare Liste der
+  Grundannahmen. Alle anderen nummerierten Arten teilen sich einen Zähler (Definition 1, Satz 2, Hilfssatz 3 …), vorerst
+  je Seite; mit der Buchstruktur bekommen sie Kapitelnummern (Satz 2.14).
 - Die deutschen Bezeichnungen sind vorerst fest; später kommen sie aus der Sprache des Buchs.
 
 ## Marken und Verweise
@@ -173,10 +175,10 @@ die Gerade in Abb. 3 eindeutig.“ (im Web und im E-Book ein Link).
 
 - Der Name endet beim ersten Zeichen, das kein Buchstabe, keine Ziffer, kein `-` oder `_` ist (in „§abb-gerade.“ gehört
   der Punkt nicht dazu); ein `-` am Ende gehört nicht dazu.
-- **Marken gelten im ganzen Buch** (alle `….geo.md` unter dem Ordner mit der `index.yaml`, ohne Buch im selben Ordner):
+- **Marken gelten im ganzen Buch** (alle `….geo.md` unter dem Ordner mit der `index.yaml`, ohne Buch im selben Ordner; nicht in Dateien und Ordnern mit `_` am Anfang):
   ein Verweis braucht keinen Dateinamen, und verschobene Aussagen bleiben erreichbar. Eine Marke darf im Buch nur einmal
   vorkommen. Die anderen Seiten zählen, wie sie gespeichert sind.
-- Ein Verweis auf eine andere Seite zeigt vorerst die Nummer, die die Marke dort hat (die Zählung ist noch je Seite).
+- Ein Verweis auf eine andere Seite zeigt die Nummer, die die Marke dort hat – bei Axiomen die Nummer im ganzen Buch, bei den übrigen Arten vorerst die Nummer auf jener Seite.
 - Eine unbekannte Marke ist ein Fehler; die Seite zeigt an der Stelle „??“.
 - **In VS Code:** nach `§` bietet die Vervollständigung alle Marken des Buchs an (mit Art, Nummer und Text), in
   `![](#` bzw. `![](datei.geo#` (auch nach `..`) die Schritte des Skripts (Marke oder Name, mit Nummer und
