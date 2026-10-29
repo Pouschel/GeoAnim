@@ -997,6 +997,54 @@ function lastContentLine (document, start, end) {
   return end
 }
 
+// ------------------------------------------------------------------ files changed elsewhere
+
+// a script or page changed (saved here, or written by another VS Code window): the other open scripts and pages anew,
+// as they may include it, use it or show it as a figure (the daemon compiles a changed file again)
+function refreshOthers (changed) {
+  for (const document of vscode.workspace.textDocuments) {
+    if (kindOf(document) && document.uri.fsPath !== changed) {
+      schedule(document)
+    }
+  }
+}
+
+// watchers for the books of the open scripts and pages (the folder with index.yaml, else the file's folder): also
+// outside the workspace, and also for changes by other programs
+const fileWatchers = new Map()
+let refreshTimer = null
+
+function bookFolderOf (file) {
+  for (let folder = path.dirname(file); ; folder = path.dirname(folder)) {
+    if (fs.existsSync(path.join(folder, 'index.yaml'))) {
+      return folder
+    }
+    if (path.dirname(folder) === folder) {
+      return path.dirname(file)
+    }
+  }
+}
+
+function watchFolderOf (document) {
+  if (!kindOf(document) || document.uri.scheme !== 'file') {
+    return
+  }
+  const folder = bookFolderOf(document.uri.fsPath)
+  if (fileWatchers.has(folder)) {
+    return
+  }
+  const watcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(vscode.Uri.file(folder), '**/*.{geo,md}'))
+  const changed = uri => {
+    // a file open here and unchanged in the editor follows by itself; the others are compiled again, once for a burst
+    clearTimeout(refreshTimer)
+    refreshTimer = setTimeout(() => refreshOthers(uri.fsPath), 300)
+  }
+  watcher.onDidChange(changed)
+  watcher.onDidCreate(changed)
+  watcher.onDidDelete(changed)
+  fileWatchers.set(folder, watcher)
+}
+
 // ------------------------------------------------------------------ pages (.geo.md): editor and preview together
 
 let keepPagePosition = 0
@@ -1455,13 +1503,12 @@ function activate (context) {
     // a saved file may be included or used by others, or be a figure of a page
     vscode.workspace.onDidSaveTextDocument(saved => {
       if (isGeo(saved)) {
-        for (const document of vscode.workspace.textDocuments) {
-          if (kindOf(document) && document !== saved) {
-            schedule(document)
-          }
-        }
+        refreshOthers(saved.uri.fsPath)
       }
     }),
+    // a script or page written by another program (another VS Code window): the pages and scripts open here again
+    { dispose: () => { for (const watcher of fileWatchers.values()) watcher.dispose() } },
+    vscode.workspace.onDidOpenTextDocument(document => watchFolderOf(document)),
     vscode.workspace.onDidCloseTextDocument(document => {
       const key = document.uri.toString()
       for (const uri of reported.get(key) || []) {
@@ -1492,6 +1539,7 @@ function activate (context) {
     { dispose: () => { stopDaemon(); watchBuilds([]) } })
   for (const document of vscode.workspace.textDocuments) {
     if (kindOf(document)) {
+      watchFolderOf(document)
       compile(document)
     }
   }
