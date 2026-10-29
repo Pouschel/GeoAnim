@@ -137,12 +137,16 @@ Durch zwei verschiedene Punkte verläuft **genau eine Gerade**.
 | `proof` | Beweis | nein | ohne Kasten, endet mit ∎ |
 | `example` | Beispiel | ja | ohne Kasten |
 | `remark` | Bemerkung | nein | ohne Kasten |
+| `box` | – (nur ein Titel, wenn es einen gibt) | nein | neutraler grauer Kasten, nicht kursiv |
 
 - **Eröffnungszeile:** `::: art`, dann freiwillig die Marke `{#name}` und ein Titel (Markdown und Formeln erlaubt; er
   erscheint in Klammern) – in beliebiger Reihenfolge: `::: def Strecke {#def-strecke}` ist dasselbe wie
   `::: def {#def-strecke} Strecke`.
 - **Inhalt:** beliebiges Markdown bis zur Zeile `:::` – Absätze, Formeln, Listen; die Bezeichnung steht am Anfang des
   ersten Absatzes.
+- **`box`** ist der neutrale Kasten für Hervorhebungen ohne Bedeutung als Aussage – etwa eine Leitfrage. Ohne Titel
+  nur der Kasten, mit Titel (`::: box Merke`) steht „**Merke.**“ am Anfang. Ein Kasten wird nicht gezählt und hat keine
+  Marke; `>` bleibt für Zitate.
 - **Zählung:** vorerst je Seite, ein gemeinsamer Zähler für alle nummerierten Arten (Axiom 1, Definition 2, Satz 3 …).
   Die Zählung über das ganze Buch (mit Kapitelnummern) und die Wahl der Zähler kommen mit der Buchstruktur.
 - Die deutschen Bezeichnungen sind vorerst fest; später kommen sie aus der Sprache des Buchs.
@@ -195,6 +199,7 @@ Fehler werden in VS Code rot unterstrichen und stehen in der Vorschau über der 
 | eigenes Skript ohne passenden Namen | `![](#2)` in `seite.md` oder in einer noch nie gespeicherten Seite |
 | falscher Attributwert | `{crop=vielleicht}`, `{float=oben}`, `{width=breit}` |
 | unbekannte Art einer Aussage | `::: satz` (richtig: `::: theorem`) |
+| Marke an einem Kasten | `::: box {#leitfrage}` (die Marke gehört an die Überschrift davor) |
 | Marke doppelt | auf derselben Seite oder auf einer anderen Seite des Buchs |
 | Marke aus einem Zeichen | `{#a}` |
 | zwei Marken an einer Abbildung | `![](#1){#abb-a}` und `![](#2){#abb-b}` im selben Absatz |

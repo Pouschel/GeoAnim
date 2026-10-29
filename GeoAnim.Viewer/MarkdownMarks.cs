@@ -23,8 +23,8 @@ public sealed record BookMark(string File, PageMark Mark);
 public sealed partial class MarkdownPage
 {
     /// <summary>
-    /// The kinds of statements ("::: axiom … :::") with their names on the page; null: not numbered. "def" is short for
-    /// "definition".
+    /// The kinds of statements ("::: axiom … :::") with their names on the page and whether they are numbered. "def" is
+    /// short for "definition"; "box" is a plain box without a name (only its title, if it has one).
     /// </summary>
     internal static readonly IReadOnlyDictionary<string, (string Name, bool Numbered)> StatementKinds = new Dictionary<string, (string, bool)>
     {
@@ -36,6 +36,7 @@ public sealed partial class MarkdownPage
         ["proof"] = ("Beweis", false),
         ["example"] = ("Beispiel", true),
         ["remark"] = ("Bemerkung", false),
+        ["box"] = ("", false),
     };
 
     private static readonly Dictionary<string, string> KindAliases = new() { ["def"] = "definition" };
@@ -116,7 +117,16 @@ public sealed partial class MarkdownPage
                         container.SetData(typeof(Statement), statement);
                         if (container.TryGetAttributes()?.Id is { } id)
                         {
-                            marks.Add(Mark(id, statement.Kind, label, statement.Title ?? StartOf(text, container), container));
+                            if (statement.Kind == "box")
+                            {
+                                // nothing a reference could show
+                                errors.Add(new MarkdownProblem(container.Line + 1, container.Column + 1,
+                                    $"A box has no number to refer to: put the mark \"{id}\" at the heading before it."));
+                            }
+                            else
+                            {
+                                marks.Add(Mark(id, statement.Kind, label, statement.Title ?? StartOf(text, container), container));
+                            }
                         }
                         break;
                     }
@@ -305,20 +315,36 @@ public sealed partial class MarkdownPage
     // (Geradenaxiom)."); a proof ends with ∎
     private sealed class StatementRenderer : HtmlObjectRenderer<CustomContainer>
     {
+        // our classes instead of Markdig's (which is the kind as written)
+        private static void SetClasses(CustomContainer container, params string[] classes)
+        {
+            HtmlAttributes attributes = container.GetAttributes();
+            attributes.Classes?.Clear();
+            foreach (string name in classes)
+            {
+                attributes.AddClass(name);
+            }
+        }
+
         protected override void Write(HtmlRenderer renderer, CustomContainer container)
         {
             if (container.GetData(typeof(Statement)) is not Statement statement)
             {
                 // an unknown kind: its content as it is
-                renderer.Write("<div class=\"statement statement-unknown\"").WriteAttributes(container).WriteLine('>');
+                SetClasses(container, "statement", "statement-unknown");
+                renderer.Write("<div").WriteAttributes(container).WriteLine('>');
                 renderer.WriteChildren(container);
                 renderer.WriteLine("</div>");
                 return;
             }
-            string label = "<span class=\"statement-label\">" + WebUtility.HtmlEncode(statement.Label)
-                + (statement.Title != null ? " (" + InlineHtml(statement.Title) + ")" : "") + ".</span> ";
+            // "Axiom 2 (Geradenaxiom).", "Beweis."; a box: its title ("Merke.") or nothing
+            string label = statement.Label.Length == 0
+                ? (statement.Title != null ? "<span class=\"statement-label\">" + InlineHtml(statement.Title) + ".</span> " : "")
+                : "<span class=\"statement-label\">" + WebUtility.HtmlEncode(statement.Label)
+                    + (statement.Title != null ? " (" + InlineHtml(statement.Title) + ")" : "") + ".</span> ";
             string end = statement.Kind == "proof" ? " <span class=\"qed\">∎</span>" : "";
-            renderer.Write("<div class=\"statement statement-").Write(statement.Kind).Write('"').WriteAttributes(container).WriteLine('>');
+            SetClasses(container, "statement", "statement-" + statement.Kind);
+            renderer.Write("<div").WriteAttributes(container).WriteLine('>');
             bool labelled = false;
             for (int i = 0; i < container.Count; i++)
             {
@@ -341,7 +367,10 @@ public sealed partial class MarkdownPage
                 }
                 if (!labelled)
                 {
-                    renderer.Write("<p>").Write(label.TrimEnd()).WriteLine("</p>");
+                    if (label.Length > 0)
+                    {
+                        renderer.Write("<p>").Write(label.TrimEnd()).WriteLine("</p>");
+                    }
                     labelled = true;
                 }
                 renderer.Write(child);
@@ -350,7 +379,7 @@ public sealed partial class MarkdownPage
                     renderer.Write("<p class=\"qed-line\">").Write(end.Trim()).WriteLine("</p>");
                 }
             }
-            if (!labelled)
+            if (!labelled && label.Length + end.Length > 0)
             {
                 renderer.Write("<p>").Write(label.TrimEnd()).Write(end).WriteLine("</p>");
             }

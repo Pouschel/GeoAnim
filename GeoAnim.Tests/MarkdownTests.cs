@@ -333,7 +333,7 @@ public sealed class MarkdownTests : IDisposable
         Assert.Equal(["ax-gerade", "def-strecke"], page.Marks.Select(m => m.Name));
         Assert.Equal(("axiom", "Axiom 1", "Geradenaxiom"), (page.Marks[0].Kind, page.Marks[0].Label, page.Marks[0].Text));
         Assert.Equal(("definition", "Definition 2", 5), (page.Marks[1].Kind, page.Marks[1].Label, page.Marks[1].Line));
-        Assert.Contains("<div class=\"statement statement-axiom\" id=\"ax-gerade\"", page.Html);
+        Assert.Contains("<div id=\"ax-gerade\" class=\"statement statement-axiom\" data-line=\"1\">", page.Html);
         Assert.Contains("<span class=\"statement-label\">Axiom 1 (Geradenaxiom).</span> Durch zwei", page.Html);
         Assert.Contains("<span class=\"statement-label\">Definition 2 (Strecke <svg", page.Html);
         Assert.Contains("<span class=\"statement-label\">Beweis.</span> Klar. <span class=\"qed\">∎</span>", page.Html);
@@ -422,5 +422,18 @@ public sealed class MarkdownTests : IDisposable
         }))).RootElement;
         Assert.Equal(["gleich", null], steps.GetProperty("steps").EnumerateArray().Select(s => s.GetProperty("mark").GetString()));
         Assert.Equal("zwei", steps.GetProperty("steps")[1].GetProperty("name").GetString());
+    }
+
+    [Fact]
+    public void ABoxHasNoName()
+    {
+        MarkdownPage page = MarkdownPage.Parse("::: box\nWelche Eigenschaften?\n:::\n\n::: box Merke\nNie negativ.\n:::\n\n::: axiom\nx\n:::\n\n::: box {#bx}\ny\n:::\n");
+
+        Assert.Contains("<div class=\"statement statement-box\" data-line=\"1\">\n<p data-line=\"2\">Welche Eigenschaften?</p>", page.Html);
+        Assert.Contains("<span class=\"statement-label\">Merke.</span> Nie negativ.", page.Html);
+        // boxes are not counted
+        Assert.Contains("Axiom 1.", page.Html);
+        Assert.Empty(page.Marks);
+        Assert.Contains("A box has no number", Assert.Single(page.Errors).Message);
     }
 }

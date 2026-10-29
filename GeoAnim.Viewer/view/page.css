@@ -230,6 +230,12 @@ svg.formula {
   font-style: italic;
 }
 
+/* a plain box: highlighted, without a name */
+.statement-box {
+  border-left-color: #c3c8d0;
+  background: #f4f5f7;
+}
+
 .statement-definition {
   border-left-color: #8fbf9a;
   background: #f5faf6;
