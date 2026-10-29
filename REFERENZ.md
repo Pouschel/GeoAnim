@@ -44,7 +44,7 @@ Vor dem ersten `step` (außer `keyword`).
 | `view` | `view x -1 .. 11 y -1 .. 7` | sichtbarer Bereich; vor dem ersten Objekt |
 | `background` | `background Farbe` | Hintergrundfarbe |
 | `grid` | `grid` · `grid n` | Gitter mit Abstand 1 bzw. n |
-| `axes` | `axes` | Koordinatenachsen mit Zahlen |
+| `axes` | `axes` · `axes size 18` · `axes color gray` · `axes size 18 color gray` | Koordinatenachsen mit Zahlen; `size`: Größe der Zahlen in pt (Voreinstellung 15; ihre Abstände zur Achse und untereinander wachsen mit), `color`: Farbe von Achsen und Zahlen (Voreinstellung grau) |
 | `speed` | `speed n` | Tempo der ganzen Animation (0.5 halb so schnell, 2 doppelt so schnell) |
 | `keyword` | `keyword Begriff, Begriff …` | Schlüsselwörter der Seite für `exportdir` (verlinkt in `info` und `description` der anderen Seiten, nicht in Schrittbeschreibungen); Begriffe durch Kommas getrennt, ein Begriff aus einem oder mehreren Wörtern, Endungen nach `/`: `Punkt/e/en`, `rechte/r/n Winkel/s/n`; hinter einer `step`-Zeile verweisen sie auf diesen Schritt; mit `|` fortsetzbar |
 

@@ -1293,4 +1293,13 @@ public class ScriptTests
         ErrorAt("point A = 0 0 color reddish", 1, 21, "Unknown colour");
         ErrorAt("point to = 0 0", 1, 7, "keyword \"to\"");
     }
+
+    [Fact]
+    public void AxesHaveASizeAndAColour()
+    {
+        string json = ScriptCompiler.Compile("axes size 34 color navy\npoint A = 1 1\n").ToJson();
+        Assert.Contains("\"axes\":true,\"axesSize\":34,\"axesColor\":\"#", json);
+        Assert.DoesNotContain("axesSize", ScriptCompiler.Compile("axes\npoint A = 1 1\n").ToJson());
+        Assert.Throws<ScriptError>(() => ScriptCompiler.Compile("axes size -2\n"));
+    }
 }

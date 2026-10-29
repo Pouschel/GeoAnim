@@ -1109,13 +1109,16 @@
       }
     }
     if (animation.axes) {
-      const color = '#7a808c'
+      const color = animation.axesColor || '#7a808c'
+      // the numbers' size ("axes size 18", else 15 points); their distances to the axes and to each other grow with it
+      const size = animation.axesSize || 15
+      const f = size / 15
       const axes = create('g', { stroke: color, 'stroke-width': 1.5 * unit, fill: color }, decor)
-      const labels = create('g', { fill: color, 'font-size': 15 * unit }, decor)
+      const labels = create('g', { fill: color, 'font-size': size * unit }, decor)
       const arrow = 9 * unit
-      // labels on every k-th unit, at least 36 points apart
+      // labels on every k-th unit, at least 36 points apart (more for larger numbers)
       let k = 1
-      while (k * scale < 36 * unit) {
+      while (k * scale < 36 * f * unit) {
         k = k === 1 ? 2 : k === 2 ? 5 : k * 2
       }
       if (view.ymin <= 0 && view.ymax >= 0) {
@@ -1125,11 +1128,11 @@
         create('polygon', { points: `${xEnd},${y0} ${xEnd - arrow},${y0 - arrow / 2} ${xEnd - arrow},${y0 + arrow / 2}`, stroke: 'none' }, axes)
         for (let x = Math.ceil(view.xmin / k) * k; x < view.xmax; x += k) {
           // no number at 0 and none cut off at the edges
-          if (Math.abs(x) < 1e-9 || toX(x) < 12 * unit || toX(x) > toX(view.xmax) - 24 * unit) {
+          if (Math.abs(x) < 1e-9 || toX(x) < 12 * f * unit || toX(x) > toX(view.xmax) - 24 * f * unit) {
             continue
           }
           create('line', { x1: toX(x), y1: y0 - 4 * unit, x2: toX(x), y2: y0 + 4 * unit }, axes)
-          create('text', { x: toX(x), y: y0 + 20 * unit, 'text-anchor': 'middle' }, labels).textContent = formatNumber(x)
+          create('text', { x: toX(x), y: y0 + 20 * f * unit, 'text-anchor': 'middle' }, labels).textContent = formatNumber(x)
         }
       }
       if (view.xmin <= 0 && view.xmax >= 0) {
@@ -1137,11 +1140,11 @@
         create('line', { x1: x0, y1: toY(view.ymin), x2: x0, y2: 0 }, axes)
         create('polygon', { points: `${x0},0 ${x0 - arrow / 2},${arrow} ${x0 + arrow / 2},${arrow}`, stroke: 'none' }, axes)
         for (let y = Math.ceil(view.ymin / k) * k; y < view.ymax; y += k) {
-          if (Math.abs(y) < 1e-9 || toY(y) < 24 * unit || toY(y) > toY(view.ymin) - 12 * unit) {
+          if (Math.abs(y) < 1e-9 || toY(y) < 24 * f * unit || toY(y) > toY(view.ymin) - 12 * f * unit) {
             continue
           }
           create('line', { x1: x0 - 4 * unit, y1: toY(y), x2: x0 + 4 * unit, y2: toY(y) }, axes)
-          create('text', { x: x0 - 8 * unit, y: toY(y) + 5 * unit, 'text-anchor': 'end' }, labels).textContent = formatNumber(y)
+          create('text', { x: x0 - 8 * f * unit, y: toY(y) + 5 * f * unit, 'text-anchor': 'end' }, labels).textContent = formatNumber(y)
         }
       }
     }

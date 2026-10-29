@@ -165,7 +165,24 @@ internal sealed partial class Parser
                 statement = new GridStatement(l, c, IsNumberAt(position) ? ExpectPositive("the grid distance") : 1);
                 break;
             case "axes":
-                statement = new AxesStatement(l, c);
+                {
+                    // "axes size 18 color gray": size of the numbers, colour of axes and numbers
+                    double? size = null;
+                    Color? color = null;
+                    while (Current.Kind == TokenKind.Name && Current.Text is "size" or "color")
+                    {
+                        string option = Next().Text;
+                        if (option == "size")
+                        {
+                            size = ExpectPositive("the size of the axes' numbers");
+                        }
+                        else
+                        {
+                            color = ExpectColor();
+                        }
+                    }
+                    statement = new AxesStatement(l, c, size, color);
+                }
                 break;
             case "speed":
                 statement = new SpeedStatement(l, c, ExpectPositive("the speed"));

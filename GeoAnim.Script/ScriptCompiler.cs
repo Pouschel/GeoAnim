@@ -203,6 +203,8 @@ public static class ScriptCompiler
                 case AxesStatement s:
                     RequireSetup(s, "axes");
                     c.Axes = true;
+                    c.AxesSize = s.Size ?? c.AxesSize;
+                    c.AxesColor = s.Color ?? c.AxesColor;
                     break;
                 case DefaultStatement s:
                     foreach (string kind in s.Kinds.Count == 0 ? [""] : s.Kinds)

@@ -58,6 +58,12 @@ public sealed class AnimationData
 
     public bool Axes { get; }
 
+    /// <summary>The size of the axes' numbers in points (null: the player's 15).</summary>
+    public double? AxesSize { get; init; }
+
+    /// <summary>The colour of the axes and their numbers (null: the player's grey).</summary>
+    public Color? AxesColor { get; init; }
+
     /// <summary>Total length in milliseconds.</summary>
     public double Duration { get; }
 
@@ -98,6 +104,8 @@ public sealed class AnimationData
     public AnimationData WithTexts(string? title, string? description, IReadOnlyList<AnimationStep> steps) =>
         new(title, View, Background, GridStep, Axes, Duration, steps, primitives, timeScale, Formulas)
         {
+            AxesSize = AxesSize,
+            AxesColor = AxesColor,
             Description = description,
             Keywords = Keywords,
             Inspection = Inspection,
@@ -137,6 +145,14 @@ public sealed class AnimationData
                 json.WriteNumber("grid", GridStep.Value);
             }
             json.WriteBoolean("axes", Axes);
+            if (AxesSize != null)
+            {
+                json.WriteNumber("axesSize", AxesSize.Value);
+            }
+            if (AxesColor != null)
+            {
+                json.WriteString("axesColor", AxesColor.Value.ToHex());
+            }
             json.WriteNumber("duration", RoundTime(Duration));
             json.WriteStartArray("steps");
             foreach (AnimationStep step in Steps)

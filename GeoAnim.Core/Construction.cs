@@ -96,6 +96,12 @@ public sealed class Construction
     /// <summary>Whether the coordinate axes are drawn.</summary>
     public bool Axes { get; set; }
 
+    /// <summary>The size of the axes' numbers in points (null: 15); the distances to the axes grow with it.</summary>
+    public double? AxesSize { get; set; }
+
+    /// <summary>The colour of the axes and their numbers (null: grey).</summary>
+    public Color? AxesColor { get; set; }
+
     /// <summary>
     /// Speed of the whole animation: 1 as given by the durations, 0.5 half as fast (everything takes twice as long),
     /// 2 twice as fast. Applied when the animation is built; <see cref="Time"/> stays unscaled.
@@ -965,6 +971,8 @@ public sealed class Construction
         List<AnimationStep> scaledSteps = steps.Select(s => s with { Start = s.Start * scale, End = s.End * scale }).ToList();
         return new AnimationData(Title, view, Background, GridStep, Axes, time * scale, scaledSteps, scene.Primitives, scale, RenderFormulas(scaledSteps))
         {
+            AxesSize = AxesSize,
+            AxesColor = AxesColor,
             Description = Description,
             Keywords = keywords.ToList(),
             Inspection = inspector == null ? [] : inspector.Ghosts
