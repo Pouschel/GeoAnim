@@ -64,6 +64,20 @@ public sealed class FigureTests : IDisposable
     }
 
     [Fact]
+    public void NothingReachesOutOfTheView()
+    {
+        // a segment and a text that go beyond the view on the left: cut off there, as in the player
+        FigureAnimation animation = Animation("view x -5 .. 5 y -5 .. 5\npoint A = -10 0 nolabel\npoint B = 0 0 nolabel\nsegment s = A B\n"
+            + "text t = \"ein langer Text\" at -5 2\nstep Eins");
+        var style = new FigureStyle(10, 0.25);
+        double end = animation.EndOf(0);
+        FigureImage cropped = FigureRenderer.Render(animation, end, style, [end]);
+        Assert.InRange(cropped.Width, 50, 60);
+        Assert.Contains("clip-path=\"url(#area-", cropped.Svg);
+        Assert.Equal(100, FigureRenderer.Render(animation, end, style).Width, 6);
+    }
+
+    [Fact]
     public void TheStillsOfARowAreCutAlike()
     {
         FigureAnimation animation = Animation("view x -10 .. 10 y -10 .. 10\nstep Eins\npoint A = 0 0 nolabel\nstep Zwei\npoint B = 6 3 nolabel");

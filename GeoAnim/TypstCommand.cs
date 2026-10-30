@@ -19,13 +19,15 @@ internal static partial class Program
     /// geoanim typst &lt;dir&gt; [-o folder] [-pdf]: the pages of a book as a Typst project for the printed book: book.typ
     /// (title page, contents, the chapters with their pages), pages/*.typ, the figures and formulas as SVG (figures in
     /// their size in print, from "print:" in index.yaml) and style.typ with the look – the book's own if its folder has one
-    /// (beside index.yaml), else the standard. With -pdf Typst makes the PDF right away (it must be installed).
+    /// (beside index.yaml), else the standard. With -pdf Typst makes the PDF right away (it must be installed): in the
+    /// project's folder, named after it, or as given ("-pdf buch.pdf", relative to the project's folder).
     /// </summary>
     internal static int Typst(List<string> arguments)
     {
         string folder = arguments[0];
         string? output = null;
         bool pdf = false;
+        string? pdfName = null;
         for (int i = 1; i < arguments.Count; i++)
         {
             if (arguments[i] is "-o" or "--output" && i + 1 < arguments.Count)
@@ -35,6 +37,10 @@ internal static partial class Program
             else if (arguments[i] is "-pdf" or "--pdf")
             {
                 pdf = true;
+                if (i + 1 < arguments.Count && arguments[i + 1].EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+                {
+                    pdfName = arguments[++i];
+                }
             }
             else
             {
@@ -54,7 +60,9 @@ internal static partial class Program
         }
         output ??= Path.Combine(Path.GetDirectoryName(root)!, Path.GetFileName(root) + "-typst");
         int result = new TypstWriter(root).Write(output);
-        return pdf && result == 0 ? CompilePdf(output, Path.Combine(Path.GetDirectoryName(output)!, Path.GetFileName(root) + ".pdf")) : result;
+        // the PDF in the project's folder, named after it (or as given)
+        string pdfFile = Path.GetFullPath(Path.Combine(output, pdfName ?? Path.GetFileName(output.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)) + ".pdf"));
+        return pdf && result == 0 ? CompilePdf(output, pdfFile) : result;
     }
 
     // "typst compile book.typ book.pdf" in the project's folder

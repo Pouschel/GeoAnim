@@ -12,7 +12,7 @@ namespace GeoAnim.Cli;
 /// geoanim figure &lt;file.geo&gt;[#steps] [-o file.svg]: the picture as in the book (SVG in pt, or PNG).<br/>
 /// geoanim formula "abs(A-B)" [-o file.png]: a formula as a picture (PNG on white, or SVG).<br/>
 /// geoanim epub &lt;dir&gt; [-o book.epub]: the pages of a book as an e-book (EPUB 3).<br/>
-/// geoanim typst &lt;dir&gt; [-o folder] [-pdf]: the pages of a book as a Typst project (and PDF) for print.<br/>
+/// geoanim typst &lt;dir&gt; [-o folder] [-pdf [file.pdf]]: the pages of a book as a Typst project (and PDF) for print.<br/>
 /// geoanim daemon: compiles for an editor over standard input and output (see <see cref="Daemon"/>).
 /// </summary>
 internal static partial class Program
@@ -43,10 +43,11 @@ internal static partial class Program
               Writes the pages of the book in dir (*.geo.md below the folder with index.yaml) as an e-book (EPUB 3):
               figures and formulas as PNG on white (for Kindle), with -svg as SVG; figures as wide as the page, formulas
               sized in em, so that they grow with the reader's font size. Default: dir.epub next to the folder.
-          geoanim typst <dir> [-o <folder>] [-pdf]
+          geoanim typst <dir> [-o <folder>] [-pdf [<file.pdf>]]
               Writes the pages of the book in dir as a Typst project for print (default: dir-typst next to the folder):
               book.typ, pages/, figures and formulas as SVG, and style.typ with the look (the book's own style.typ
-              beside index.yaml, else the standard). -pdf: then makes the PDF with Typst (dir.pdf next to the folder).
+              beside index.yaml, else the standard). -pdf: then makes the PDF with Typst, in the project's folder and
+              named after it (or as given, relative to that folder).
           geoanim daemon
               Compiles for an editor (the VS Code extension): JSON requests on standard input, answers on standard output.
         """;

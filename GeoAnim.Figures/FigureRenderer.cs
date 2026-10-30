@@ -20,8 +20,9 @@ public static partial class FigureRenderer
 {
     /// <summary>
     /// The picture at <paramref name="time"/> (ms). With <paramref name="cropTimes"/> it shows only what is drawn at those
-    /// times (all pictures of a row of stills alike), else the whole view – larger where something drawn reaches out of
-    /// it (labels are larger next to the geometry in the book than in the player): nothing is cut off.
+    /// times (all pictures of a row of stills alike), else the whole view. Nothing reaches out of the script's view: what
+    /// lies beyond it is cut off, as in the player – texts too (in the book they are larger next to the geometry than in the
+    /// player, so a text near the border may need a larger view).
     /// </summary>
     public static FigureImage Render(FigureAnimation animation, double time, FigureStyle style, IReadOnlyList<double>? cropTimes = null)
     {
@@ -29,33 +30,29 @@ public static partial class FigureRenderer
         View view = full;
         double scale = style.PointsPerUnit;
         double least = 16 * style.SizeFactor / scale;
-        SKRect? content = null;
-        foreach (double t in cropTimes is { Count: > 0 } ? cropTimes : [time])
+        if (cropTimes is { Count: > 0 })
         {
-            var measure = new Scene(animation, style, full);
-            measure.Draw(t);
-            if (measure.Content is { } box)
+            SKRect? content = null;
+            foreach (double t in cropTimes)
             {
-                content = content is { } known ? SKRect.Union(known, box) : box;
+                var measure = new Scene(animation, style, full, full);
+                measure.Draw(t);
+                if (measure.Content is { } box)
+                {
+                    content = content is { } known ? SKRect.Union(known, box) : box;
+                }
             }
-        }
-        if (content is { } c)
-        {
-            double xmin = full.XMin + c.Left / scale, xmax = full.XMin + c.Right / scale;
-            double ymax = full.YMax - c.Top / scale, ymin = full.YMax - c.Bottom / scale;
-            if (cropTimes is { Count: > 0 })
+            if (content is { } c)
             {
-                // a margin of 5 % of the content, at least 16 sizes; beyond the script's view if the content reaches out
+                double xmin = full.XMin + c.Left / scale, xmax = full.XMin + c.Right / scale;
+                double ymax = full.YMax - c.Top / scale, ymin = full.YMax - c.Bottom / scale;
+                // a margin of 5 % of the content, at least 16 sizes – within the script's view
                 double margin = Math.Max(0.05 * Math.Max(xmax - xmin, ymax - ymin), least);
-                view = new View(xmin - margin, xmax + margin, ymin - margin, ymax + margin);
-            }
-            else
-            {
-                view = new View(Math.Min(full.XMin, xmin - least), Math.Max(full.XMax, xmax + least),
-                    Math.Min(full.YMin, ymin - least), Math.Max(full.YMax, ymax + least));
+                view = new View(Math.Max(full.XMin, xmin - margin), Math.Min(full.XMax, xmax + margin),
+                    Math.Max(full.YMin, ymin - margin), Math.Min(full.YMax, ymax + margin));
             }
         }
-        var scene = new Scene(animation, style, view);
+        var scene = new Scene(animation, style, view, full);
         scene.Draw(time);
         return scene.Image();
     }
@@ -72,8 +69,14 @@ public static partial class FigureRenderer
     // baseline and below, and the box of its ink
     private sealed record TextLayout(string Markup, string HaloSource, double Width, int Lines, double Top, double Bottom);
 
-    private sealed partial class Scene(FigureAnimation animation, FigureStyle style, View view)
+    // a picture of the part "view" of the plane; drawn is only what lies in the script's view ("area")
+    private sealed partial class Scene(FigureAnimation animation, FigureStyle style, View view, View scriptView)
     {
+        // where the shapes, the grid and the axes are drawn: the script's view, as far as the picture shows it
+        private readonly View area = new(Math.Max(view.XMin, scriptView.XMin), Math.Min(view.XMax, scriptView.XMax),
+            Math.Max(view.YMin, scriptView.YMin), Math.Min(view.YMax, scriptView.YMax));
+
+
         private readonly double scale = style.PointsPerUnit;
         private readonly double unit = style.SizeFactor;
         private readonly StringBuilder items = new();
@@ -102,17 +105,42 @@ public static partial class FigureRenderer
             svg.Append("<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"").Append(N(Width)).Append("pt\" height=\"").Append(N(Height))
                 .Append("pt\" viewBox=\"0 0 ").Append(N(Width)).Append(' ').Append(N(Height)).Append("\">");
             svg.Append("<rect width=\"").Append(N(Width)).Append("\" height=\"").Append(N(Height)).Append("\" fill=\"").Append(animation.Background).Append("\"/>");
-            svg.Append(decor).Append(items).Append("</svg>");
+            svg.Append("<clipPath id=\"").Append(ClipId).Append("\"><rect x=\"").Append(N(ToX(area.XMin))).Append("\" y=\"").Append(N(ToY(area.YMax)))
+                .Append("\" width=\"").Append(N(Math.Max(0, (area.XMax - area.XMin) * scale))).Append("\" height=\"").Append(N(Math.Max(0, (area.YMax - area.YMin) * scale)))
+                .Append("\"/></clipPath>");
+            svg.Append("<g clip-path=\"url(#").Append(ClipId).Append(")\">").Append(decor).Append(items).Append("</g></svg>");
             return new FigureImage(svg.ToString(), Width, Height);
         }
 
-        // counts a box (in points) for the content, if the primitive is not unbounded
+        // the name of the cut: one of its own in each picture (pictures may stand together in one page)
+        private string ClipId
+        {
+            get
+            {
+                // the same for the same picture (FNV-1a over the numbers): the files of an export stay the same
+                uint hash = 2166136261;
+                foreach (char c in string.Join(",", N(view.XMin), N(view.XMax), N(view.YMin), N(view.YMax), N(area.XMin), N(area.XMax), N(area.YMin), N(area.YMax)))
+                {
+                    hash = (hash ^ c) * 16777619;
+                }
+                return "area-" + hash.ToString("x8", CultureInfo.InvariantCulture);
+            }
+        }
+
+        // counts a box (in points) for the content, if the primitive is not unbounded: as far as it lies in the area
         private void Count(SKRect box, bool counts)
         {
-            if (counts && box.Width >= 0 && box.Height >= 0)
+            if (!counts || box.Width < 0 || box.Height < 0)
             {
-                Content = Content is { } known ? SKRect.Union(known, box) : box;
+                return;
             }
+            var inside = new SKRect((float)ToX(area.XMin), (float)ToY(area.YMax), (float)ToX(area.XMax), (float)ToY(area.YMin));
+            if (!box.IntersectsWithInclusive(inside))
+            {
+                return;
+            }
+            box.Intersect(inside);
+            Content = Content is { } known ? SKRect.Union(known, box) : box;
         }
 
         private void CountPath(string d, double strokeWidth, bool counts)
@@ -703,13 +731,13 @@ public static partial class FigureRenderer
             if (animation.Grid is double step && step > 0)
             {
                 decor.Append("<g stroke=\"#e3e6eb\" stroke-width=\"").Append(N(Math.Max(0.25, unit))).Append("\">");
-                for (double x = Math.Ceiling(view.XMin / step) * step; x <= view.XMax + 1e-9; x += step)
+                for (double x = Math.Ceiling(area.XMin / step) * step; x <= area.XMax + 1e-9; x += step)
                 {
-                    decor.Append("<path d=\"M").Append(N(ToX(x))).Append(" 0V").Append(N(Height)).Append("\"/>");
+                    decor.Append("<path d=\"M").Append(N(ToX(x))).Append(' ').Append(N(ToY(area.YMax))).Append('V').Append(N(ToY(area.YMin))).Append("\"/>");
                 }
-                for (double y = Math.Ceiling(view.YMin / step) * step; y <= view.YMax + 1e-9; y += step)
+                for (double y = Math.Ceiling(area.YMin / step) * step; y <= area.YMax + 1e-9; y += step)
                 {
-                    decor.Append("<path d=\"M0 ").Append(N(ToY(y))).Append('H').Append(N(Width)).Append("\"/>");
+                    decor.Append("<path d=\"M").Append(N(ToX(area.XMin))).Append(' ').Append(N(ToY(y))).Append('H').Append(N(ToX(area.XMax))).Append("\"/>");
                 }
                 decor.Append("</g>");
             }
@@ -735,15 +763,15 @@ public static partial class FigureRenderer
                 double left = anchor == "middle" ? x - width / 2 : x - width;
                 labels.Append("<path d=\"").Append(FigureFonts.Outline(text, left, y, size * unit, false, false)).Append("\"/>");
             }
-            if (view.YMin <= 0 && view.YMax >= 0)
+            if (area.YMin <= 0 && area.YMax >= 0)
             {
-                double y0 = ToY(0), xEnd = ToX(view.XMax);
-                decor.Append("<path d=\"M0 ").Append(N(y0)).Append('H').Append(N(xEnd)).Append("\"/>");
+                double y0 = ToY(0), xEnd = ToX(area.XMax);
+                decor.Append("<path d=\"M").Append(N(ToX(area.XMin))).Append(' ').Append(N(y0)).Append('H').Append(N(xEnd)).Append("\"/>");
                 decor.Append("<path stroke=\"none\" d=\"M").Append(N(xEnd)).Append(' ').Append(N(y0)).Append('L').Append(N(xEnd - arrow)).Append(' ')
                     .Append(N(y0 - arrow / 2)).Append('L').Append(N(xEnd - arrow)).Append(' ').Append(N(y0 + arrow / 2)).Append("Z\"/>");
-                for (double x = Math.Ceiling(view.XMin / k) * k; x < view.XMax; x += k)
+                for (double x = Math.Ceiling(area.XMin / k) * k; x < area.XMax; x += k)
                 {
-                    if (Math.Abs(x) < 1e-9 || ToX(x) < 12 * f * unit || ToX(x) > ToX(view.XMax) - 24 * f * unit)
+                    if (Math.Abs(x) < 1e-9 || ToX(x) - ToX(area.XMin) < 12 * f * unit || ToX(x) > ToX(area.XMax) - 24 * f * unit)
                     {
                         continue;
                     }
@@ -751,15 +779,15 @@ public static partial class FigureRenderer
                     Label(FormatNumber(x), ToX(x), y0 + 20 * f * unit, "middle");
                 }
             }
-            if (view.XMin <= 0 && view.XMax >= 0)
+            if (area.XMin <= 0 && area.XMax >= 0)
             {
-                double x0 = ToX(0);
-                decor.Append("<path d=\"M").Append(N(x0)).Append(' ').Append(N(ToY(view.YMin))).Append("V0\"/>");
-                decor.Append("<path stroke=\"none\" d=\"M").Append(N(x0)).Append(" 0L").Append(N(x0 - arrow / 2)).Append(' ').Append(N(arrow)).Append('L')
-                    .Append(N(x0 + arrow / 2)).Append(' ').Append(N(arrow)).Append("Z\"/>");
-                for (double y = Math.Ceiling(view.YMin / k) * k; y < view.YMax; y += k)
+                double x0 = ToX(0), yEnd = ToY(area.YMax);
+                decor.Append("<path d=\"M").Append(N(x0)).Append(' ').Append(N(ToY(area.YMin))).Append('V').Append(N(yEnd)).Append("\"/>");
+                decor.Append("<path stroke=\"none\" d=\"M").Append(N(x0)).Append(' ').Append(N(yEnd)).Append('L').Append(N(x0 - arrow / 2)).Append(' ').Append(N(yEnd + arrow)).Append('L')
+                    .Append(N(x0 + arrow / 2)).Append(' ').Append(N(yEnd + arrow)).Append("Z\"/>");
+                for (double y = Math.Ceiling(area.YMin / k) * k; y < area.YMax; y += k)
                 {
-                    if (Math.Abs(y) < 1e-9 || ToY(y) < 24 * f * unit || ToY(y) > ToY(view.YMin) - 12 * f * unit)
+                    if (Math.Abs(y) < 1e-9 || ToY(y) - ToY(area.YMax) < 24 * f * unit || ToY(y) > ToY(area.YMin) - 12 * f * unit)
                     {
                         continue;
                     }
