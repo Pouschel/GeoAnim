@@ -646,6 +646,19 @@ public sealed class MarkdownTests : IDisposable
     }
 
     [Fact]
+    public void AKeywordOfSeveralWordsAtAStatementOrHeading()
+    {
+        MarksOfPage read = MarkdownPage.ReadMarks(
+            "::: example {#bsp-ebene kw=euklidische Ebene} Die euklidische Ebene\nText.\n:::\n\n## Metrische Räume {kw=metrische/r/n Raum/es, Räume/n}\n");
+        Assert.Equal(["euklidische Ebene", "metrische Raum"], read.Keywords.Select(k => k.Term));
+        Assert.DoesNotContain("euklidische", read.Keywords[0].Forms.Where(f => !f.Contains(' ')));
+        Assert.Equal("bsp-ebene", read.Keywords[0].Anchor);
+        MarkdownPage page = MarkdownPage.Parse("::: example {#bsp-ebene kw=euklidische Ebene} Die euklidische Ebene\nText.\n:::\n");
+        Assert.DoesNotContain("Ebene=", page.Html);
+        Assert.Contains("id=\"bsp-ebene\"", page.Html);
+    }
+
+    [Fact]
     public void KeywordsAreLinkedAfterAReference()
     {
         var links = new Dictionary<string, KeywordLink> { ["Punkt"] = new KeywordLink("punkte.geo.md#kw-punkt", "Punkte") };

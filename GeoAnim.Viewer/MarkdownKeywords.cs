@@ -83,10 +83,21 @@ public sealed partial class MarkdownPage
 
     // attributes that Markdig leaves as text because a value has spaces ("## Metrische Räume {kw=Metrik/en, metrische/r
     // Raum}", "**Haus**{kw=/es, Häuser/n}"): read here, at the end of a heading and right after an emphasis
-    private static void RescueAttributes(MarkdownDocument document)
+    private static void RescueAttributes(MarkdownDocument document, string text)
     {
+        string[] lines = text.Split('\n');
         foreach (MarkdownObject element in document.Descendants().ToList())
         {
+            // the opening line of a statement ("::: example {#bsp kw=euklidische Ebene} Titel"): Markdig takes "Ebene" for
+            // an attribute of its own; read them again from the line
+            if (element is CustomContainer container && container.Line < lines.Length
+                && Regex.Match(lines[container.Line].TrimEnd('\r'), @"^\s*:{3,}[^{}]*\{([^{}]*)\}") is { Success: true } opening)
+            {
+                HtmlAttributes attributes = container.GetAttributes();
+                attributes.Properties?.Clear();
+                ParseAttributes(opening.Groups[1].Value, attributes);
+                continue;
+            }
             if (element is HeadingBlock { Inline.LastChild: LiteralInline last } heading)
             {
                 string content = last.Content.ToString();
