@@ -15,9 +15,14 @@
       "commandLineArgs": "exportdir C:/Code/GeoBook/src -o C:/Code/GeoBook/html -assets -serve -sheet",
       "workingDirectory": "$(ProjectDir).."
     },
-    "export book": {
+    "export ebook": {
       "commandName": "Project",
       "commandLineArgs": "epub C:/Code/GeoBook/src-new -o C:/Code/GeoBook/eb-geo.epub ",
+      "workingDirectory": "$(ProjectDir).."
+    },
+    "export book": {
+      "commandName": "Project",
+      "commandLineArgs": "epub C:/Code/GeoBook/src-new -o C:/Code/GeoBook/eb-geo-typst",
       "workingDirectory": "$(ProjectDir).."
     }
   }

@@ -229,3 +229,54 @@ public sealed class EpubTests : IDisposable
         Assert.Equal(1, Program.Epub([folder]));
     }
 }
+
+public sealed class TypstTests : IDisposable
+{
+    private readonly string folder = Directory.CreateTempSubdirectory("geoanim-typst").FullName;
+
+    public void Dispose() => Directory.Delete(folder, recursive: true);
+
+    private void Write(string name, string content)
+    {
+        string path = Path.Combine(folder, name);
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, content);
+    }
+
+    [Fact]
+    public void TheBookBecomesATypstProject()
+    {
+        Write("index.yaml", "title: Buch\nauthor: Thomas\n");
+        Write("10_Kapitel/10_Erste.geo", "view x -5 .. 5 y -5 .. 5\nstep Eins #eins\npoint A = 0 0\nstep Zwei\npoint B = 2 2");
+        Write("10_Kapitel/10_Erste.geo.md", "# Erste Seite\n\nDer **Punkt**{kw} $A$ hat *Stern* a_b_c # und [x].\n\n1. eins\n2. zwei\n\n![Ein Punkt](#eins){#abb-punkt}\n\n::: axiom {#ax} Eins\nText.\n:::\n\n::: proof\nKlar.\n:::\n");
+        Write("10_Kapitel/20_Zweite.geo.md", "# Zweite Seite\n\nNach §ax und §abb-punkt gilt es für jeden Punkt.[^1]\n\n[^1]: Eine Fußnote.\n");
+        string output = Path.Combine(folder, "out");
+        Assert.Equal(0, Program.Typst([folder, "-o", output]));
+
+        string main = File.ReadAllText(Path.Combine(output, "book.typ"));
+        Assert.Contains("#show: book.with(title: \"Buch\", author: \"Thomas\", text-size: 11pt, language: \"de\")", main);
+        Assert.Contains("#chapter(\"1\", [Kapitel])", main);
+        Assert.Contains("#include \"pages/p01-Erste.typ\"", main);
+        Assert.True(File.Exists(Path.Combine(output, "style.typ")));
+        string first = File.ReadAllText(Path.Combine(output, "pages", "p01-Erste.typ"));
+        Assert.Contains("#heading(level: 2)[#section-number[1.1] Erste Seite]", first);
+        // text escaped, formulas and figures as pictures
+        Assert.Contains("#emph[Stern] a\\_b\\_c \\# und \\[x\\]", first);
+        Assert.Matches(@"#box\(baseline: [-0-9.]+em, height: [0-9.]+em, move\(dy: -0.04em, image\(""../formulas/[0-9a-f]+.svg""", first);
+        Assert.Matches(@"#geo-figure\(image\(""../figures/[0-9a-f]+.svg""\), caption: \[#figure-label\[Abb. 1.1\] Ein Punkt\]\) <p1-abb-punkt>", first);
+        Assert.Contains("#statement(\"axiom\")[#statement-label[Axiom 1 (Eins).] Text.] <p1-ax>", first);
+        Assert.Contains("#statement(\"proof\")[#statement-label[Beweis.] Klar. #qed()]", first);
+        Assert.Contains("#enum([eins], [zwei])", first);
+        Assert.Contains("#strong[Punkt] <p1-kw-punkt>", first);
+        string second = File.ReadAllText(Path.Combine(output, "pages", "p02-Zweite.typ"));
+        Assert.Contains("#link(<p1-ax>)[Axiom 1]", second);
+        Assert.Contains("#link(<p1-abb-punkt>)[Abb. 1.1]", second);
+        Assert.Matches(@"#link\(<p1-kw-punkt>\)\[Punkt\]\.#footnote\[Eine Fußnote\.\]", second);
+        Assert.NotEmpty(Directory.GetFiles(Path.Combine(output, "figures"), "*.svg"));
+
+        // the book's own look
+        Write("style.typ", "// mein Stil\n");
+        Assert.Equal(0, Program.Typst([folder, "-o", output]));
+        Assert.Equal("// mein Stil\n", File.ReadAllText(Path.Combine(output, "style.typ")));
+    }
+}
