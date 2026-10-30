@@ -17,6 +17,10 @@ mklink /J "%USERPROFILE%\.vscode\extensions\geoanim-geo" "%CD%\editors\vscode"
 (Eine Verknüpfung, damit Änderungen an der Erweiterung ohne Kopieren wirken.) Danach VS Code neu starten – nach einer
 Änderung an der Erweiterung ebenso (oder „Developer: Reload Window“).
 
+**Symbole im Explorer:** Skripte (`.geo`) zeigen den rechten Winkel des Buch-Icons (für dunkle Themes heller),
+Buchseiten (`.geo.md`) das Markdown-Zeichen. Das sind Sprach-Symbole: Sie erscheinen, wo das eingestellte
+Datei-Symbol-Design (etwa Seti, die Voreinstellung) für die Sprache kein eigenes hat.
+
 ## Vorschau und Fehler
 
 - **Vorschau:** Symbol oben rechts im Editor, Strg+K V oder „GeoAnim: Vorschau öffnen“. Sie zeigt die Animation neben

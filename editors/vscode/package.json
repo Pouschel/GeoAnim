@@ -31,7 +31,11 @@
         "extensions": [
           ".geo"
         ],
-        "configuration": "./language-configuration.json"
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "./icons/geo-light.svg",
+          "dark": "./icons/geo-dark.svg"
+        }
       },
       {
         "id": "geomd",
@@ -42,7 +46,11 @@
         "filenamePatterns": [
           "*.geo.md"
         ],
-        "configuration": "./language-configuration-geomd.json"
+        "configuration": "./language-configuration-geomd.json",
+        "icon": {
+          "light": "./icons/geomd.svg",
+          "dark": "./icons/geomd.svg"
+        }
       }
     ],
     "grammars": [
