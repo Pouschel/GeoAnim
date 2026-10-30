@@ -16,6 +16,8 @@
 
 // ------------------------------------------------------------------ the book
 
+// text-size: the font size of the text – unless index.yaml says it ("print: text: 10pt"), then that one (the figures and
+// formulas are made for it, and the preview shows them in proportion to it: best set it there)
 #let book(title: none, author: none, text-size: 11pt, language: "de", body) = {
   set document(title: title, author: if author == none { () } else { author })
   set page(

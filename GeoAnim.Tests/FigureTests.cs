@@ -268,7 +268,8 @@ public sealed class TypstTests : IDisposable
         Assert.Equal(0, Program.Typst([folder, "-o", output]));
 
         string main = File.ReadAllText(Path.Combine(output, "book.typ"));
-        Assert.Contains("#show: book.with(title: \"Buch\", author: \"Thomas\", text-size: 11pt, language: \"de\")", main);
+        // the font size of style.typ: index.yaml has none
+        Assert.Contains("#show: book.with(title: \"Buch\", author: \"Thomas\", language: \"de\")", main);
         Assert.Contains("#chapter(\"1\", [Kapitel])", main);
         Assert.Contains("#include \"pages/p01-Erste.typ\"", main);
         Assert.True(File.Exists(Path.Combine(output, "style.typ")));

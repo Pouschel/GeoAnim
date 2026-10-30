@@ -508,7 +508,8 @@ internal static partial class Program
                 .Append("#import \"style.typ\": *\n\n")
                 .Append("#show: book.with(title: ").Append(String(title))
                 .Append(settings.Author != null ? ", author: " + String(settings.Author) : "")
-                .Append(", text-size: ").Append(textSize.ToString("0.##", CultureInfo.InvariantCulture)).Append("pt")
+                // the font size only if index.yaml says it ("print: text"); else the one of style.typ
+                .Append(settings.TextSize is double size ? ", text-size: " + size.ToString("0.##", CultureInfo.InvariantCulture) + "pt" : "")
                 .Append(", language: ").Append(String(settings.Language ?? "de")).Append(")\n\n")
                 .Append("#title-page(title: [").Append(Escape(title)).Append("], author: ").Append(Optional(settings.Author))
                 .Append(", description: ").Append(Optional(settings.Description)).Append(")\n\n")
