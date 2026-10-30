@@ -290,7 +290,7 @@ internal static partial class Program
                         return $"#statement({String(kind)})[{Blocks(element.ChildNodes, context).Trim()}]{label}";
                     }
                 case "div" when element.ClassList.Contains("formula-block"):
-                    return "#display-formula[" + Inlines(element.ChildNodes, context).Trim() + "]";
+                    return DisplayFormula(element, context) + label;
                 default:
                     return Blocks(element.ChildNodes, context).Trim();
             }
@@ -339,7 +339,7 @@ internal static partial class Program
                 case "svg" when element.ClassList.Contains("formula"):
                     return Formula(element.GetAttribute("aria-label") ?? "", context);
                 case "span" when element.ClassList.Contains("formula-display"):
-                    return "#display-formula[" + Content().Trim() + "]";
+                    return DisplayFormula(element, context) + label;
                 case "span" when element.ClassList.Contains("statement-label"):
                     return "#statement-label[" + Content() + "]";
                 case "span" when element.ClassList.Contains("qed"):
@@ -355,6 +355,15 @@ internal static partial class Program
                 default:
                     return Content() + label;
             }
+        }
+
+        // a formula on a line of its own, with its number ("(2.3)") if it has a mark
+        private string DisplayFormula(IElement element, PageContext context)
+        {
+            IElement? number = element.QuerySelector(".formula-number");
+            number?.Remove();
+            return "#display-formula(" + (number != null ? "number: [" + Escape(number.TextContent) + "]" : "") + ")["
+                + Inlines(element.ChildNodes, context).Trim() + "]";
         }
 
         // a link: a footnote, a reference into the book (a label), a page of the web, or its text

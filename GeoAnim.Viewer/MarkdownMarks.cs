@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Net;
 using System.Text.RegularExpressions;
 using Markdig.Extensions.CustomContainers;
+using Markdig.Extensions.Mathematics;
 using Markdig.Renderers;
 using Markdig.Renderers.Html;
 using Markdig.Syntax;
@@ -68,11 +69,14 @@ public sealed partial class MarkdownPage
     {
         null => mark,
         HeadingCounter => mark with { Label = HeadingLabel(numbering, mark.Text) },
-        string counter => mark with { Label = NameOf(mark.Kind) + " " + numbering.NumberOf(counter, mark.Index) },
+        string counter => mark with { Label = LabelOf(mark.Kind, numbering.NumberOf(counter, mark.Index)) },
     };
 
     // "Abb.", "Satz", …
     private static string NameOf(string kind) => kind == "figure" ? FigureName : StatementKinds[kind].Name;
+
+    // what a number shows: "Satz 2.3", a formula's "(2.3)"
+    private static string LabelOf(string kind, string number) => kind == "equation" ? "(" + number + ")" : NameOf(kind) + " " + number;
 
     // what a reference to a heading shows: the page's section ("Abschnitt 2.1"), else its text in quotes
     private static string HeadingLabel(PageNumbering numbering, string text) =>
@@ -188,6 +192,28 @@ public sealed partial class MarkdownPage
                         break;
                     }
             }
+        }
+        // formulas on lines of their own with a mark ("$$…$$ {#gl-name}"): numbered in the order of the page
+        foreach (MarkdownObject element in document.Descendants())
+        {
+            (string? Id, string Source, Block? At, MarkdownObject? Formula) found = element switch
+            {
+                MathBlock block when block.TryGetAttributes()?.Id is { } blockId =>
+                    (blockId, string.Join(" ", block.Lines.Lines.Take(block.Lines.Count).Select(l => l.Slice.ToString().Trim())).Trim(), block, block),
+                MathInline { DelimiterCount: 2 } inline when inline.TryGetAttributes()?.Id is { } inlineId =>
+                    (inlineId, inline.Content.ToString().Trim(), inline.Parent?.ParentBlock, inline),
+                _ => ((string?)null, "", (Block?)null, (MarkdownObject?)null),
+            };
+            (string? id, string source, Block? at, MarkdownObject? formula) = found;
+            if (id == null || formula == null)
+            {
+                continue;
+            }
+            (int index, string number) = Next("equation");
+            string label = LabelOf("equation", number);
+            formula.SetData(typeof(FormulaNumber), label);
+            (int line, int column) = element is MathInline math ? locate(math.Span.Start) : (at!.Line + 1, at.Column + 1);
+            marks.Add(new PageMark(id, "equation", label, source, line, column) { Counter = book.CounterOf("equation"), Index = index });
         }
         counts = counted;
         // a mark of one character: Markdig does not take it ("{#a}")

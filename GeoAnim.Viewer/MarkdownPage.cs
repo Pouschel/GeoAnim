@@ -146,6 +146,8 @@ public sealed partial class MarkdownPage
     {
         var errors = new List<MarkdownProblem>();
         var warnings = new List<MarkdownProblem>();
+        // "$$" … "$$ {#gl-name}": the mark of a formula at its end, where Markdig wants it at the start
+        text = MoveFormulaMarks(text);
         MarkdownDocument document = Markdown.Parse(text, Pipeline);
         Func<int, (int, int)> locate = Locator(text);
 
@@ -159,6 +161,7 @@ public sealed partial class MarkdownPage
         }
 
         RescueAttributes(document);
+        AttachFormulaMarks(document);
         string? heading = document.Descendants<HeadingBlock>().FirstOrDefault(h => h.Level == 1) is { } first
             ? Regex.Replace(HeadingText(text, first), @"\s*\{[^{}]*\}\s*$", "")
             : null;
@@ -545,11 +548,18 @@ public sealed partial class MarkdownPage
         protected override void Write(HtmlRenderer renderer, MathInline math)
         {
             string source = math.Content.ToString().Trim();
-            // "$$…$$" in a paragraph: centred on a line of its own, with the punctuation after it ("$$…$$.")
+            // "$$…$$" in a paragraph: centred on a line of its own, with the punctuation after it ("$$…$$."); with a mark
+            // its number on the right
             bool display = math.DelimiterCount == 2;
+            string? number = math.GetData(typeof(FormulaNumber)) as string;
             if (display)
             {
-                renderer.Write("<span class=\"formula-display\">");
+                renderer.Write("<span class=\"formula-display").Write(number != null ? " formula-numbered" : "").Write('"');
+                if (math.TryGetAttributes()?.Id is { } id)
+                {
+                    renderer.Write(" id=\"").WriteEscape(id).Write('"');
+                }
+                renderer.Write('>');
             }
             try
             {
@@ -563,7 +573,78 @@ public sealed partial class MarkdownPage
             }
             if (display)
             {
-                renderer.WriteEscape(math.GetData(typeof(DisplayPunctuation)) as string ?? "").Write("</span>");
+                renderer.WriteEscape(math.GetData(typeof(DisplayPunctuation)) as string ?? "");
+                if (number != null)
+                {
+                    renderer.Write("<span class=\"formula-number\">").WriteEscape(number).Write("</span>");
+                }
+                renderer.Write("</span>");
+            }
+        }
+    }
+
+    // the number of a formula with a mark ("(2.3)")
+    private sealed class FormulaNumber;
+
+    // "$$" on a line of its own … "$$ {#gl-name}" (the mark at the end): the mark moved to the opening line, as Markdig
+    // reads it there; the lines stay where they are
+    private static string MoveFormulaMarks(string text)
+    {
+        if (!text.Contains("$$", StringComparison.Ordinal))
+        {
+            return text;
+        }
+        string[] lines = text.Split('\n');
+        int open = -1;
+        for (int i = 0; i < lines.Length; i++)
+        {
+            string line = lines[i].TrimEnd('\r');
+            if (open < 0)
+            {
+                if (Regex.IsMatch(line, @"^\s{0,3}\$\$\s*(\{[^{}]*\})?\s*$"))
+                {
+                    open = i;
+                }
+                continue;
+            }
+            Match closing = Regex.Match(line, @"^(\s{0,3}\$\$)\s*(\{[^{}]*\})\s*$");
+            if (closing.Success)
+            {
+                string end = lines[i].EndsWith('\r') ? "\r" : "";
+                string opening = lines[open].TrimEnd('\r');
+                string openEnd = lines[open].EndsWith('\r') ? "\r" : "";
+                lines[open] = opening.TrimEnd() + " " + closing.Groups[2].Value + openEnd;
+                lines[i] = closing.Groups[1].Value + end;
+                open = -1;
+            }
+            else if (Regex.IsMatch(line, @"^\s{0,3}\$\$\s*$"))
+            {
+                open = -1;
+            }
+        }
+        return string.Join('\n', lines);
+    }
+
+    // "$$a^2+b^2=c^2$$ {#gl-name}" in a paragraph: Markdig gives the mark (after a space) to the paragraph; it belongs to
+    // the formula before it (the space goes, so that the punctuation after it stays with the formula)
+    private static void AttachFormulaMarks(MarkdownDocument document)
+    {
+        foreach (ParagraphBlock paragraph in document.Descendants<ParagraphBlock>())
+        {
+            if (paragraph.TryGetAttributes()?.Id is not { } id || paragraph.Inline == null)
+            {
+                continue;
+            }
+            MathInline? formula = paragraph.Inline.Descendants<MathInline>().LastOrDefault(m => m.DelimiterCount == 2);
+            if (formula == null || formula.TryGetAttributes()?.Id != null)
+            {
+                continue;
+            }
+            formula.GetAttributes().Id = id;
+            paragraph.GetAttributes().Id = null;
+            if (formula.NextSibling is LiteralInline space && space.Content.ToString().Trim().Length == 0)
+            {
+                space.Remove();
             }
         }
     }
@@ -590,7 +671,8 @@ public sealed partial class MarkdownPage
         protected override void Write(HtmlRenderer renderer, MathBlock math)
         {
             string source = string.Join(" ", math.Lines.Lines.Take(math.Lines.Count).Select(l => l.Slice.ToString().Trim())).Trim();
-            renderer.Write("<div class=\"formula-block\"").WriteAttributes(math).Write('>');
+            string? number = math.GetData(typeof(FormulaNumber)) as string;
+            renderer.Write("<div class=\"formula-block").Write(number != null ? " formula-numbered" : "").Write('"').WriteAttributes(math).Write('>');
             try
             {
                 renderer.Write(FormulaSvg(source));
@@ -600,6 +682,10 @@ public sealed partial class MarkdownPage
                 (int line, int column) = locate(math.Span.Start);
                 errors.Add(new MarkdownProblem(line, column, e.Message));
                 renderer.Write(FaultyFormula(source));
+            }
+            if (number != null)
+            {
+                renderer.Write("<span class=\"formula-number\">").WriteEscape(number).Write("</span>");
             }
             renderer.WriteLine("</div>");
         }

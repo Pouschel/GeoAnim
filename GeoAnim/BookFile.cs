@@ -29,6 +29,7 @@ namespace GeoAnim.Cli;
 ///   axiom: own book                 # a counter of its own, through the book: Axiom 5 ("own" alone: the same for axioms)
 ///   figure: own                     # a counter of its own: Abb. 2.3
 ///   example: own                    # Beispiel 2.1
+///   equation: own                   # formulas with a mark: (2.1)
 ///   default: shared                 # all other numbered statements one counter: Definition 2.1, Satz 2.2, …
 ///   headings: yes                   # chapters and pages numbered: 2 Abstandsgeometrie, 2.1 Abstandsaxiome
 /// </code>

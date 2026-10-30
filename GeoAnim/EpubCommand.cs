@@ -169,6 +169,13 @@ internal static partial class Program
             {
                 figure.Replace(Figure(document, figure, figures));
             }
+            // the number of a formula first: it floats to the right of the line
+            foreach (IElement number in body.QuerySelectorAll(".formula-numbered > .formula-number").ToList())
+            {
+                IElement parent = number.ParentElement!;
+                number.Remove();
+                parent.Prepend(number);
+            }
             foreach (IElement link in body.QuerySelectorAll("a[href]").ToList())
             {
                 Relink(link, entry, book);
@@ -667,6 +674,10 @@ internal static partial class Program
 
                 img.formula {
                   margin: 0;
+                }
+
+                .formula-number {
+                  float: right;
                 }
 
                 .formula-block,

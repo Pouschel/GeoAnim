@@ -469,7 +469,7 @@ public sealed class MarkdownTests : IDisposable
         File.WriteAllText(Path.Combine(folder, "10_Eins", "20_B.geo.md"),
             "# Zweite\n\n::: axiom {#ax-b}\nx\n:::\n\n::: theorem {#satz-b}\nx\n:::\n\n::: example {#bsp-b}\nx\n:::\n\n![](x.geo){#abb-b}\n\nNach §def-a und §erste.\n");
         File.WriteAllText(Path.Combine(folder, "20_Zwei", "10_C.geo.md"),
-            "# Dritte\n\n::: axiom {#ax-c}\nx\n:::\n\n::: lemma {#lemma-c}\nx\n:::\n\nSiehe §satz-b, §ax-b und §abb-b.\n");
+            "# Dritte\n\n::: axiom {#ax-c}\nx\n:::\n\n::: lemma {#lemma-c}\nx\n:::\n\nSiehe §satz-b, §ax-b und §abb-b.\n\n$$x = 1$$ {#gl-c}\n");
 
         MarkdownPage second = PageOfBook("10_Eins/20_B.geo.md");
         // the page's heading with its section; axioms through the book, the other statements one counter in the chapter,
@@ -482,14 +482,14 @@ public sealed class MarkdownTests : IDisposable
 
         // a new chapter starts again, the axioms go on
         MarkdownPage third = PageOfBook("20_Zwei/10_C.geo.md");
-        Assert.Equal(["Axiom 3", "Hilfssatz 2.1"], third.Marks.Select(m => m.Label));
+        Assert.Equal(["Axiom 3", "Hilfssatz 2.1", "(2.1)"], third.Marks.Select(m => m.Label));
         Assert.Contains(">Satz 1.2</a>, <a class=\"ref\" href=\"../10_Eins/20_B.geo.md#ax-b\">Axiom 2</a> und", third.Html);
         Assert.Contains(">Abb. 1.2</a>", third.Html);
 
         // other rules: through the book, examples with the others, no numbers on headings
         File.WriteAllText(Path.Combine(folder, "index.yaml"), "title: Buch\nnumbering:\n  within: book\n  example: shared\n  headings: no\n");
         MarkdownPage again = PageOfBook("20_Zwei/10_C.geo.md");
-        Assert.Equal(["Axiom 3", "Hilfssatz 5"], again.Marks.Select(m => m.Label));
+        Assert.Equal(["Axiom 3", "Hilfssatz 5", "(1)"], again.Marks.Select(m => m.Label));
         Assert.DoesNotContain("section-number", again.Html);
         Assert.Contains(">Satz 3</a>", again.Html);
         Assert.Null(again.SectionNumber);
@@ -504,6 +504,34 @@ public sealed class MarkdownTests : IDisposable
         Assert.Equal(3, warnings.Count);
         Assert.Equal(NumberScope.Page, settings.Numbering.ScopeOf("figure"));
         Assert.Equal(NumberScope.Book, settings.Numbering.ScopeOf("axiom"));
+    }
+
+    [Fact]
+    public void FormulasWithAMarkAreNumbered()
+    {
+        MarkdownPage page = MarkdownPage.Parse("""
+            Es gilt
+
+            $$a^2 + b^2 = c^2$$ {#gl-pythagoras}.
+
+            und $$x$$ ohne Nummer, aber $$y = 2$${#gl-y}, weiter.
+
+            $$
+            d(A,B) >= 0
+            $$ {#gl-positiv}
+
+            Nach §gl-pythagoras und §gl-positiv.
+            """);
+
+        Assert.Empty(page.Errors);
+        Assert.Equal([("gl-pythagoras", "(1)"), ("gl-y", "(2)"), ("gl-positiv", "(3)")], page.Marks.Select(m => (m.Name, m.Label)));
+        Assert.Equal(("equation", "a^2 + b^2 = c^2"), (page.Marks[0].Kind, page.Marks[0].Text));
+        Assert.Matches("<span class=\"formula-display formula-numbered\" id=\"gl-pythagoras\"><svg[^\n]*</svg>.<span class=\"formula-number\">\\(1\\)</span></span>", page.Html);
+        Assert.Contains("<span class=\"formula-display\"><svg", page.Html);
+        Assert.Matches("<div class=\"formula-block formula-numbered\" id=\"gl-positiv\"[^>]*><svg[^\n]*<span class=\"formula-number\">\\(3\\)</span></div>", page.Html);
+        Assert.Contains("<a class=\"ref\" href=\"#gl-pythagoras\">(1)</a> und <a class=\"ref\" href=\"#gl-positiv\">(3)</a>", page.Html);
+        // the lines stay where they are (the mark moved to the opening line)
+        Assert.Equal(7, page.Marks[2].Line);
     }
 
     [Fact]

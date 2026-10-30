@@ -157,8 +157,11 @@
 
 // ------------------------------------------------------------------ formulas and figures
 
-// "$$…$$": a formula on a line of its own, centred
-#let display-formula(body) = block(width: 100%, above: 0.8em, below: 0.8em, align(center, body))
+// "$$…$$": a formula on a line of its own, centred; with a mark its number on the right ("(2.3)")
+#let display-formula(number: none, body) = block(width: 100%, above: 0.8em, below: 0.8em,
+  if number == none { align(center, body) } else {
+    grid(columns: (1fr, auto, 1fr), align: (left, center, right + horizon), [], body, number)
+  })
 
 // "Abb. 2.3" in a caption
 #let figure-label(body) = text(weight: "bold", body)

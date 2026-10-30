@@ -50,6 +50,7 @@ Ein unbekannter Schlüssel ist eine Warnung, ein Fehler im YAML ein Fehler (mit 
 | Attribute | `{#marke .klasse}` hinter einem Element | |
 | Formel im Text | `$bar(AB)$` | AsciiMath wie in Skripten; kein Leerzeichen direkt nach dem ersten und vor dem letzten `$` |
 | abgesetzte Formel | `$$…$$` im Absatz · `$$` … `$$` auf eigenen Zeilen | zentriert auf einer Zeile für sich; ein Satzzeichen direkt dahinter (`$$…$$.`) steht mit auf der Formelzeile |
+| nummerierte Formel | `$$a^2+b^2=c^2$$ {#gl-pythagoras}.` · beim Block `$$ {#gl-name}` als Schlusszeile (oder als erste Zeile) | eine abgesetzte Formel mit Marke bekommt eine Nummer rechts auf ihrer Zeile – (2.3), siehe [Nummerierung](#nummerierung); `§gl-pythagoras` zeigt „(2.3)“. Formeln im Text (`$…$`) haben keine Nummer |
 | Dollarzeichen | `\$` | |
 | Sprungmarke | `[nach oben](#oben)` | ein Link mit `#…` bleibt ein Link auf eine Stelle der Seite |
 | andere Seite | `[Strecken](20_Strecken.geo.md)` | öffnet in der Vorschau diese Seite |
@@ -179,6 +180,7 @@ Durch zwei verschiedene Punkte verläuft **genau eine Gerade**.
 |---|---|---|
 | Abbildung | `![…](#bez){#abb-gerade}` | Abb. 2.3 |
 | Aussage | `::: axiom {#ax-gerade} …` | Axiom 2, Satz 2.14 |
+| Formel | `$$…$$ {#gl-pythagoras}` | (2.3) – „nach §gl-pythagoras“, „aus Ungleichung §gl-dreieck“ |
 | Seite | `# Abstandsaxiome {#abstandsaxiome}` (die `#`-Überschrift, der Seitentitel) | Abschnitt 2.1 |
 | Abschnitt in einer Seite | `## Die Gerade {#abschnitt-gerade}` | „Die Gerade“ (`##`, `###` … haben keine Nummern) |
 
@@ -223,6 +225,7 @@ deren Nummer (Satz 2.1.3), im ganzen Buch nichts (Axiom 5). Voreinstellung:
 | Axiom | eigener, im ganzen Buch | Axiom 1, 2, 3 … |
 | Abbildung | eigener, im Kapitel | Abb. 2.1, 2.2 … |
 | Beispiel | eigener, im Kapitel | Beispiel 2.1, 2.2 … |
+| Formel (nur mit Marke) | eigener, im Kapitel | (2.1), (2.2) … |
 | Definition, Satz, Hilfssatz, Folgerung | gemeinsamer, im Kapitel | Definition 2.1, Satz 2.2, Folgerung 2.3 … |
 
 Beweise, Bemerkungen und Kästen haben keine Nummer. Gezählt wird in Buchreihenfolge über alle Seiten (ohne Dateien und
@@ -236,6 +239,7 @@ numbering:
   axiom: own book     # eigener Zähler, durch das ganze Buch ("own" allein: für Axiome dasselbe)
   figure: own         # eigener Zähler (im Bereich von within)
   example: own        # shared: zählt mit den Definitionen und Sätzen
+  equation: own       # Formeln mit Marke: (2.1), (2.2) …
   default: shared     # der gemeinsame Zähler (mit book, chapter oder page: sein eigener Bereich)
   headings: yes       # Kapitel und Seiten nummeriert (no: ohne Nummern vor den Überschriften)
 ```

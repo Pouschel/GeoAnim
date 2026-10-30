@@ -15,13 +15,13 @@ public enum NumberScope
 /// or counts with the shared one, each counter in its scope (<see cref="Within"/> unless the kind says otherwise); in a
 /// chapter the numbers have the chapter's in front ("Satz 2.14"), through the book not ("Axiom 5"). With
 /// <see cref="Headings"/> chapters and pages have numbers ("2 Abstandsgeometrie", "2.1 Abstandsaxiome"). Standard:
-/// axioms through the book, figures and examples with counters of their own in each chapter, the other statements
-/// sharing one.
+/// axioms through the book, figures, examples and formulas (with a mark) with counters of their own in each chapter, the
+/// other statements sharing one.
 /// </summary>
 public sealed record BookNumbering
 {
     /// <summary>The kinds that can be numbered (the numbered statements and figures).</summary>
-    public static readonly IReadOnlyList<string> Kinds = ["axiom", "definition", "theorem", "lemma", "corollary", "example", "figure"];
+    public static readonly IReadOnlyList<string> Kinds = ["axiom", "definition", "theorem", "lemma", "corollary", "example", "figure", "equation"];
 
     /// <summary>The name of the shared counter.</summary>
     public const string Shared = "shared";
@@ -34,6 +34,7 @@ public sealed record BookNumbering
         ["axiom"] = NumberScope.Book,
         ["figure"] = null,
         ["example"] = null,
+        ["equation"] = null,
     };
 
     /// <summary>The scope of the shared counter (null: <see cref="Within"/>).</summary>

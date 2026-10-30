@@ -15,7 +15,7 @@
     },
     {
       "name": "constant.character.math.block.geomd",
-      "begin": "^\\s*\\$\\$\\s*$",
+      "begin": "^\\s*\\$\\$\\s*(?:\\{[^{}]*\\}\\s*)?$",
       "end": "^\\s*\\$\\$",
       "beginCaptures": {
         "0": {

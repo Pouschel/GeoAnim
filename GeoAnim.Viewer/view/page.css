@@ -103,6 +103,18 @@ svg.formula {
   text-align: center;
 }
 
+/* a formula with a mark: its number on the right of its line */
+.formula-numbered {
+  position: relative;
+}
+
+.formula-number {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
 /* "$$…$$" within a paragraph: a line of its own */
 .formula-display {
   display: block;
