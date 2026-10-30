@@ -369,3 +369,21 @@ public sealed class FigureSizeTests
         Assert.Equal(("8cm", false), (page.Figures[1].Width, page.Figures[1].NoWarn));
     }
 }
+
+public sealed class RayTests
+{
+    [Fact]
+    public void ARayKeepsItsArrowheadInACutPicture()
+    {
+        AnimationData data = ScriptCompiler.Compile("view x -10 .. 10 y -10 .. 10\npoint A = 0 0 nolabel\npoint B = 2 0 nolabel\nray r = A B arrow end\nstep Eins");
+        var animation = FigureAnimation.Parse(data.ToJson());
+        double end = animation.EndOf(0);
+        FigureImage image = FigureRenderer.Render(animation, end, new FigureStyle(10, 0.25), [end]);
+        // the picture ends after B; the arrowhead (a filled triangle) lies inside it
+        Assert.True(image.Width < 60, image.Width.ToString(CultureInfo.InvariantCulture));
+        Match head = Regex.Match(image.Svg, @"<path d=""M([0-9.]+) ([0-9.]+)L[^""]*Z"" fill=");
+        Assert.True(head.Success, image.Svg);
+        double tip = double.Parse(head.Groups[1].Value, CultureInfo.InvariantCulture);
+        Assert.InRange(tip, image.Width - 3, image.Width);
+    }
+}

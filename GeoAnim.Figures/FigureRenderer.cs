@@ -303,6 +303,16 @@ public static partial class FigureRenderer
         private void DrawLine(Dictionary<string, object> v, bool counts)
         {
             double x1 = ToX(Number(v, "x1")), y1 = ToY(Number(v, "y1")), x2 = ToX(Number(v, "x2")), y2 = ToY(Number(v, "y2"));
+            // a ray or a whole line reaches to the script's view: in a picture cut smaller it ends at the picture's border –
+            // with an arrowhead a little inside it (as the player keeps it inside its view), so that the head is seen
+            if (!counts)
+            {
+                bool hasHead = Text(v, "arrow") is "end" or "start" or "both";
+                if (!ClipToPicture(ref x1, ref y1, ref x2, ref y2, hasHead ? Math.Max(4 * unit, 0.012 * Math.Max(Width, Height)) : 0))
+                {
+                    return;
+                }
+            }
             double length = Math.Sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
             if (length < 1e-6)
             {
@@ -330,6 +340,43 @@ public static partial class FigureRenderer
             items.Append("<path d=\"").Append(d).Append("\" fill=\"none\" stroke=\"").Append(color).Append("\" stroke-width=\"").Append(N(width * unit))
                 .Append("\" stroke-linecap=\"round\"/>");
             CountPath(d, width * unit, counts);
+        }
+
+        // the part of the segment (x1, y1)–(x2, y2) in the picture's drawing area, less a margin (Liang–Barsky); false if none
+        private bool ClipToPicture(ref double x1, ref double y1, ref double x2, ref double y2, double margin)
+        {
+            double left = Math.Max(0, ToX(area.XMin)) + margin, right = Math.Min(Width, ToX(area.XMax)) - margin;
+            double top = Math.Max(0, ToY(area.YMax)) + margin, bottom = Math.Min(Height, ToY(area.YMin)) - margin;
+            double dx = x2 - x1, dy = y2 - y1;
+            double from = 0, to = 1;
+            foreach ((double p, double q) in new[] { (-dx, x1 - left), (dx, right - x1), (-dy, y1 - top), (dy, bottom - y1) })
+            {
+                if (Math.Abs(p) < 1e-12)
+                {
+                    if (q < 0)
+                    {
+                        return false;
+                    }
+                    continue;
+                }
+                double t = q / p;
+                if (p < 0)
+                {
+                    from = Math.Max(from, t);
+                }
+                else
+                {
+                    to = Math.Min(to, t);
+                }
+            }
+            if (from >= to)
+            {
+                return false;
+            }
+            (double ax, double ay) = (x1 + from * dx, y1 + from * dy);
+            (x2, y2) = (x1 + to * dx, y1 + to * dy);
+            (x1, y1) = (ax, ay);
+            return true;
         }
 
         private string ArcPath(double cx, double cy, double r, double start, double sweep)
