@@ -15,10 +15,17 @@ namespace GeoAnim.Viewer;
 /// "Axiom 2", "Abschnitt 1.2"), a text to recognise it by (caption, title, heading or the start of the statement) and
 /// where it stands.
 /// </summary>
-public sealed record PageMark(string Name, string Kind, string Label, string Text, int Line, int Column);
+public sealed record PageMark(string Name, string Kind, string Label, string Text, int Line, int Column)
+{
+    /// <summary>The counter that numbers it (<see cref="BookNumbering.CounterOf"/>), "heading" for the page's heading, or null.</summary>
+    public string? Counter { get; init; }
 
-/// <summary>The marks of a page and the number of its axioms (which are counted through the book).</summary>
-public sealed record MarksOfPage(IReadOnlyList<PageMark> Marks, int Axioms)
+    /// <summary>Its place in its counter on the page (from 1).</summary>
+    public int Index { get; init; }
+}
+
+/// <summary>The marks of a page and how many of each counter it has (for the numbers of the pages after it).</summary>
+public sealed record MarksOfPage(IReadOnlyList<PageMark> Marks, IReadOnlyDictionary<string, int> Counts)
 {
     /// <summary>The keywords of the page.</summary>
     public IReadOnlyList<PageKeywordDefinition> Keywords { get; init; } = [];
@@ -54,49 +61,80 @@ public sealed partial class MarkdownPage
     private const string FigureName = "Abb.";
     private const string SectionName = "Abschnitt";
 
-    /// <summary>A mark read with <see cref="ReadMarks"/>, for a page with <paramref name="axiomsBefore"/> axioms before it.</summary>
-    public static PageMark AfterAxioms(PageMark mark, int axiomsBefore) =>
-        mark.Kind == "axiom" && axiomsBefore > 0 && mark.Label.Split(' ') is [_, var number] && int.TryParse(number, CultureInfo.InvariantCulture, out int n)
-            ? mark with { Label = StatementKinds["axiom"].Name + " " + (n + axiomsBefore).ToString(CultureInfo.InvariantCulture) }
-            : mark;
+    private const string HeadingCounter = "heading";
+
+    /// <summary>A mark read with <see cref="ReadMarks"/>, with the numbers of its page in the book.</summary>
+    public static PageMark Renumbered(PageMark mark, PageNumbering numbering) => mark.Counter switch
+    {
+        null => mark,
+        HeadingCounter => mark with { Label = HeadingLabel(numbering, mark.Text) },
+        string counter => mark with { Label = NameOf(mark.Kind) + " " + numbering.NumberOf(counter, mark.Index) },
+    };
+
+    // "Abb.", "Satz", …
+    private static string NameOf(string kind) => kind == "figure" ? FigureName : StatementKinds[kind].Name;
+
+    // what a reference to a heading shows: the page's section ("Abschnitt 2.1"), else its text in quotes
+    private static string HeadingLabel(PageNumbering numbering, string text) =>
+        numbering.Section != null && numbering.Book.Headings ? SectionName + " " + numbering.Section : "„" + HtmlExporter.PlainText(text) + "“";
 
     // a statement as read: its kind, title (Markdown) and what references show
     private sealed record Statement(string Kind, string? Title, string Label);
 
     // ------------------------------------------------------------------ numbers and marks
 
-    // numbers figures ("Abb. 1" …), statements (axioms after those of the pages before, the other numbered kinds with one
-    // counter) and sections (## → 1, ### → 1.1 …) in the order of the page, and collects the marks
+    // numbers figures and statements in the order of the page, each with its counter (from the numbers before the page in
+    // the book), puts the section's number in front of the page's heading and collects the marks; how many of each counter
+    // the page has
     private static List<PageMark> Number(string text, MarkdownDocument document, Func<int, (int, int)> locate,
-        List<MarkdownProblem> errors, int axiomsBefore, out int axioms)
+        List<MarkdownProblem> errors, PageNumbering numbering, out Dictionary<string, int> counts)
     {
         var marks = new List<PageMark>();
-        int figures = 0, statements = 0;
-        axioms = 0;
-        var sections = new int[7];
+        var counted = new Dictionary<string, int>(StringComparer.Ordinal);
+        BookNumbering book = numbering.Book;
         string[] lines = text.Split('\n');
+        bool pageHeading = false;
+        // the next number of a kind: its place in its counter and the number shown
+        (int Index, string Number) Next(string kind)
+        {
+            string counter = book.CounterOf(kind);
+            int index = counted[counter] = counted.GetValueOrDefault(counter) + 1;
+            return (index, numbering.NumberOf(counter, index));
+        }
         foreach (Block block in document.Descendants<Block>().ToList())
         {
             switch (block)
             {
-                case HeadingBlock { Level: >= 2 } heading:
+                case HeadingBlock heading:
                     {
-                        sections[heading.Level]++;
-                        for (int level = heading.Level + 1; level < sections.Length; level++)
+                        // the page's heading (the first "#"): its section in front; the others ("##" …) have no numbers
+                        bool first = heading.Level == 1 && !pageHeading;
+                        pageHeading |= heading.Level == 1;
+                        string headingText = HeadingText(text, heading);
+                        if (first && numbering.Section != null && book.Headings && heading.Inline != null)
                         {
-                            sections[level] = 0;
+                            var number = new HtmlInline("<span class=\"section-number\">" + numbering.Section + "</span> ");
+                            if (heading.Inline.FirstChild is { } start)
+                            {
+                                start.InsertBefore(number);
+                            }
+                            else
+                            {
+                                heading.Inline.AppendChild(number);
+                            }
                         }
-                        string number = string.Join(".", sections.Skip(2).Take(heading.Level - 1).Select(n => n.ToString(CultureInfo.InvariantCulture)));
                         if (heading.TryGetAttributes()?.Id is { } id)
                         {
-                            marks.Add(Mark(id, "section", SectionName + " " + number, HeadingText(text, heading), heading));
+                            marks.Add(first
+                                ? Mark(id, "section", HeadingLabel(numbering, headingText), headingText, heading) with { Counter = HeadingCounter }
+                                : Mark(id, "section", HeadingLabel(PageNumbering.None, headingText), headingText, heading));
                         }
                         break;
                     }
                 case GeoFigureBlock figure:
                     {
-                        figures++;
-                        figure.Label = FigureName + " " + figures.ToString(CultureInfo.InvariantCulture);
+                        (int index, string number) = Next("figure");
+                        figure.Label = FigureName + " " + number;
                         // the mark at one of its images ("![](#2){#abb-gerade}")
                         string? id = null;
                         foreach (FigureItem item in figure.Items)
@@ -117,7 +155,7 @@ public sealed partial class MarkdownPage
                         {
                             figure.GetAttributes().Id = id;
                             string caption = string.Join(" · ", figure.Items.Select(i => i.Reference?.Caption).Where(c => !string.IsNullOrEmpty(c)));
-                            marks.Add(Mark(id, "figure", figure.Label, caption, figure));
+                            marks.Add(Mark(id, "figure", figure.Label, caption, figure) with { Counter = book.CounterOf("figure"), Index = index });
                         }
                         break;
                     }
@@ -129,9 +167,8 @@ public sealed partial class MarkdownPage
                             break;
                         }
                         (string name, bool numbered) = StatementKinds[statement.Kind];
-                        // axioms have a counter of their own, through the book; the other kinds share one
-                        int number = !numbered ? 0 : statement.Kind == "axiom" ? axiomsBefore + ++axioms : ++statements;
-                        string label = numbered ? name + " " + number.ToString(CultureInfo.InvariantCulture) : name;
+                        (int index, string number) = numbered ? Next(statement.Kind) : (0, "");
+                        string label = numbered ? name + " " + number : name;
                         statement = statement with { Label = label };
                         container.SetData(typeof(Statement), statement);
                         if (container.TryGetAttributes()?.Id is { } id)
@@ -144,13 +181,15 @@ public sealed partial class MarkdownPage
                             }
                             else
                             {
-                                marks.Add(Mark(id, statement.Kind, label, statement.Title ?? StartOf(text, container), container));
+                                PageMark mark = Mark(id, statement.Kind, label, statement.Title ?? StartOf(text, container), container);
+                                marks.Add(numbered ? mark with { Counter = book.CounterOf(statement.Kind), Index = index } : mark);
                             }
                         }
                         break;
                     }
             }
         }
+        counts = counted;
         // a mark of one character: Markdig does not take it ("{#a}")
         foreach (Match single in SingleCharacterMark().Matches(text))
         {

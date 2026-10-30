@@ -110,24 +110,30 @@ public sealed partial class MarkdownPage
     /// without it they are not checked. <paramref name="loadScript"/> compiles a script (by its full path) for its figure;
     /// it throws <see cref="FormatException"/> with the message for a faulty one. Without it the figures stay
     /// placeholders. <paramref name="bookMarks"/> are the marks of the book's other pages, for references to them;
-    /// <paramref name="axiomsBefore"/> the number of axioms on the pages before (axioms are counted through the book).
+    /// <paramref name="numbering"/> the numbers of the page in the book (its section, the counts of the pages before it).
     /// </summary>
     public static MarkdownPage Parse(string text, string? file = null, Func<string, AnimationData>? loadScript = null,
-        IReadOnlyDictionary<string, BookMark>? bookMarks = null, int axiomsBefore = 0, IReadOnlyDictionary<string, KeywordLink>? keywordLinks = null) =>
-        Build(text, file, loadScript, bookMarks, axiomsBefore, keywordLinks, render: true);
+        IReadOnlyDictionary<string, BookMark>? bookMarks = null, PageNumbering? numbering = null, IReadOnlyDictionary<string, KeywordLink>? keywordLinks = null) =>
+        Build(text, file, loadScript, bookMarks, numbering ?? PageNumbering.None, keywordLinks, render: true);
 
-    /// <summary>The marks of a page (for the references of the other pages), without making its HTML.</summary>
-    public static MarksOfPage ReadMarks(string text)
+    /// <summary>
+    /// The marks of a page (for the references of the other pages) and how many of each counter it has, without making its
+    /// HTML; their labels as on a page alone (<see cref="Renumbered"/> gives them the numbers of the page in the book).
+    /// </summary>
+    public static MarksOfPage ReadMarks(string text, BookNumbering? book = null)
     {
-        MarkdownPage page = Build(text, null, null, null, 0, null, render: false);
-        return new MarksOfPage(page.Marks, page.Axioms) { Keywords = page.KeywordDefinitions, Title = page.Title };
+        MarkdownPage page = Build(text, null, null, null, (PageNumbering.None with { Book = book ?? BookNumbering.Default }), null, render: false);
+        return new MarksOfPage(page.Marks, page.Counts) { Keywords = page.KeywordDefinitions, Title = page.Title };
     }
 
-    /// <summary>The number of axioms on the page (they are counted through the book).</summary>
-    public int Axioms { get; private set; }
+    /// <summary>How many of each counter the page has (for the numbers of the pages after it).</summary>
+    public IReadOnlyDictionary<string, int> Counts { get; private set; } = new Dictionary<string, int>();
+
+    /// <summary>The number of the page in the book ("2.1"), if it has one.</summary>
+    public string? SectionNumber { get; private set; }
 
     private static MarkdownPage Build(string text, string? file, Func<string, AnimationData>? loadScript,
-        IReadOnlyDictionary<string, BookMark>? bookMarks, int axiomsBefore, IReadOnlyDictionary<string, KeywordLink>? keywordLinks, bool render)
+        IReadOnlyDictionary<string, BookMark>? bookMarks, PageNumbering numbering, IReadOnlyDictionary<string, KeywordLink>? keywordLinks, bool render)
     {
         var errors = new List<MarkdownProblem>();
         var warnings = new List<MarkdownProblem>();
@@ -213,10 +219,10 @@ public sealed partial class MarkdownPage
         MovePunctuation(document);
 
         // numbers and marks of figures, statements and sections; then the references to them
-        List<PageMark> marks = Number(text, document, locate, errors, axiomsBefore, out int axioms);
+        List<PageMark> marks = Number(text, document, locate, errors, numbering, out Dictionary<string, int> counts);
         if (!render)
         {
-            return new MarkdownPage("") { Marks = marks, Axioms = axioms, KeywordDefinitions = keywordDefinitions, FrontTitle = title, Heading = heading };
+            return new MarkdownPage("") { Marks = marks, Counts = counts, KeywordDefinitions = keywordDefinitions, FrontTitle = title, Heading = heading };
         }
         string? page = file == null ? null : Path.GetFullPath(file);
         CheckMarks(marks, page, bookMarks, errors);
@@ -269,7 +275,8 @@ public sealed partial class MarkdownPage
             Figures = figures,
             PageFigures = pageFigures,
             Marks = marks,
-            Axioms = axioms,
+            Counts = counts,
+            SectionNumber = numbering.Book.Headings ? numbering.Section : null,
             KeywordDefinitions = keywordDefinitions,
             Errors = errors.OrderBy(e => e.Line).ThenBy(e => e.Column).ToList(),
             Warnings = warnings,

@@ -24,6 +24,11 @@ Animierte geometrische Konstruktionen aus einer kleinen Skriptsprache (oder aus 
       title: mathepedia.de
       url: https://mathepedia.de/
     footer: © … · [Impressum](https://…) · [Datenschutz](https://…)   # unter der Übersicht und am Ende des Menüs
+    numbering:                                 # Nummerierung (Voreinstellung; siehe REFERENZ-MARKDOWN.md)
+      within: chapter                          # Satz 2.14, Abb. 2.3
+      axiom: own book                          # Axiom 5, durch das ganze Buch
+      example: own                             # Beispiel 2.1
+      headings: yes                            # 2 Abstandsgeometrie, 2.1 Abstandsaxiome
     print:                                     # Abbildungen im Buch (E-Book, Druck), siehe geoanim figure
       scale: 5mm                               # eine Koordinateneinheit (mm, cm, pt, in)
       labels: 9pt                              # Schriftgröße der Beschriftungen …

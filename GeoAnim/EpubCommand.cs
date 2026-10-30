@@ -72,6 +72,9 @@ internal static partial class Program
         // a page of the e-book: its source (relative to the book), file in the e-book, title
         private sealed record EpubPage(string Source, string FullPath, string File, string Title)
         {
+            // "2.1" (with numbered headings)
+            public string? Number { get; set; }
+
             public string Body { get; set; } = "";
         }
 
@@ -126,7 +129,7 @@ internal static partial class Program
                 {
                     bookMarks.TryAdd(mark.Mark.Name, mark);
                 }
-                MarkdownPage page = MarkdownPage.Parse(text, entry.FullPath, Daemon.LoadScript, bookMarks, of.AxiomsBefore, of.KeywordLinks);
+                MarkdownPage page = MarkdownPage.Parse(text, entry.FullPath, Daemon.LoadScript, bookMarks, of.Numbering, of.KeywordLinks);
                 foreach (MarkdownProblem problem in page.Errors)
                 {
                     progress.Error($"{entry.Source}:{problem.Line}:{problem.Column}: {problem.Message}");
@@ -138,6 +141,7 @@ internal static partial class Program
                 }
                 string title = HtmlExporter.PlainText(page.Title ?? DisplayName(Path.GetFileName(entry.Source)[..^".geo.md".Length]));
                 book[i] = entry = entry with { Title = title };
+                entry.Number = page.SectionNumber;
                 entry.Body = Convert(page, entry, book, progress);
             }
             WriteZip(output, book);
@@ -179,7 +183,7 @@ internal static partial class Program
             if (body.QuerySelector("h1") == null)
             {
                 IElement heading = document.CreateElement("h1");
-                heading.TextContent = entry.Title;
+                heading.TextContent = (entry.Number != null ? entry.Number + " " : "") + entry.Title;
                 body.Prepend(heading);
             }
             return string.Concat(body.ChildNodes.Select(node => node.ToHtml(XhtmlMarkupFormatter.Instance)));
@@ -433,20 +437,23 @@ internal static partial class Program
         private List<TocEntry> Contents(List<EpubPage> book)
         {
             var top = new List<TocEntry>();
+            // chapters and pages with their numbers ("2 Abstandsgeometrie", "2.1 Abstandsaxiome")
+            Dictionary<string, string> numbers = settings.Numbering.Headings ? Daemon.BookNumbers(book.Select(p => p.Source)) : [];
             foreach (EpubPage page in book)
             {
                 List<TocEntry> level = top;
                 string[] folders = page.Source.Split('/')[..^1];
-                foreach (string folder in folders)
+                for (int i = 0; i < folders.Length; i++)
                 {
-                    string label = DisplayName(folder);
+                    string path = string.Join("/", folders[..(i + 1)]);
+                    string label = (numbers.TryGetValue(path, out string? number) ? number + " " : "") + DisplayName(folders[i]);
                     if (level.Count == 0 || level[^1].File != null || level[^1].Label != label)
                     {
                         level.Add(new TocEntry(label, null, []));
                     }
                     level = level[^1].Children;
                 }
-                level.Add(new TocEntry(page.Title, page.File, []));
+                level.Add(new TocEntry((page.Number != null ? page.Number + " " : "") + page.Title, page.File, []));
             }
             return top;
         }
@@ -690,6 +697,10 @@ internal static partial class Program
                   margin: 0.2em 0 0;
                   font-size: 0.9em;
                   text-align: center;
+                }
+
+                .section-number {
+                  margin-right: 0.3em;
                 }
 
                 .figure-label,

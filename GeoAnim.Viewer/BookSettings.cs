@@ -44,6 +44,9 @@ public sealed record BookSettings
     /// </summary>
     public double? TextSize { get; init; }
 
+    /// <summary>How figures, statements and headings are numbered ("numbering:").</summary>
+    public BookNumbering Numbering { get; init; } = BookNumbering.Default;
+
     public static BookSettings None { get; } = new();
 
     /// <summary>The absolute address of a page of the book (path relative to its root, with "/"), or null without <see cref="Url"/>.</summary>

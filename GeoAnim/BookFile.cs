@@ -24,7 +24,13 @@ namespace GeoAnim.Cli;
 ///   labels: 9pt                     # the font size of the labels …
 ///   labelsize: 34                   # … of this size in the scripts (all sizes in the same ratio)
 ///   text: 11pt                      # the font size of the text the figures go with
-/// numbering:                        # (not used yet)
+/// numbering:                        # how figures, statements and headings are numbered (these are the defaults)
+///   within: chapter                 # counters start again in each chapter: Satz 2.14 (book: Satz 47; page: Satz 2.1.3)
+///   axiom: own book                 # a counter of its own, through the book: Axiom 5 ("own" alone: the same for axioms)
+///   figure: own                     # a counter of its own: Abb. 2.3
+///   example: own                    # Beispiel 2.1
+///   default: shared                 # all other numbered statements one counter: Definition 2.1, Satz 2.2, …
+///   headings: yes                   # chapters and pages numbered: 2 Abstandsgeometrie, 2.1 Abstandsaxiome
 /// </code>
 /// </summary>
 internal static class BookFile
@@ -145,7 +151,97 @@ internal static class BookFile
             FigureSize = figureSize,
             TextSize = textSize,
             Author = Text("author"),
+            Numbering = ReadNumbering(map, warn),
         };
+    }
+
+    private static readonly string[] NumberingKeys = ["within", "default", "headings", .. BookNumbering.Kinds, "def"];
+
+    // "numbering:": the defaults changed by what it says
+    private static BookNumbering ReadNumbering(YamlMappingNode map, Action<string> warn)
+    {
+        if (!map.Children.TryGetValue(new YamlScalarNode("numbering"), out YamlNode? node))
+        {
+            return BookNumbering.Default;
+        }
+        if (node is not YamlMappingNode numbering)
+        {
+            warn($"{Name}: \"numbering\" needs entries below it like \"axiom: own book\".");
+            return BookNumbering.Default;
+        }
+        BookNumbering result = BookNumbering.Default;
+        var own = new Dictionary<string, NumberScope?>(result.Own);
+        static NumberScope? ScopeOf(string word) => word switch
+        {
+            "book" => NumberScope.Book,
+            "chapter" => NumberScope.Chapter,
+            "page" => NumberScope.Page,
+            _ => null,
+        };
+        foreach ((YamlNode keyNode, YamlNode valueNode) in numbering.Children)
+        {
+            string key = (keyNode as YamlScalarNode)?.Value ?? "";
+            string value = ((valueNode as YamlScalarNode)?.Value ?? "").Trim().ToLowerInvariant();
+            string[] words = value.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            key = key == "def" ? "definition" : key;
+            if (!NumberingKeys.Contains(key))
+            {
+                warn($"{Name}: unknown entry \"numbering: {key}\" (possible: {string.Join(", ", NumberingKeys.Where(k => k != "def"))}).");
+                continue;
+            }
+            switch (key)
+            {
+                case "within":
+                    if (ScopeOf(value) is { } within)
+                    {
+                        result = result with { Within = within };
+                    }
+                    else
+                    {
+                        warn($"{Name}: \"numbering: within\" is book, chapter or page, not \"{value}\".");
+                    }
+                    break;
+                case "headings":
+                    if (value is "yes" or "true" or "no" or "false" || int.TryParse(value, out _))
+                    {
+                        result = result with { Headings = value is "yes" or "true" || (int.TryParse(value, out int levels) && levels > 0) };
+                    }
+                    else
+                    {
+                        warn($"{Name}: \"numbering: headings\" is yes or no, not \"{value}\".");
+                    }
+                    break;
+                default:
+                    // "own", "own book", "shared", "shared chapter" (the shared counter's scope: only with "default")
+                    NumberScope? scope = words.Length > 1 ? ScopeOf(words[1]) : null;
+                    if (words.Length is 0 or > 2 || words[0] is not ("own" or "shared") || (words.Length == 2 && scope == null)
+                        || (key == "default" && words[0] == "own"))
+                    {
+                        warn($"{Name}: \"numbering: {key}\" is " + (key == "default" ? "shared (and book, chapter or page)" : "own or shared (own with book, chapter or page)")
+                            + $", not \"{value}\".");
+                        break;
+                    }
+                    if (key == "default")
+                    {
+                        result = result with { SharedScope = scope };
+                    }
+                    else if (words[0] == "own")
+                    {
+                        // without a scope the kind's standard one (axioms: through the book)
+                        own[key] = scope ?? BookNumbering.Default.Own.GetValueOrDefault(key);
+                    }
+                    else
+                    {
+                        if (scope != null)
+                        {
+                            warn($"{Name}: \"numbering: {key}: shared\" counts with the others; their scope is set by \"default\".");
+                        }
+                        own.Remove(key);
+                    }
+                    break;
+            }
+        }
+        return result with { Own = own };
     }
 
     // "print:" with "scale: 5mm", "labels: 9pt", "labelsize: 34" and "text: 11pt": points per unit, per size of the scripts

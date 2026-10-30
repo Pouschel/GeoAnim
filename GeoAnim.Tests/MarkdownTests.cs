@@ -368,11 +368,12 @@ public sealed class MarkdownTests : IDisposable
             """, file, ScriptCompiler.CompileFile, other);
 
         Assert.Equal(["abschnitt-gerade", "abb-gerade", "ax-gerade"], page.Marks.Select(m => m.Name));
-        Assert.Equal("Abschnitt 1.1", page.Marks[0].Label);
+        // a heading below the page's: its text (they have no numbers)
+        Assert.Equal("„Die Gerade“", page.Marks[0].Label);
         Assert.Contains("<a class=\"ref\" href=\"#abb-gerade\">Abb. 1</a>", page.Html);
         Assert.Contains("<a class=\"ref\" href=\"#ax-gerade\">Axiom 1</a>", page.Html);
         Assert.Contains("<a class=\"ref\" href=\"sub/strecken.geo.md#def-strecke\">Definition 4</a>", page.Html);
-        Assert.Contains("<a class=\"ref\" href=\"#abschnitt-gerade\">Abschnitt 1.1</a>", page.Html);
+        Assert.Contains("<a class=\"ref\" href=\"#abschnitt-gerade\">„Die Gerade“</a>", page.Html);
         Assert.Contains("Kein Verweis: §abb und § 5.", page.Html);
         Assert.Contains("<span class=\"ref-missing\" title=\"nichts\">??</span>", page.Html);
         Assert.Contains("<figure class=\"geo-figure\" id=\"abb-gerade\"", page.Html);
@@ -399,7 +400,7 @@ public sealed class MarkdownTests : IDisposable
         Assert.Contains("at least two characters", Assert.Single(MarkdownPage.Parse("## A {#a}\n").Errors).Message);
         MarksOfPage read = MarkdownPage.ReadMarks("## A {#ab}\n\n## B {#ab}\n\n::: axiom {#ax}\nx\n:::\n");
         Assert.Equal(["ab", "ab", "ax"], read.Marks.Select(m => m.Name));
-        Assert.Equal(1, read.Axioms);
+        Assert.Equal(1, read.Counts["axiom"]);
     }
 
     [Fact]
@@ -425,6 +426,78 @@ public sealed class MarkdownTests : IDisposable
         }))).RootElement;
         Assert.Equal(["gleich", null], steps.GetProperty("steps").EnumerateArray().Select(s => s.GetProperty("mark").GetString()));
         Assert.Equal("zwei", steps.GetProperty("steps")[1].GetProperty("name").GetString());
+    }
+
+    [Fact]
+    public void ChaptersAndPagesAreNumberedInTheirOrder()
+    {
+        Dictionary<string, string> numbers = Daemon.BookNumbers(
+            ["Vorwort.geo.md", "10_Eins/10_A.geo.md", "10_Eins/20_Unter/10_B.geo.md", "10_Eins/20_Unter/20_C.geo.md", "10_Eins/30_D.geo.md", "20_Zwei/10_E.geo.md"]);
+
+        Assert.False(numbers.ContainsKey("Vorwort.geo.md"));
+        Assert.Equal("1", numbers["10_Eins"]);
+        Assert.Equal("1.1", numbers["10_Eins/10_A.geo.md"]);
+        Assert.Equal("1.2", numbers["10_Eins/20_Unter"]);
+        Assert.Equal("1.2.2", numbers["10_Eins/20_Unter/20_C.geo.md"]);
+        Assert.Equal("1.3", numbers["10_Eins/30_D.geo.md"]);
+        Assert.Equal("2.1", numbers["20_Zwei/10_E.geo.md"]);
+    }
+
+    // a page of the book as the preview shows it
+    private MarkdownPage PageOfBook(string relative)
+    {
+        string file = Path.Combine(folder, relative);
+        string text = File.ReadAllText(file);
+        Daemon.BookOfPage book = Daemon.ReadBook(file, text);
+        return MarkdownPage.Parse(text, file, null, book.Marks.ToDictionary(m => m.Mark.Name), book.Numbering, book.KeywordLinks);
+    }
+
+    [Fact]
+    public void FiguresAndStatementsAreNumberedInTheirChapter()
+    {
+        File.WriteAllText(Path.Combine(folder, "index.yaml"), "title: Buch\n");
+        Directory.CreateDirectory(Path.Combine(folder, "10_Eins"));
+        Directory.CreateDirectory(Path.Combine(folder, "20_Zwei"));
+        File.WriteAllText(Path.Combine(folder, "10_Eins", "10_A.geo.md"),
+            "# Erste {#erste}\n\n::: axiom {#ax-a}\nx\n:::\n\n::: def {#def-a}\nx\n:::\n\n::: example\nx\n:::\n\n![](x.geo)\n");
+        File.WriteAllText(Path.Combine(folder, "10_Eins", "20_B.geo.md"),
+            "# Zweite\n\n::: axiom {#ax-b}\nx\n:::\n\n::: theorem {#satz-b}\nx\n:::\n\n::: example {#bsp-b}\nx\n:::\n\n![](x.geo){#abb-b}\n\nNach §def-a und §erste.\n");
+        File.WriteAllText(Path.Combine(folder, "20_Zwei", "10_C.geo.md"),
+            "# Dritte\n\n::: axiom {#ax-c}\nx\n:::\n\n::: lemma {#lemma-c}\nx\n:::\n\nSiehe §satz-b, §ax-b und §abb-b.\n");
+
+        MarkdownPage second = PageOfBook("10_Eins/20_B.geo.md");
+        // the page's heading with its section; axioms through the book, the other statements one counter in the chapter,
+        // examples and figures their own
+        Assert.Contains("<h1 data-line=\"1\"><span class=\"section-number\">1.2</span> Zweite</h1>", second.Html);
+        Assert.Equal(["Axiom 2", "Satz 1.2", "Beispiel 1.2", "Abb. 1.2"], second.Marks.Select(m => m.Label));
+        Assert.Contains(">Definition 1.1</a>", second.Html);
+        Assert.Contains(">Abschnitt 1.1</a>", second.Html);
+        Assert.Equal("1.2", second.SectionNumber);
+
+        // a new chapter starts again, the axioms go on
+        MarkdownPage third = PageOfBook("20_Zwei/10_C.geo.md");
+        Assert.Equal(["Axiom 3", "Hilfssatz 2.1"], third.Marks.Select(m => m.Label));
+        Assert.Contains(">Satz 1.2</a>, <a class=\"ref\" href=\"../10_Eins/20_B.geo.md#ax-b\">Axiom 2</a> und", third.Html);
+        Assert.Contains(">Abb. 1.2</a>", third.Html);
+
+        // other rules: through the book, examples with the others, no numbers on headings
+        File.WriteAllText(Path.Combine(folder, "index.yaml"), "title: Buch\nnumbering:\n  within: book\n  example: shared\n  headings: no\n");
+        MarkdownPage again = PageOfBook("20_Zwei/10_C.geo.md");
+        Assert.Equal(["Axiom 3", "Hilfssatz 5"], again.Marks.Select(m => m.Label));
+        Assert.DoesNotContain("section-number", again.Html);
+        Assert.Contains(">Satz 3</a>", again.Html);
+        Assert.Null(again.SectionNumber);
+    }
+
+    [Fact]
+    public void UnknownNumberingIsAWarning()
+    {
+        File.WriteAllText(Path.Combine(folder, "index.yaml"), "numbering:\n  axiom: eigen\n  within: kapitel\n  bild: own\n  figure: own page\n");
+        var warnings = new List<string>();
+        BookSettings settings = BookFile.Read(folder, warnings.Add, out _);
+        Assert.Equal(3, warnings.Count);
+        Assert.Equal(NumberScope.Page, settings.Numbering.ScopeOf("figure"));
+        Assert.Equal(NumberScope.Book, settings.Numbering.ScopeOf("axiom"));
     }
 
     [Fact]
@@ -518,7 +591,7 @@ public sealed class MarkdownTests : IDisposable
             ## Punkt im Titel
 
             Wieder ein Punkt, [ein Punkt](x.md), **Punkt**{kw} und $Punkt$.
-            """, null, null, null, 0, links);
+            """, null, null, null, null, links);
 
         // once per section and target: Punkt, rechter Winkel, Winkel; after the heading Punkt again
         Assert.Equal(4, page.Html.Split("class=\"keyword\"").Length - 1);
@@ -542,7 +615,7 @@ public sealed class MarkdownTests : IDisposable
     public void KeywordsAreLinkedAfterAReference()
     {
         var links = new Dictionary<string, KeywordLink> { ["Punkt"] = new KeywordLink("punkte.geo.md#kw-punkt", "Punkte") };
-        MarkdownPage page = MarkdownPage.Parse("::: axiom {#ax}\nText.\n:::\n\nNach §ax gilt es für jeden Punkt.\n", null, null, null, 0, links);
+        MarkdownPage page = MarkdownPage.Parse("::: axiom {#ax}\nText.\n:::\n\nNach §ax gilt es für jeden Punkt.\n", null, null, null, null, links);
         Assert.Contains("für jeden <a href=\"punkte.geo.md#kw-punkt\" class=\"keyword\"", page.Html);
     }
 

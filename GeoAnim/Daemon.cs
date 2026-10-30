@@ -189,14 +189,14 @@ internal static class Daemon
     private static string RenderMarkdown(JsonElement id, string file, string text)
     {
         string? path = Path.IsPathRooted(file) ? Path.GetFullPath(file) : null;
-        BookOfPage book = path == null ? new BookOfPage([], 0, new Dictionary<string, KeywordLink>(), []) : ReadBook(path, text);
+        BookOfPage book = path == null ? new BookOfPage([], PageNumbering.None, new Dictionary<string, KeywordLink>(), []) : ReadBook(path, text);
         List<BookMark> others = book.Marks;
         var bookMarks = new Dictionary<string, BookMark>(StringComparer.Ordinal);
         foreach (BookMark other in others)
         {
             bookMarks.TryAdd(other.Mark.Name, other);
         }
-        MarkdownPage page = MarkdownPage.Parse(text, path, LoadScript, bookMarks, book.AxiomsBefore, book.KeywordLinks);
+        MarkdownPage page = MarkdownPage.Parse(text, path, LoadScript, bookMarks, book.Numbering, book.KeywordLinks);
         return Answer(id, json =>
         {
             json.WriteString("html", page.Html);
@@ -270,9 +270,9 @@ internal static class Daemon
         });
     }
 
-    // what a page needs of its book: the marks of the other pages, the number of axioms before it, the links of the other
-    // pages' keywords (form → link) and warnings for its own keywords that other pages have too
-    internal sealed record BookOfPage(List<BookMark> Marks, int AxiomsBefore, IReadOnlyDictionary<string, KeywordLink> KeywordLinks,
+    // what a page needs of its book: the marks of the other pages, its numbers (section, counts before it), the links of the
+    // other pages' keywords (form → link) and warnings for its own keywords that other pages have too
+    internal sealed record BookOfPage(List<BookMark> Marks, PageNumbering Numbering, IReadOnlyDictionary<string, KeywordLink> KeywordLinks,
         List<MarkdownProblem> Warnings)
     {
         // the keywords of the book's pages (not of its scripts), for the editor to find the place of one
@@ -280,19 +280,19 @@ internal static class Daemon
     }
 
     // the marks and keywords of a page "*.geo.md", as saved; read again when it has changed
-    private static readonly Dictionary<string, (DateTime Written, MarksOfPage Marks)> PageMarks =
+    private static readonly Dictionary<string, (DateTime Written, string Numbering, MarksOfPage Marks)> PageMarks =
         new(StringComparer.OrdinalIgnoreCase);
 
-    private static MarksOfPage? ReadPage(string file)
+    private static MarksOfPage? ReadPage(string file, BookNumbering numbering)
     {
         DateTime written = File.GetLastWriteTimeUtc(file);
-        if (PageMarks.TryGetValue(file, out var known) && known.Written == written)
+        if (PageMarks.TryGetValue(file, out var known) && known.Written == written && known.Numbering == numbering.Key)
         {
             return known.Marks;
         }
         try
         {
-            known = (written, MarkdownPage.ReadMarks(File.ReadAllText(file)));
+            known = (written, numbering.Key, MarkdownPage.ReadMarks(File.ReadAllText(file), numbering));
         }
         catch (IOException)
         {
@@ -306,7 +306,9 @@ internal static class Daemon
     // not in folders or files starting with "_") in book order, the other pages as saved, the page itself as in the editor
     internal static BookOfPage ReadBook(string page, string text)
     {
-        string root = BookKeywords.RootOf(page) ?? Path.GetDirectoryName(page)!;
+        string? bookRoot = BookKeywords.RootOf(page);
+        string root = bookRoot ?? Path.GetDirectoryName(page)!;
+        BookNumbering numbering = bookRoot == null ? BookNumbering.Default : BookFile.Read(bookRoot, _ => { }, out _).Numbering;
         var marks = new List<BookMark>();
         var warnings = new List<MarkdownProblem>();
         List<string> files;
@@ -320,7 +322,7 @@ internal static class Daemon
         }
         catch (IOException)
         {
-            return new BookOfPage(marks, 0, new Dictionary<string, KeywordLink>(), warnings);
+            return new BookOfPage(marks, PageNumbering.None, new Dictionary<string, KeywordLink>(), warnings);
         }
         string own = Path.GetRelativePath(root, page).Replace('\\', '/');
         if (!files.Contains(own, StringComparer.OrdinalIgnoreCase))
@@ -328,14 +330,19 @@ internal static class Daemon
             files.Add(own);
         }
         files.Sort(Program.BookOrder.Instance);
-        MarksOfPage ownMarks = MarkdownPage.ReadMarks(text);
+        MarksOfPage ownMarks = MarkdownPage.ReadMarks(text, numbering);
+        // the numbers of the chapters and pages; the counts of the pages before, through the book and in the chapter
+        Dictionary<string, string> numbers = BookNumbers(files.Where(f => f.EndsWith(".geo.md", StringComparison.OrdinalIgnoreCase)));
+        var bookCounts = new Dictionary<string, int>(StringComparer.Ordinal);
+        var chapterCounts = new Dictionary<string, int>(StringComparer.Ordinal);
+        string? chapter = null;
+        PageNumbering ownNumbering = PageNumbering.None with { Book = numbering };
         string folder = Path.GetDirectoryName(page)!;
         string Href(string file, string? anchor) => Path.GetRelativePath(folder, file).Replace('\\', '/') + (anchor != null ? "#" + anchor : "");
         // the keywords in book order: the first page with a form keeps it (as in the export)
         var keywords = new Dictionary<string, (string File, KeywordLink Link)>(StringComparer.Ordinal);
         var ownForms = new Dictionary<string, PageKeywordDefinition>(StringComparer.Ordinal);
         var definitions = new List<(string File, PageKeywordDefinition Keyword)>();
-        int axioms = 0, axiomsBefore = 0;
         foreach (string relative in files)
         {
             string file = Path.GetFullPath(Path.Combine(root, relative));
@@ -355,21 +362,25 @@ internal static class Daemon
                 }
                 continue;
             }
-            MarksOfPage? read = isOwn ? ownMarks : ReadPage(file);
+            MarksOfPage? read = isOwn ? ownMarks : ReadPage(file, numbering);
             if (read == null)
             {
                 continue;
             }
-            int before = axioms;
+            PageNumbering pageNumbering = NumberingOf(relative);
             if (isOwn)
             {
-                axiomsBefore = axioms;
+                ownNumbering = pageNumbering;
             }
             else
             {
-                marks.AddRange(read.Marks.Select(m => new BookMark(file, MarkdownPage.AfterAxioms(m, before))));
+                marks.AddRange(read.Marks.Select(m => new BookMark(file, MarkdownPage.Renumbered(m, pageNumbering))));
             }
-            axioms += read.Axioms;
+            foreach ((string counter, int count) in read.Counts)
+            {
+                bookCounts[counter] = bookCounts.GetValueOrDefault(counter) + count;
+                chapterCounts[counter] = chapterCounts.GetValueOrDefault(counter) + count;
+            }
             string pageTitle = read.Title ?? Path.GetFileName(file);
             foreach (PageKeywordDefinition keyword in read.Keywords)
             {
@@ -383,9 +394,32 @@ internal static class Daemon
         // the own page's keywords are not linked on it
         var links = keywords.Where(k => !string.Equals(k.Value.File, page, StringComparison.OrdinalIgnoreCase))
             .ToDictionary(k => k.Key, k => k.Value.Link, StringComparer.Ordinal);
-        var book = new BookOfPage(marks, axiomsBefore, links, warnings);
+        var book = new BookOfPage(marks, ownNumbering, links, warnings);
         book.Definitions.AddRange(definitions);
         return book;
+
+        // the numbers of a page: its section and chapter, the counts before it (a new chapter starts its counters again)
+        PageNumbering NumberingOf(string relative)
+        {
+            string? section = numbers.GetValueOrDefault(relative);
+            string? pageChapter = section?.Split('.')[0];
+            if (pageChapter != chapter)
+            {
+                chapterCounts.Clear();
+                chapter = pageChapter;
+            }
+            var before = new Dictionary<string, int>(StringComparer.Ordinal);
+            foreach (string counter in BookNumbering.Kinds.Select(numbering.CounterOf).Distinct())
+            {
+                before[counter] = numbering.ScopeOf(counter) switch
+                {
+                    NumberScope.Book => bookCounts.GetValueOrDefault(counter),
+                    NumberScope.Chapter => chapterCounts.GetValueOrDefault(counter),
+                    _ => 0,
+                };
+            }
+            return new PageNumbering(numbering, section, pageChapter, before);
+        }
 
         void AddKeyword(string form, string file, KeywordLink link, PageKeywordDefinition? ownKeyword)
         {
@@ -410,6 +444,40 @@ internal static class Daemon
                 warnings.Add(new MarkdownProblem(mine.Line, mine.Column, $"The keyword {form} is also the keyword of {Path.GetFileName(file)}."));
             }
         }
+    }
+
+    /// <summary>
+    /// The numbers of the chapters and pages of a book from its pages (relative paths with "/", in book order): a folder in
+    /// the book's folder is a chapter ("2"), the pages and folders in it are numbered together in their order ("2.1",
+    /// "2.2", a folder "2.3" with its pages "2.3.1" …). Pages in the book's folder itself (a preface) have none. Folders
+    /// without pages do not count. Keys: the pages' paths and the folders' paths (without "/" at the end).
+    /// </summary>
+    internal static Dictionary<string, string> BookNumbers(IEnumerable<string> pages)
+    {
+        var numbers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var next = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        foreach (string pagePath in pages)
+        {
+            string[] parts = pagePath.Split('/');
+            if (parts.Length == 1)
+            {
+                continue;
+            }
+            string parent = "";
+            string prefix = "";
+            for (int i = 0; i < parts.Length; i++)
+            {
+                string path = i == 0 ? parts[0] : parent + "/" + parts[i];
+                if (!numbers.TryGetValue(path, out string? number))
+                {
+                    int index = next[parent] = next.GetValueOrDefault(parent) + 1;
+                    number = numbers[path] = prefix + index.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                }
+                prefix = number + ".";
+                parent = path;
+            }
+        }
+        return numbers;
     }
 
     // the steps of a script, for the completion of a figure's steps

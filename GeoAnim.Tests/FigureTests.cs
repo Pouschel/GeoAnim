@@ -205,7 +205,7 @@ public sealed class EpubTests : IDisposable
         Assert.DoesNotContain("<svg", first);
         Assert.DoesNotContain("data-line", first);
         Assert.Contains("alt=\"A\" class=\"formula\"", first);
-        Assert.Matches("<img src=\"../images/a-[0-9a-f]+.png\" alt=\"Abb. 1 Ein Punkt\"", first);
+        Assert.Matches("<img src=\"../images/a-[0-9a-f]+.png\" alt=\"Abb. 1.1 Ein Punkt\"", first);
         // the row of two steps: two pictures, the still one
         Assert.Equal(3, System.Text.RegularExpressions.Regex.Matches(first, "images/a-").Count);
         // as wide as the page; two side by side share it
