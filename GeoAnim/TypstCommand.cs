@@ -502,7 +502,12 @@ internal static partial class Program
             {
                 File.WriteAllBytes(Path.Combine(output, name), content);
             }
-            // the look: the book's own, else the standard
+            // the look: GeoAnim's standard, always anew; the book's own style.typ (which imports it), else one that only does
+            using (Stream stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("typst/standard.typ")!)
+            using (var reader = new StreamReader(stream))
+            {
+                File.WriteAllText(Path.Combine(output, "standard.typ"), reader.ReadToEnd(), utf8);
+            }
             string own = Path.Combine(root, "style.typ");
             if (File.Exists(own))
             {
@@ -510,12 +515,29 @@ internal static partial class Program
             }
             else
             {
-                using Stream stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("typst/style.typ")!;
-                using var reader = new StreamReader(stream);
-                File.WriteAllText(Path.Combine(output, "style.typ"), reader.ReadToEnd(), utf8);
+                File.WriteAllText(Path.Combine(output, "style.typ"), """
+                    // The look of the book: GeoAnim's standard (standard.typ). To change it, put a style.typ beside index.yaml
+                    // that imports the standard and changes what it wants (see the start of standard.typ).
+                    #import "standard.typ": *
+
+                    """, utf8);
+            }
+            // the book's icon, for the title page
+            foreach (string old in Directory.EnumerateFiles(output, "icon.*"))
+            {
+                File.Delete(old);
+            }
+            if (IconFile is { } icon)
+            {
+                File.Copy(settings.IconFile!, Path.Combine(output, icon), overwrite: true);
             }
             File.WriteAllText(Path.Combine(output, "book.typ"), Main(book), utf8);
         }
+
+        // the name of the book's icon in the project ("icon.svg"), if it has one Typst can show
+        private string? IconFile => settings.IconFile is { } file && Path.GetExtension(file).ToLowerInvariant() is ".svg" or ".png" or ".jpg" or ".jpeg"
+            ? "icon" + Path.GetExtension(file).ToLowerInvariant()
+            : null;
 
         // book.typ: the template, title page, contents, and the pages under their chapters
         private string Main(List<TypstPage> book)
@@ -531,7 +553,8 @@ internal static partial class Program
                 .Append(settings.TextSize is double size ? ", text-size: " + size.ToString("0.##", CultureInfo.InvariantCulture) + "pt" : "")
                 .Append(", language: ").Append(String(settings.Language ?? "de")).Append(")\n\n")
                 .Append("#title-page(title: [").Append(Escape(title)).Append("], author: ").Append(Optional(settings.Author))
-                .Append(", description: ").Append(Optional(settings.Description)).Append(")\n\n")
+                .Append(", description: ").Append(Optional(settings.Description))
+                .Append(IconFile is { } icon ? ", icon: image(" + String(icon) + ")" : "").Append(")\n\n")
                 .Append("#contents()\n\n");
             Dictionary<string, string> numbers = settings.Numbering.Headings ? Daemon.BookNumbers(book.Select(p => p.Source)) : [];
             string[] open = [];

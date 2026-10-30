@@ -1,6 +1,12 @@
-// The look of the printed book (Typst). geoanim typst writes this file next to book.typ, unless the book's folder has a
-// style.typ of its own: then that one. To change the look, copy this file into the book's folder (beside index.yaml)
-// and change it there.
+// The standard look of the printed book (Typst). geoanim typst writes this file anew with every export – do not change
+// it here. The pages use style.typ, which imports this file; to change the look, put a style.typ of your own beside
+// index.yaml that imports it and changes what it wants, e.g.
+//
+//   #import "standard.typ": *
+//   #let book = book.with(page-width: 15.5cm, page-height: 23.5cm, margin: (inside: 1.8cm, outside: 2.2cm, top: 2.4cm, bottom: 2.2cm))
+//   #let statement-label(body) = text(weight: "bold", fill: rgb("#8c1f1f"), body)
+//
+// so that it keeps what later versions of GeoAnim add here.
 //
 // Everything the pages use is defined here: the template (book), the title page, chapters, statements (axioms,
 // definitions, theorems …), figures and display formulas. Numbers come from GeoAnim (as on the web and in the e-book);
@@ -18,12 +24,23 @@
 
 // text-size: the font size of the text – unless index.yaml says it ("print: text: 10pt"), then that one (the figures and
 // formulas are made for it, and the preview shows them in proportion to it: best set it there)
-#let book(title: none, author: none, text-size: 11pt, language: "de", body) = {
+// page-width, page-height, margin: the format of the book's pages; font: the font of the text
+#let book(
+  title: none,
+  author: none,
+  text-size: 11pt,
+  language: "de",
+  page-width: 17cm,
+  page-height: 24cm,
+  margin: (inside: 2cm, outside: 2.5cm, top: 2.6cm, bottom: 2.4cm),
+  font: text-font,
+  body,
+) = {
   set document(title: title, author: if author == none { () } else { author })
   set page(
-    width: 17cm,
-    height: 24cm,
-    margin: (inside: 2cm, outside: 2.5cm, top: 2.6cm, bottom: 2.4cm),
+    width: page-width,
+    height: page-height,
+    margin: margin,
     // the running head: the chapter on the left pages, the section on the right; the page number outside
     header: context {
       let here-page = here().page()
@@ -56,7 +73,7 @@
       }
     },
   )
-  set text(font: text-font, size: text-size, lang: language)
+  set text(font: font, size: text-size, lang: language)
   set par(justify: true, leading: 0.62em, spacing: 0.95em)
   set heading(numbering: none)
   show heading: set text(weight: "bold")
@@ -80,18 +97,23 @@
   body
 }
 
-// the title page and its back
-#let title-page(title: none, author: none, description: none) = {
+// the title page (the author above the title, the book's icon below it, then the description) and its back
+#let title-page(title: none, author: none, description: none, icon: none) = {
   page(header: none, footer: none, {
-    v(5cm)
+    set par(justify: false)
+    v(3.5cm)
     align(center, {
-      text(size: 2.4em, weight: "bold", title)
       if author != none {
-        v(1.5cm)
         text(size: 1.3em, author)
+        v(1.2cm)
+      }
+      text(size: 2.4em, weight: "bold", title)
+      if icon != none {
+        v(1.5cm)
+        box(width: 3.2cm, icon)
       }
       if description != none {
-        v(2cm)
+        v(1.5cm)
         block(width: 80%, text(style: "italic", description))
       }
     })

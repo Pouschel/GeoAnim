@@ -653,6 +653,11 @@ public sealed class MarkdownTests : IDisposable
         Assert.Equal(["euklidische Ebene", "metrische Raum"], read.Keywords.Select(k => k.Term));
         Assert.DoesNotContain("euklidische", read.Keywords[0].Forms.Where(f => !f.Contains(' ')));
         Assert.Equal("bsp-ebene", read.Keywords[0].Anchor);
+        // a word in bold in a list, whose attributes Markdig reads itself
+        Assert.Equal("umgekehrte Dreiecksungleichung", Assert.Single(MarkdownPage.ReadMarks(
+            "1. **Umgekehrte Dreiecksungleichung**{kw=umgekehrte Dreiecksungleichung}\n2. zwei\n").Keywords).Term);
+        MarkdownPage list = MarkdownPage.Parse("1. **Umgekehrte Dreiecksungleichung**{kw=umgekehrte Dreiecksungleichung}\n");
+        Assert.DoesNotContain("dreiecksungleichung=", list.Html);
         MarkdownPage page = MarkdownPage.Parse("::: example {#bsp-ebene kw=euklidische Ebene} Die euklidische Ebene\nText.\n:::\n");
         Assert.DoesNotContain("Ebene=", page.Html);
         Assert.Contains("id=\"bsp-ebene\"", page.Html);

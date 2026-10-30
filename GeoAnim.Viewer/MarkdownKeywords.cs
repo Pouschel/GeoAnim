@@ -98,6 +98,24 @@ public sealed partial class MarkdownPage
                 ParseAttributes(opening.Groups[1].Value, attributes);
                 continue;
             }
+            // a word in bold whose attributes Markdig read itself ("**Umgekehrte Dreiecksungleichung**{kw=umgekehrte
+            // Dreiecksungleichung}" – "Dreiecksungleichung" as an attribute of its own): read again from the text after it
+            if (element is EmphasisInline marked && marked.TryGetAttributes() is { } read && marked.Span.End + 1 < text.Length
+                && text[marked.Span.End + 1] == '{' && LeadingAttributes().Match(text.Substring(marked.Span.End + 1, Math.Min(500, text.Length - marked.Span.End - 1))) is { Success: true } after)
+            {
+                read.Properties?.Clear();
+                ParseAttributes(after.Groups[1].Value, read);
+                continue;
+            }
+            // a heading likewise ("## Metrische Räume {kw=metrische/r/n Raum/es}"), if Markdig took its attributes
+            if (element is HeadingBlock readHeading && readHeading.TryGetAttributes() is { Properties.Count: > 0 } headingAttributes
+                && readHeading.Line < lines.Length && TrailingAttributes().Match(lines[readHeading.Line].TrimEnd('\r')) is { Success: true } trailing
+                && !(readHeading.Inline?.LastChild is LiteralInline text2 && text2.Content.ToString().Contains('{')))
+            {
+                headingAttributes.Properties?.Clear();
+                ParseAttributes(trailing.Groups[1].Value, headingAttributes);
+                continue;
+            }
             if (element is HeadingBlock { Inline.LastChild: LiteralInline last } heading)
             {
                 string content = last.Content.ToString();

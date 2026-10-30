@@ -27,7 +27,7 @@
 
   <!-- the standard look of the printed book (geoanim typst) -->
   <ItemGroup>
-    <EmbeddedResource Include="typst\style.typ" LogicalName="typst/style.typ" />
+    <EmbeddedResource Include="typst\standard.typ" LogicalName="typst/standard.typ" />
   </ItemGroup>
 
   <!-- All scripts in Samples (with subfolders) show in Visual Studio under this project; new files appear by themselves. -->

@@ -431,16 +431,50 @@ internal static partial class Program
         private string TitlePage()
         {
             var html = new StringBuilder();
-            html.Append("<div class=\"title-page\">\n<h1 class=\"book-title\">").Append(X(Title)).Append("</h1>\n");
+            html.Append("<div class=\"title-page\">\n");
             if (settings.Author != null)
             {
                 html.Append("<p class=\"book-author\">").Append(X(settings.Author)).Append("</p>\n");
+            }
+            html.Append("<h1 class=\"book-title\">").Append(X(Title)).Append("</h1>\n");
+            if (Icon() is { } icon)
+            {
+                html.Append("<p class=\"book-icon\"><img src=\"../").Append(icon).Append("\" alt=\"\" /></p>\n");
             }
             if (settings.Description != null)
             {
                 html.Append("<p class=\"book-description\">").Append(X(settings.Description)).Append("</p>\n");
             }
             return html.Append("</div>").ToString();
+        }
+
+        // the book's icon as a picture of the e-book (an SVG as PNG, unless -svg), or null
+        private string? Icon()
+        {
+            if (settings.IconFile is not { } file)
+            {
+                return null;
+            }
+            byte[] content = File.ReadAllBytes(file);
+            switch (Path.GetExtension(file).ToLowerInvariant())
+            {
+                case ".png":
+                    return Picture("icon", content, ".png");
+                case ".svg" when svg:
+                    return Picture("icon", content, ".svg");
+                case ".svg":
+                    {
+                        // 3.2 cm wide, as high as its shape
+                        string text = Encoding.UTF8.GetString(content);
+                        double[] box = System.Text.RegularExpressions.Regex.Match(text, @"viewBox=""([^""]+)""") is { Success: true } viewBox
+                            ? viewBox.Groups[1].Value.Split([' ', ','], StringSplitOptions.RemoveEmptyEntries).Select(v => double.Parse(v, CultureInfo.InvariantCulture)).ToArray()
+                            : [0, 0, 1, 1];
+                        double width = FigureStyle.Millimetres(32), height = box.Length == 4 && box[2] > 0 ? width * box[3] / box[2] : width;
+                        return Picture("icon", FigurePng.Render(text, width, height, FigureDpi), ".png");
+                    }
+                default:
+                    return null;
+            }
         }
 
         // the pages by their chapters (folders), as nested lists: (chapter or null, page or null, children)
@@ -771,8 +805,13 @@ internal static partial class Program
                 }
 
                 .book-author {
-                  margin-top: 1.5em;
+                  margin-bottom: 1.5em;
                   font-size: 1.2em;
+                }
+
+                .book-icon img {
+                  width: 30%;
+                  margin-top: 1em;
                 }
 
                 .book-description {
