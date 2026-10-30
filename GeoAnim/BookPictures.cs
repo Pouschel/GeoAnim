@@ -44,15 +44,22 @@ internal static class BookPictures
     /// <summary>
     /// A warning if the figure's texts are larger next to its drawing than in the player (then a text placed freely may
     /// run into a line): the player's texts are a part of its width (size 34 of 1280 pixels), the book's have a fixed size.
+    /// Not if its size was chosen (the figure's scale or width, the script's "print scale" or "print width") or the figure
+    /// says "{nowarn}".
     /// </summary>
     public static string? TextWarning(PageFigure figure, FigureAnimation animation, FigureStyle used)
     {
+        if (figure.Reference.NoWarn || figure.Reference.Scale != null || figure.Reference.Width != null
+            || animation.PrintScale != null || animation.PrintWidth != null)
+        {
+            return null;
+        }
         double printWidth = (animation.XMax - animation.XMin) * used.PointsPerUnit;
         double ratio = printWidth > 0 ? 1280 * used.SizeFactor / printWidth : 1;
         return ratio > 1.2
             ? $"{figure.Reference.File}: in print its texts are {ratio.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)} times as large next to the drawing "
                 + $"as in the player ({(used.PointsPerUnit * 25.4 / 72).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture)} mm a unit) – check texts placed freely (\"at x y\"), "
-                + "or make the figure larger (scale, width)."
+                + "or make the figure larger (scale, width); {nowarn} at the figure if it fits."
             : null;
     }
 

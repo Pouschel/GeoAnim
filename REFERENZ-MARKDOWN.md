@@ -115,6 +115,7 @@ steht auch die Marke: `![](#2){#abb-strahl crop=no}`.
 | `float` | `left` · `right` | der folgende Text fließt um die Abbildung – **festgelegt, noch nicht umgesetzt**: im Web und im E-Book später, im gedruckten Buch bleiben Abbildungen zentriert |
 | `width` | `8cm` · `60mm` · `200pt` · `3in` · `40%` | im Buch die Breite der Abbildung nach dem Zuschnitt (bei einer Bildfolge der ganzen Reihe); der Maßstab ergibt sich daraus. Prozent: Breite zu `float` im Web – **festgelegt, noch nicht umgesetzt** |
 | `scale` | `6mm` · `0.5cm` · `14pt` | im Buch die Länge einer Einheit für diese Abbildung |
+| `nowarn` | (ohne Wert) | keine Warnung zur Größe der Texte im Druck (geprüft, passt): `![](#2){nowarn}` |
 
 `float`, `width` und `scale` gelten für die ganze Abbildung; haben zwei ihrer Bilder verschiedene Werte, ist das ein
 Fehler.
@@ -124,8 +125,10 @@ im Skript (REFERENZ.md), sonst `print: scale` der `index.yaml`. Die Beschriftung
 `index.yaml` sagt (`labels`); eine kleinere Abbildung hat also im Verhältnis größere Texte als der Player, in dem Texte
 ein fester Anteil der Bildbreite sind. Ist eine Abbildung so schmal, dass ihre Texte mehr als 1,2-mal so groß wirken wie
 im Player (bei 9 pt für Größe 34: schmaler als etwa 10 cm für den ganzen `view`), meldet GeoAnim eine Warnung an der
-Abbildung – frei platzierte Texte (`at x y`) können dann in Linien rutschen. Texte an Objekten (`labeldir`, `gap`,
-`below`) rücken mit.
+Abbildung – Texte können dann in Linien rutschen (frei platzierte mit `at x y` eher als solche an Objekten). Die Warnung
+gilt nur für den Standard-Maßstab der `index.yaml`: Wer die Größe selbst gewählt hat (`print scale`/`print width` im
+Skript, `scale`/`width` an der Abbildung), bekommt keine; nach dem Prüfen in der Druckansicht schaltet `{nowarn}` sie
+für eine Abbildung ab.
 
 ## Aussagen
 

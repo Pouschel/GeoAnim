@@ -33,6 +33,9 @@ public sealed record GeoReference(string File, string? From, string? To, string 
     /// <summary>The figure's width in print after cutting ("{width=8cm}"; a percentage is for the web), or null.</summary>
     public string? Width { get; init; }
 
+    /// <summary>No warning about the size of its texts in print ("{nowarn}": checked, it fits).</summary>
+    public bool NoWarn { get; init; }
+
     /// <summary>The address as written: file and steps.</summary>
     public string Source => From == null ? File : File + "#" + (From == To ? From : From + ".." + To);
 }
@@ -417,7 +420,7 @@ public sealed partial class MarkdownPage
         url != null && (url.StartsWith('#') || Regex.IsMatch(url.Split('#')[0], @"\.geo$", RegexOptions.IgnoreCase));
 
     // the attributes of a figure: "{crop=no}" for the image, "{float=right width=40%}" for the whole figure
-    private static readonly string[] FigureAttributes = ["crop", "float", "width", "scale"];
+    private static readonly string[] FigureAttributes = ["crop", "float", "width", "scale", "nowarn"];
 
     // "file.geo", "file.geo#2", "file.geo#3..4" (also "3-4"), "file.geo#name", "file.geo#from..to"; "#…" the page's own
     // script
@@ -429,6 +432,7 @@ public sealed partial class MarkdownPage
         string caption = image.FirstChild == null ? "" : CaptionOf(text, image);
         bool crop = true;
         string? scale = null, width = null;
+        bool noWarn = false;
         foreach ((string key, string? raw) in image.TryGetAttributes()?.Properties ?? [])
         {
             string value = (raw ?? "").Trim();
@@ -436,6 +440,9 @@ public sealed partial class MarkdownPage
             {
                 case "crop" when value is "yes" or "no":
                     crop = value == "yes";
+                    break;
+                case "nowarn" when value.Length == 0:
+                    noWarn = true;
                     break;
                 case "float" when value is "left" or "right":
                 case "width" when WidthPattern().IsMatch(value):
@@ -486,7 +493,7 @@ public sealed partial class MarkdownPage
         }
         if (hash < 0 || hash == url.Length - 1)
         {
-            return new GeoReference(file, null, null, caption, line, column, crop) { Scale = scale, Width = width };
+            return new GeoReference(file, null, null, caption, line, column, crop) { Scale = scale, Width = width, NoWarn = noWarn };
         }
         string steps = url.Substring(hash + 1);
         Match match = StepPattern().Match(steps);
@@ -498,7 +505,7 @@ public sealed partial class MarkdownPage
         }
         string from = match.Groups[1].Success ? match.Groups[1].Value : match.Groups[3].Value;
         string to = match.Groups[2].Success ? match.Groups[2].Value : match.Groups[4].Success ? match.Groups[4].Value : from;
-        return new GeoReference(file, from, to, caption, line, column, crop) { Scale = scale, Width = width };
+        return new GeoReference(file, from, to, caption, line, column, crop) { Scale = scale, Width = width, NoWarn = noWarn };
     }
 
     [GeneratedRegex(@"^\d+(\.\d+)?(%|mm|cm|pt|in)$")]
@@ -680,7 +687,7 @@ public sealed partial class MarkdownPage
         }
         string json = animation.ToJson();
         string key = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(
-            json + "|" + from + "|" + to + "|" + still + "|" + reference.Crop + "|" + reference.Scale + "|" + reference.Width)))[..16].ToLowerInvariant();
+            json + "|" + from + "|" + to + "|" + still + "|" + reference.Crop + "|" + reference.Scale + "|" + reference.Width + "|" + reference.NoWarn)))[..16].ToLowerInvariant();
         ViewWindow view = animation.View;
         double ratio = (view.XMax - view.XMin) / (view.YMax - view.YMin);
         string? stepCaption = still && to >= 0 ? animation.Steps[to.Value].Caption : null;
