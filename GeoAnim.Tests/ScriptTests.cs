@@ -22,6 +22,7 @@ public class ScriptTests
     [
         ("Samples", Repository.PathOf("Samples")),
         ("GeoBook", @"C:\Code\GeoBook\src"),
+        ("Buch-neu", @"C:\Code\GeoBook\src-new"),
     ];
 
     /// <summary>Every script in these folders, with subfolders, named "Samples/Euklid/Book1/Prop1.geo".</summary>
