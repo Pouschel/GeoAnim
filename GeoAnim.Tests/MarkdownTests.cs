@@ -419,6 +419,12 @@ public sealed class MarkdownTests : IDisposable
         Assert.Empty(answer.GetProperty("errors").EnumerateArray());
         Assert.Contains("href=\"a.geo.md#ax-a\">Axiom 1</a>", answer.GetProperty("html").GetString());
         Assert.Equal(["abb-b", "ax-a"], answer.GetProperty("marks").EnumerateArray().Select(m => m.GetProperty("name").GetString()));
+        // the figure as in print too: its picture in pt and the font size of the text
+        JsonElement figure = answer.GetProperty("figures").EnumerateObject().Single().Value;
+        Assert.Equal(11, figure.GetProperty("textSize").GetDouble());
+        JsonElement picture = Assert.Single(figure.GetProperty("pictures").EnumerateArray());
+        Assert.StartsWith("<svg", picture.GetProperty("svg").GetString());
+        Assert.True(picture.GetProperty("width").GetDouble() > 0);
 
         JsonElement steps = JsonDocument.Parse(Daemon.Handle(JsonSerializer.Serialize(new
         {

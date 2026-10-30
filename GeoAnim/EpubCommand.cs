@@ -294,12 +294,7 @@ internal static partial class Program
             {
                 animation = animations[figure.Key] = FigureAnimation.Parse(figure.AnimationJson);
             }
-            List<double> times = figure.From == null
-                ? [animation.EndOf(animation.Steps.Count - 1)]
-                : figure.Still
-                    ? [animation.EndOf(figure.To!.Value)]
-                    : Enumerable.Range(figure.From.Value, figure.To!.Value - figure.From.Value + 1).Select(animation.EndOf).ToList();
-            return times.Select(time => FigureRenderer.Render(animation, time, style, figure.Crop ? times : null)).ToList();
+            return BookPictures.Of(figure, animation, style);
         }
 
         // a picture in the e-book, once for the same content: its path ("images/a-1f2e….png")

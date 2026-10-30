@@ -247,13 +247,44 @@
   } catch (ignored) {
   }
 
-  // a frame with the player for every figure that has none yet
+  // the book: the pictures as GeoAnim makes them for print, in proportion to the text as in print (the text of the
+  // preview stands for the book's text of "print: text"); a row of stills with their steps' numbers and descriptions;
+  // narrower if the column is too narrow
+  function printPictures (item, data) {
+    const pixelsPerPoint = parseFloat(getComputedStyle(page).fontSize) / (data.textSize || 11)
+    const row = document.createElement('div')
+    row.className = 'geo-print'
+    for (const picture of data.pictures) {
+      const cell = document.createElement('div')
+      cell.className = 'geo-print-picture'
+      const image = document.createElement('img')
+      image.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(picture.svg)
+      image.width = Math.round(picture.width * pixelsPerPoint)
+      image.alt = 'Abbildung'
+      cell.style.width = image.width + 'px'
+      cell.appendChild(image)
+      if (picture.caption) {
+        const caption = document.createElement('div')
+        caption.className = 'geo-print-caption'
+        caption.innerHTML = picture.caption
+        cell.appendChild(caption)
+      }
+      row.appendChild(cell)
+    }
+    item.appendChild(row)
+  }
+
+  // a frame with the player for every figure that has none yet (in the book: the printed pictures)
   function startFigures () {
     for (const item of page.querySelectorAll('.geo-item[data-figure]')) {
-      if (item.querySelector('iframe')) {
+      if (item.querySelector('iframe, .geo-print')) {
         continue
       }
       const data = figures[item.dataset.figure]
+      if (mode === 'book' && data && data.pictures && data.pictures.length > 0) {
+        printPictures(item, data)
+        continue
+      }
       if (!data || !window.GEO_FIGURE_PLAYER) {
         continue
       }
@@ -316,8 +347,8 @@
   function showMode () {
     modeButton.textContent = mode === 'book' ? 'Buch' : 'Web'
     modeButton.title = mode === 'book'
-      ? 'Abbildungen wie im Buch (Standbilder); klicken: wie im Web (Player)'
-      : 'Abbildungen wie im Web (Player); klicken: wie im Buch (Standbilder)'
+      ? 'Abbildungen wie im Druck (Größe und Schrift im Verhältnis zum Text wie im Buch); klicken: wie im Web (Player)'
+      : 'Abbildungen wie im Web (Player); klicken: wie im Druck'
   }
   showMode()
   modeButton.addEventListener('click', () => {

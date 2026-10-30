@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using GeoAnim.Figures;
 using GeoAnim.Script;
 using GeoAnim.Viewer;
 
@@ -197,6 +198,7 @@ internal static class Daemon
             bookMarks.TryAdd(other.Mark.Name, other);
         }
         MarkdownPage page = MarkdownPage.Parse(text, path, LoadScript, bookMarks, book.Numbering, book.KeywordLinks);
+        (FigureStyle Style, double TextSize) print = path == null ? (FigureStyle.Default, 11) : BookPictures.PrintOf(Path.GetDirectoryName(path)!);
         return Answer(id, json =>
         {
             json.WriteString("html", page.Html);
@@ -222,6 +224,19 @@ internal static class Daemon
                 Index("to", figure.To);
                 json.WriteBoolean("still", figure.Still);
                 json.WriteBoolean("crop", figure.Crop);
+                // as in print: the pictures in their size (pt) and the font size of the text they go with
+                json.WriteNumber("textSize", print.TextSize);
+                json.WriteStartArray("pictures");
+                foreach ((FigureImage image, string? caption) in PrintPictures(figure, print.Style))
+                {
+                    json.WriteStartObject();
+                    json.WriteString("svg", image.Svg);
+                    json.WriteNumber("width", Math.Round(image.Width, 2));
+                    json.WriteNumber("height", Math.Round(image.Height, 2));
+                    json.WriteString("caption", caption);
+                    json.WriteEndObject();
+                }
+                json.WriteEndArray();
                 json.WriteEndObject();
             }
             json.WriteEndObject();
@@ -268,6 +283,34 @@ internal static class Daemon
             Problems("errors", page.Errors);
             Problems("warnings", page.Warnings.Concat(book.Warnings));
         });
+    }
+
+    // the pictures of figures as in print, made once for each figure and size
+    private static readonly Dictionary<string, List<(FigureImage Image, string? Caption)>> PrintCache = new(StringComparer.Ordinal);
+
+    // the pictures of a figure as in print; in a row of stills each with its step's number and description (HTML)
+    private static List<(FigureImage Image, string? Caption)> PrintPictures(PageFigure figure, FigureStyle style)
+    {
+        string key = figure.Key + "|" + style.PointsPerUnit.ToString("R", System.Globalization.CultureInfo.InvariantCulture)
+            + "|" + style.SizeFactor.ToString("R", System.Globalization.CultureInfo.InvariantCulture);
+        if (PrintCache.TryGetValue(key, out var known))
+        {
+            return known;
+        }
+        if (PrintCache.Count > 200)
+        {
+            PrintCache.Clear();
+        }
+        var animation = FigureAnimation.Parse(figure.AnimationJson);
+        List<FigureImage> images = BookPictures.Of(figure, animation, style);
+        List<int> steps = BookPictures.Steps(figure, animation);
+        bool row = images.Count > 1;
+        var pictures = images.Select((image, i) => (image, row && steps[i] >= 0 && steps[i] < animation.Steps.Count
+            ? "<span class=\"step-number\">" + (steps[i] + 1).ToString(System.Globalization.CultureInfo.InvariantCulture) + "</span> "
+                + MarkdownPage.InlineHtml(animation.Steps[steps[i]].Caption.Split('\n')[0])
+            : null)).ToList();
+        PrintCache[key] = pictures;
+        return pictures;
     }
 
     // what a page needs of its book: the marks of the other pages, its numbers (section, counts before it), the links of the
