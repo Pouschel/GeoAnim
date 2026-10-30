@@ -99,6 +99,12 @@ mklink /J "%USERPROFILE%\.vscode\extensions\geoanim-geo" "%CD%\editors\vscode"
   ein Klick öffnet die Zielseite im Editor an der Stelle des Stichworts (ein Skript an seinem Schritt). Ein Stichwort, das
   eine andere Seite schon hat, ist gelb unterstrichen. Seiten haben ihre eigene Vorschau neben der
   der Skripte: Beide können gleichzeitig offen sein (etwa in zwei Fenstern), und jede folgt dem aktiven Editor ihrer Art.
+  **Aussagen** (Strg+. oder die Glühbirne): Sind Zeilen markiert, schließt „In Definition einschließen“, „In Axiom …“,
+  „In Satz …“, „In Hilfssatz …“, „In Folgerung …“, „In Beweis …“, „In Beispiel …“, „In Bemerkung …“ oder „In Kasten …“
+  sie in `::: art` … `:::` ein – mit einer Leerzeile davor und danach, wo der Text weitergeht; der Cursor steht dann
+  hinter der Art, für Marke und Titel (`{#name} Titel`). Enthalten die Zeilen schon einen Container, bekommt der neue
+  außen einen Doppelpunkt mehr (`:::: box`). Steht der Cursor in einem Container, löst „Axiom-Block auflösen“ (usw.)
+  den innersten auf: Eröffnungs- und Schlusszeile fallen weg, der Inhalt bleibt. Container lassen sich falten.
 
 Die Arbeit macht `geoanim daemon`, einmal im Hintergrund gestartet (MathJax startet daher nur einmal). Gefunden wird
 `geoanim` so: die Einstellung `geoanim.path`, sonst der neuere der Builds `GeoAnim\bin\Debug\net10.0\geoanim.exe` und

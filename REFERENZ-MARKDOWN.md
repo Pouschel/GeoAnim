@@ -152,6 +152,10 @@ Durch zwei verschiedene Punkte verläuft **genau eine Gerade**.
   bei `exportdir`; Seiten und Ordner mit `_` zählen nicht): Axiom 1, 2, 3 … – sie bilden die überschaubare Liste der
   Grundannahmen. Alle anderen nummerierten Arten teilen sich einen Zähler (Definition 1, Satz 2, Hilfssatz 3 …), vorerst
   je Seite; mit der Buchstruktur bekommen sie Kapitelnummern (Satz 2.14).
+- **Verschachteln:** Ein Container in einem anderen braucht außen mehr Doppelpunkte, damit das innere `:::` nicht den
+  äußeren schließt: `:::: box` … `::: theorem` … `:::` … `::::`.
+- **Im Editor:** Markierte Zeilen schließt die Glühbirne (Strg+.) in einen Container jeder Art ein, steht der Cursor in
+  einem, löst sie ihn auf (siehe `editors/vscode/README.md`).
 - Die deutschen Bezeichnungen sind vorerst fest; später kommen sie aus der Sprache des Buchs.
 
 ## Marken und Verweise

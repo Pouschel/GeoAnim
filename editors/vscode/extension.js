@@ -1345,6 +1345,10 @@ function providePageFoldingRanges (document) {
   for (const [start, end] of fences) {
     ranges.push(new vscode.FoldingRange(start, end))
   }
+  // statements ("::: axiom" … ":::")
+  for (const block of statementBlocks(document)) {
+    ranges.push(new vscode.FoldingRange(block.start, block.end))
+  }
   return ranges.filter(range => range.end > range.start)
 }
 
@@ -1475,6 +1479,131 @@ function dissolveEdit (document, block) {
   return edit
 }
 
+// ------------------------------------------------------------------ statement blocks in pages (Ctrl+.)
+
+// the kinds of statements as the lightbulb offers them (as in REFERENZ-MARKDOWN.md)
+const STATEMENT_KINDS = [
+  ['definition', 'Definition'],
+  ['axiom', 'Axiom'],
+  ['theorem', 'Satz'],
+  ['lemma', 'Hilfssatz'],
+  ['corollary', 'Folgerung'],
+  ['proof', 'Beweis'],
+  ['example', 'Beispiel'],
+  ['remark', 'Bemerkung'],
+  ['box', 'Kasten']
+]
+
+const statementName = kind => {
+  const known = STATEMENT_KINDS.find(([name]) => name === kind || (kind === 'def' && name === 'definition'))
+  return known ? known[1] : kind
+}
+
+// the blocks "::: kind …" … ":::" of a page (not in code blocks): { start, end, colons, kind }; a closing line closes the
+// innermost open block with at most as many colons
+function statementBlocks (document) {
+  const blocks = []
+  const open = []
+  let fence = null
+  for (let i = 0; i < document.lineCount; i++) {
+    const text = document.lineAt(i).text
+    const mark = /^\s{0,3}(`{3,}|~{3,})/.exec(text)
+    if (fence) {
+      if (mark && mark[1][0] === fence[0] && mark[1].length >= fence.length && text.trim() === mark[1]) {
+        fence = null
+      }
+      continue
+    }
+    if (mark) {
+      fence = mark[1]
+      continue
+    }
+    const opening = /^\s{0,3}(:{3,})\s*([A-Za-z]+)/.exec(text)
+    if (opening) {
+      open.push({ start: i, colons: opening[1].length, kind: opening[2].toLowerCase() })
+      continue
+    }
+    const closing = /^\s{0,3}(:{3,})\s*$/.exec(text)
+    if (closing) {
+      for (let k = open.length - 1; k >= 0; k--) {
+        if (open[k].colons <= closing[1].length) {
+          blocks.push({ ...open[k], end: i })
+          open.splice(k)
+          break
+        }
+      }
+    }
+  }
+  return blocks
+}
+
+// selected lines: put them into a block of each kind; the cursor in a block: dissolve it (the innermost)
+function providePageCodeActions (document, range) {
+  const actions = []
+  const blocks = statementBlocks(document)
+  if (!range.isEmpty) {
+    const first = range.start.line
+    const last = lastLineOf(range)
+    for (const [kind, name] of STATEMENT_KINDS) {
+      const action = new vscode.CodeAction(`In ${name} einschließen`, vscode.CodeActionKind.RefactorRewrite)
+      action.command = { command: 'geoanim.surroundStatement', title: action.title, arguments: [document.uri, first, last, kind] }
+      actions.push(action)
+    }
+  }
+  const line = range.start.line
+  const around = blocks.filter(block => block.start <= line && line <= block.end).sort((a, b) => (a.end - a.start) - (b.end - b.start))[0]
+  if (around) {
+    const action = new vscode.CodeAction(`${statementName(around.kind)}-Block auflösen`, vscode.CodeActionKind.RefactorRewrite)
+    action.edit = new vscode.WorkspaceEdit()
+    // the closing line first: the lines stay where they are for the opening one
+    action.edit.delete(document.uri, lineWithBreak(document, around.end))
+    action.edit.delete(document.uri, lineWithBreak(document, around.start))
+    actions.push(action)
+  }
+  return actions
+}
+
+// a whole line with its line break (the last line: with the break before it)
+function lineWithBreak (document, line) {
+  return line + 1 < document.lineCount
+    ? new vscode.Range(line, 0, line + 1, 0)
+    : new vscode.Range(line - 1, document.lineAt(line - 1).text.length, line, document.lineAt(line).text.length)
+}
+
+// the lines first … last between "::: kind" and ":::" (more colons if there are blocks inside), with an empty line
+// before and after where the text goes on; the cursor after the kind, for a mark and a title ("{#name} Titel")
+async function surroundStatement (uri, first, last, kind) {
+  const editor = vscode.window.activeTextEditor
+  if (!editor || editor.document.uri.toString() !== uri.toString()) {
+    return
+  }
+  const document = editor.document
+  // without empty lines at the start and end of the selection
+  while (first < last && document.lineAt(first).isEmptyOrWhitespace) {
+    first++
+  }
+  while (last > first && document.lineAt(last).isEmptyOrWhitespace) {
+    last--
+  }
+  const inner = statementBlocks(document).filter(block => block.start >= first && block.end <= last)
+  const colons = ':'.repeat(Math.max(3, ...inner.map(block => block.colons + 1)))
+  const lines = []
+  for (let i = first; i <= last; i++) {
+    lines.push(document.lineAt(i).text)
+  }
+  const before = first > 0 && !document.lineAt(first - 1).isEmptyOrWhitespace ? '\n' : ''
+  const after = last + 1 < document.lineCount && !document.lineAt(last + 1).isEmptyOrWhitespace ? '\n' : ''
+  const opening = `${colons} ${kind}`
+  const text = before + opening + '\n' + lines.join('\n') + '\n' + colons + after
+  const range = new vscode.Range(first, 0, last, document.lineAt(last).text.length)
+  const done = await editor.edit(builder => builder.replace(range, text))
+  if (done) {
+    const line = first + (before ? 1 : 0)
+    const position = new vscode.Position(line, opening.length)
+    editor.selection = new vscode.Selection(position, position)
+  }
+}
+
 // ------------------------------------------------------------------ activation
 
 function activate (context) {
@@ -1484,6 +1613,7 @@ function activate (context) {
     vscode.commands.registerCommand('geoanim.preview', openPreview),
     vscode.commands.registerCommand('geoanim.restart', restart),
     vscode.commands.registerCommand('geoanim.surroundTogether', surroundTogether),
+    vscode.commands.registerCommand('geoanim.surroundStatement', surroundStatement),
     vscode.languages.registerDocumentSymbolProvider('geo', { provideDocumentSymbols }, { label: 'GeoAnim' }),
     vscode.languages.registerFoldingRangeProvider('geo', { provideFoldingRanges }),
     vscode.languages.registerDocumentSymbolProvider('geomd', { provideDocumentSymbols: providePageSymbols }, { label: 'GeoAnim' }),
@@ -1493,6 +1623,7 @@ function activate (context) {
     vscode.languages.registerDefinitionProvider('geomd', { provideDefinition: providePageDefinition }),
     vscode.languages.registerColorProvider('geo', { provideDocumentColors, provideColorPresentations }),
     vscode.languages.registerCodeActionsProvider('geo', { provideCodeActions }, { providedCodeActionKinds: [vscode.CodeActionKind.RefactorRewrite] }),
+    vscode.languages.registerCodeActionsProvider('geomd', { provideCodeActions: providePageCodeActions }, { providedCodeActionKinds: [vscode.CodeActionKind.RefactorRewrite] }),
     vscode.languages.registerHoverProvider('geo', { provideHover: hover }),
     vscode.languages.registerDefinitionProvider('geo', { provideDefinition: definitionLocation }),
     vscode.languages.registerRenameProvider('geo', { prepareRename, provideRenameEdits }),

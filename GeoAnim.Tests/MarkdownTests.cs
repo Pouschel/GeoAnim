@@ -530,6 +530,15 @@ public sealed class MarkdownTests : IDisposable
     }
 
     [Fact]
+    public void AStatementCanStandInABoxWithMoreColons()
+    {
+        // as the editor puts a block around one: the outer one with a colon more
+        MarkdownPage page = MarkdownPage.Parse(":::: box\n::: theorem\nSatz.\n:::\nBeweistext.\n::::\n");
+        Assert.Empty(page.Errors);
+        Assert.Matches("(?s)<div class=\"statement statement-box\"[^>]*>.*<div class=\"statement statement-theorem\"[^>]*>.*Satz[.].*</div>.*Beweistext[.].*</div>", page.Html);
+    }
+
+    [Fact]
     public void KeywordsAreLinkedAfterAReference()
     {
         var links = new Dictionary<string, KeywordLink> { ["Punkt"] = new KeywordLink("punkte.geo.md#kw-punkt", "Punkte") };
