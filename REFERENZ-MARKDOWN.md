@@ -126,9 +126,8 @@ im Skript (REFERENZ.md), sonst `print: scale` der `index.yaml`. Die Beschriftung
 ein fester Anteil der Bildbreite sind. Ist eine Abbildung so schmal, dass ihre Texte mehr als 1,2-mal so groß wirken wie
 im Player (bei 9 pt für Größe 34: schmaler als etwa 10 cm für den ganzen `view`), meldet GeoAnim eine Warnung an der
 Abbildung – Texte können dann in Linien rutschen (frei platzierte mit `at x y` eher als solche an Objekten). Die Warnung
-gilt nur für den Standard-Maßstab der `index.yaml`: Wer die Größe selbst gewählt hat (`print scale`/`print width` im
-Skript, `scale`/`width` an der Abbildung), bekommt keine; nach dem Prüfen in der Druckansicht schaltet `{nowarn}` sie
-für eine Abbildung ab.
+kommt, woher die Größe auch stammt; erst `{nowarn}` an der Abbildung schaltet sie ab – als Vermerk, dass sie im Druck
+geprüft ist (ohne `{nowarn}` ist sie wieder da).
 
 ## Aussagen
 

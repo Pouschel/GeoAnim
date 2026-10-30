@@ -44,13 +44,11 @@ internal static class BookPictures
     /// <summary>
     /// A warning if the figure's texts are larger next to its drawing than in the player (then a text placed freely may
     /// run into a line): the player's texts are a part of its width (size 34 of 1280 pixels), the book's have a fixed size.
-    /// Not if its size was chosen (the figure's scale or width, the script's "print scale" or "print width") or the figure
-    /// says "{nowarn}".
+    /// Whatever gave its size; only "{nowarn}" at the figure (checked in print, it fits) turns it off.
     /// </summary>
     public static string? TextWarning(PageFigure figure, FigureAnimation animation, FigureStyle used)
     {
-        if (figure.Reference.NoWarn || figure.Reference.Scale != null || figure.Reference.Width != null
-            || animation.PrintScale != null || animation.PrintWidth != null)
+        if (figure.Reference.NoWarn)
         {
             return null;
         }

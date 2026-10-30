@@ -345,14 +345,14 @@ public sealed class FigureSizeTests
         BookPictures.Of(figure, animation, book, out FigureStyle used);
         // 10 units of 5 mm: 5 cm instead of the player's 12 cm
         Assert.Contains("2.4 times as large", BookPictures.TextWarning(figure, animation, used));
-        // a size chosen on purpose: no warning (though the texts are as large)
+        // a size chosen on purpose warns too
         PageFigure scaled = Figure("print scale 4mm\n" + Script, crop: false);
         var scaledAnimation = FigureAnimation.Parse(scaled.AnimationJson);
         BookPictures.Of(scaled, scaledAnimation, book, out used);
-        Assert.Null(BookPictures.TextWarning(scaled, scaledAnimation, used));
-        PageFigure small = Figure(Script, scale: "3mm", crop: false);
-        BookPictures.Of(small, animation, book, out used);
-        Assert.Null(BookPictures.TextWarning(small, animation, used));
+        Assert.Contains("3.0 times as large", BookPictures.TextWarning(scaled, scaledAnimation, used));
+        PageFigure large = Figure(Script, width: "12cm", crop: false);
+        BookPictures.Of(large, animation, book, out used);
+        Assert.Null(BookPictures.TextWarning(large, animation, used));
         // checked: "{nowarn}"
         PageFigure checkedFigure = figure with { Reference = figure.Reference with { NoWarn = true } };
         BookPictures.Of(checkedFigure, animation, book, out used);
