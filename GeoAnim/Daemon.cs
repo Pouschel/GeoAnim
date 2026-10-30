@@ -349,6 +349,8 @@ internal static class Daemon
     // not in folders or files starting with "_") in book order, the other pages as saved, the page itself as in the editor
     internal static BookOfPage ReadBook(string page, string text)
     {
+        // as the paths of the book's files are compared with it ("C:/a/b" is "C:\a\b" on Windows)
+        page = Path.GetFullPath(page);
         string? bookRoot = BookKeywords.RootOf(page);
         string root = bookRoot ?? Path.GetDirectoryName(page)!;
         BookNumbering numbering = bookRoot == null ? BookNumbering.Default : BookFile.Read(bookRoot, _ => { }, out _).Numbering;
