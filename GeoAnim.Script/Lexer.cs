@@ -134,11 +134,18 @@ internal static partial class Lexer
                         i++;
                     }
                 }
-                if (i < source.Length && IsNameChar(source[i]))
+                // a length with its unit ("6mm", "12cm", "9pt", "2in"): the number and the unit
+                string? unit = i < source.Length ? LengthUnit(source, i) : null;
+                if (unit == null && i < source.Length && IsNameChar(source[i]))
                 {
                     throw new ScriptError(line, column, $"\"{source.Substring(start, i - start + 1)}…\" is neither a number nor a name.");
                 }
                 tokens.Add(new Token(TokenKind.Number, source.Substring(start, i - start), line, column));
+                if (unit != null)
+                {
+                    tokens.Add(new Token(TokenKind.Name, unit, line, column + i - start));
+                    i += unit.Length;
+                }
             }
             else if (char.IsLetter(c) || c == '_')
             {
@@ -305,6 +312,19 @@ internal static partial class Lexer
         char c = source[i];
         return c == '-' && (Digit(i + 1) || i + 2 < source.Length && source[i + 1] == '.' && Digit(i + 2))
             || c == '.' && Digit(i + 1) && !(i > 0 && source[i - 1] == '.');
+    }
+
+    // "mm", "cm", "pt" or "in" right after a number (and no more letters): the unit of a length
+    private static string? LengthUnit(string source, int i)
+    {
+        foreach (string unit in new[] { "mm", "cm", "pt", "in" })
+        {
+            if (string.CompareOrdinal(source, i, unit, 0, 2) == 0 && (i + 2 >= source.Length || !IsNameChar(source[i + 2])))
+            {
+                return unit;
+            }
+        }
+        return null;
     }
 
     private static bool IsNameChar(char c) => char.IsLetterOrDigit(c) || c == '_';

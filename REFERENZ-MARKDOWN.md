@@ -113,9 +113,19 @@ steht auch die Marke: `![](#2){#abb-strahl crop=no}`.
 |---|---|---|
 | `crop` | `yes` (Voreinstellung) · `no` | im Buch auf den Inhalt zuschneiden oder die ganze `view` zeigen; gilt für das Bild |
 | `float` | `left` · `right` | der folgende Text fließt um die Abbildung – **festgelegt, noch nicht umgesetzt**: im Web und im E-Book später, im gedruckten Buch bleiben Abbildungen zentriert |
-| `width` | `40%` · `60mm` | Breite der Abbildung (zu `float`) – **festgelegt, noch nicht umgesetzt** |
+| `width` | `8cm` · `60mm` · `200pt` · `3in` · `40%` | im Buch die Breite der Abbildung nach dem Zuschnitt (bei einer Bildfolge der ganzen Reihe); der Maßstab ergibt sich daraus. Prozent: Breite zu `float` im Web – **festgelegt, noch nicht umgesetzt** |
+| `scale` | `6mm` · `0.5cm` · `14pt` | im Buch die Länge einer Einheit für diese Abbildung |
 
-`float` und `width` gelten für die ganze Abbildung; haben zwei ihrer Bilder verschiedene Werte, ist das ein Fehler.
+`float`, `width` und `scale` gelten für die ganze Abbildung; haben zwei ihrer Bilder verschiedene Werte, ist das ein
+Fehler.
+
+**Größe im Buch:** Es gilt die genaueste Angabe – `width` oder `scale` an der Abbildung, sonst `print width`/`print scale`
+im Skript (REFERENZ.md), sonst `print: scale` der `index.yaml`. Die Beschriftungen bleiben dabei so groß, wie die
+`index.yaml` sagt (`labels`); eine kleinere Abbildung hat also im Verhältnis größere Texte als der Player, in dem Texte
+ein fester Anteil der Bildbreite sind. Ist eine Abbildung so schmal, dass ihre Texte mehr als 1,2-mal so groß wirken wie
+im Player (bei 9 pt für Größe 34: schmaler als etwa 10 cm für den ganzen `view`), meldet GeoAnim eine Warnung an der
+Abbildung – frei platzierte Texte (`at x y`) können dann in Linien rutschen. Texte an Objekten (`labeldir`, `gap`,
+`below`) rücken mit.
 
 ## Aussagen
 

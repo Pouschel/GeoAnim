@@ -64,6 +64,12 @@ public sealed class AnimationData
     /// <summary>The colour of the axes and their numbers (null: the player's grey).</summary>
     public Color? AxesColor { get; init; }
 
+    /// <summary>The length of a unit in the book's figures in points ("print scale"; null: the book's).</summary>
+    public double? PrintScale { get; init; }
+
+    /// <summary>The width of the view in the book's figures in points ("print width").</summary>
+    public double? PrintWidth { get; init; }
+
     /// <summary>Total length in milliseconds.</summary>
     public double Duration { get; }
 
@@ -106,6 +112,8 @@ public sealed class AnimationData
         {
             AxesSize = AxesSize,
             AxesColor = AxesColor,
+            PrintScale = PrintScale,
+            PrintWidth = PrintWidth,
             Description = description,
             Keywords = Keywords,
             Inspection = Inspection,
@@ -152,6 +160,14 @@ public sealed class AnimationData
             if (AxesColor != null)
             {
                 json.WriteString("axesColor", AxesColor.Value.ToHex());
+            }
+            if (PrintScale != null)
+            {
+                json.WriteNumber("printScale", Math.Round(PrintScale.Value, 4));
+            }
+            if (PrintWidth != null)
+            {
+                json.WriteNumber("printWidth", Math.Round(PrintWidth.Value, 4));
             }
             json.WriteNumber("duration", RoundTime(Duration));
             json.WriteStartArray("steps");

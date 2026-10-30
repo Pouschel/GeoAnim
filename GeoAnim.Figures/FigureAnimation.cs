@@ -40,6 +40,12 @@ public sealed class FigureAnimation
 
     public string? AxesColor { get; private init; }
 
+    /// <summary>The length of a unit in print in points ("print scale" in the script), or null.</summary>
+    public double? PrintScale { get; private init; }
+
+    /// <summary>The width of the view in print in points ("print width" in the script), or null.</summary>
+    public double? PrintWidth { get; private init; }
+
     public double Duration { get; private init; }
 
     public IReadOnlyList<FigureStep> Steps { get; private init; } = [];
@@ -95,6 +101,8 @@ public sealed class FigureAnimation
             Axes = root.TryGetProperty("axes", out JsonElement axes) && axes.ValueKind == JsonValueKind.True,
             AxesSize = root.TryGetProperty("axesSize", out JsonElement axesSize) ? axesSize.GetDouble() : null,
             AxesColor = root.TryGetProperty("axesColor", out JsonElement axesColor) ? axesColor.GetString() : null,
+            PrintScale = root.TryGetProperty("printScale", out JsonElement printScale) ? printScale.GetDouble() : null,
+            PrintWidth = root.TryGetProperty("printWidth", out JsonElement printWidth) ? printWidth.GetDouble() : null,
             Duration = root.GetProperty("duration").GetDouble(),
             Steps = steps,
             Primitives = primitives,

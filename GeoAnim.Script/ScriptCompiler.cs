@@ -165,7 +165,7 @@ public static class ScriptCompiler
         private void Run(Statement statement)
         {
             // a used file: its settings and steps belong to it running alone
-            if (module != null && statement is TitleStatement or DescriptionStatement or KeywordStatement or ViewStatement or BackgroundStatement or GridStatement or AxesStatement or SpeedStatement)
+            if (module != null && statement is TitleStatement or DescriptionStatement or KeywordStatement or ViewStatement or BackgroundStatement or GridStatement or AxesStatement or SpeedStatement or PrintStatement)
             {
                 return;
             }
@@ -199,6 +199,11 @@ public static class ScriptCompiler
                 case GridStatement s:
                     RequireSetup(s, "grid");
                     c.GridStep = s.Step;
+                    break;
+                case PrintStatement s:
+                    RequireSetup(s, "print");
+                    c.PrintScale = s.Width ? null : s.Points;
+                    c.PrintWidth = s.Width ? s.Points : null;
                     break;
                 case AxesStatement s:
                     RequireSetup(s, "axes");

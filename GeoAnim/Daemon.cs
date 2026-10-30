@@ -227,7 +227,7 @@ internal static class Daemon
                 // as in print: the pictures in their size (pt) and the font size of the text they go with
                 json.WriteNumber("textSize", print.TextSize);
                 json.WriteStartArray("pictures");
-                foreach ((FigureImage image, string? caption) in PrintPictures(figure, print.Style))
+                foreach ((FigureImage image, string? caption) in PrintPictures(figure, print.Style).Pictures)
                 {
                     json.WriteStartObject();
                     json.WriteString("svg", image.Svg);
@@ -281,15 +281,20 @@ internal static class Daemon
             }
             json.WriteEndArray();
             Problems("errors", page.Errors);
-            Problems("warnings", page.Warnings.Concat(book.Warnings));
+            // a figure whose texts are larger next to its drawing in print than in the player
+            IEnumerable<MarkdownProblem> figureWarnings = page.PageFigures.DistinctBy(f => f.Key)
+                .Select(f => (Figure: f, Warning: PrintPictures(f, print.Style).Warning))
+                .Where(f => f.Warning != null)
+                .Select(f => new MarkdownProblem(f.Figure.Reference.Line, f.Figure.Reference.Column, f.Warning!));
+            Problems("warnings", page.Warnings.Concat(book.Warnings).Concat(figureWarnings));
         });
     }
 
     // the pictures of figures as in print, made once for each figure and size
-    private static readonly Dictionary<string, List<(FigureImage Image, string? Caption)>> PrintCache = new(StringComparer.Ordinal);
+    private static readonly Dictionary<string, (List<(FigureImage Image, string? Caption)> Pictures, string? Warning)> PrintCache = new(StringComparer.Ordinal);
 
     // the pictures of a figure as in print; in a row of stills each with its step's number and description (HTML)
-    private static List<(FigureImage Image, string? Caption)> PrintPictures(PageFigure figure, FigureStyle style)
+    private static (List<(FigureImage Image, string? Caption)> Pictures, string? Warning) PrintPictures(PageFigure figure, FigureStyle style)
     {
         string key = figure.Key + "|" + style.PointsPerUnit.ToString("R", System.Globalization.CultureInfo.InvariantCulture)
             + "|" + style.SizeFactor.ToString("R", System.Globalization.CultureInfo.InvariantCulture);
@@ -302,15 +307,16 @@ internal static class Daemon
             PrintCache.Clear();
         }
         var animation = FigureAnimation.Parse(figure.AnimationJson);
-        List<FigureImage> images = BookPictures.Of(figure, animation, style);
+        List<FigureImage> images = BookPictures.Of(figure, animation, style, out FigureStyle used);
         List<int> steps = BookPictures.Steps(figure, animation);
         bool row = images.Count > 1;
         var pictures = images.Select((image, i) => (image, row && steps[i] >= 0 && steps[i] < animation.Steps.Count
             ? "<span class=\"step-number\">" + (steps[i] + 1).ToString(System.Globalization.CultureInfo.InvariantCulture) + "</span> "
                 + MarkdownPage.InlineHtml(animation.Steps[steps[i]].Caption.Split('\n')[0])
             : null)).ToList();
-        PrintCache[key] = pictures;
-        return pictures;
+        var result = (pictures, BookPictures.TextWarning(figure, animation, used));
+        PrintCache[key] = result;
+        return result;
     }
 
     // what a page needs of its book: the marks of the other pages, its numbers (section, counts before it), the links of the

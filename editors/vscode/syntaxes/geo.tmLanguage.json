@@ -616,7 +616,7 @@
       ]
     },
     {
-      "begin": "^\\s*(background|grid|axes|speed|pause|together|end|point|segment|line|ray|circle|arc|sector|polygon|angle|text|move|input)\\b",
+      "begin": "^\\s*(background|grid|axes|speed|print|pause|together|end|point|segment|line|ray|circle|arc|sector|polygon|angle|text|move|input)\\b",
       "beginCaptures": {
         "1": {
           "name": "keyword.control.geo"

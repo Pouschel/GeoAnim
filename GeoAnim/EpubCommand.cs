@@ -142,6 +142,7 @@ internal static partial class Program
                 string title = HtmlExporter.PlainText(page.Title ?? DisplayName(Path.GetFileName(entry.Source)[..^".geo.md".Length]));
                 book[i] = entry = entry with { Title = title };
                 entry.Number = page.SectionNumber;
+                warn = message => progress.Warning($"{entry.Source}:{message}");
                 entry.Body = Convert(page, entry, book, progress);
             }
             WriteZip(output, book);
@@ -294,8 +295,17 @@ internal static partial class Program
             {
                 animation = animations[figure.Key] = FigureAnimation.Parse(figure.AnimationJson);
             }
-            return BookPictures.Of(figure, animation, style);
+            List<FigureImage> images = BookPictures.Of(figure, animation, style, out FigureStyle used);
+            if (BookPictures.TextWarning(figure, animation, used) is { } warning && warned.Add(figure.Key))
+            {
+                warn?.Invoke($"{figure.Reference.Line}:{figure.Reference.Column}: {warning}");
+            }
+            return images;
         }
+
+        // the warnings of the figures of the page being made ("line:column: …"), and the figures warned about
+        private Action<string>? warn;
+        private readonly HashSet<string> warned = new(StringComparer.Ordinal);
 
         // a picture in the e-book, once for the same content: its path ("images/a-1f2e….png")
         private string Picture(string prefix, byte[] content, string extension)

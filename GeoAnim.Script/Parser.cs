@@ -8,7 +8,7 @@ internal sealed partial class Parser
     /// <summary>Words that cannot be names of objects.</summary>
     internal static readonly HashSet<string> Keywords = new(StringComparer.Ordinal)
     {
-        "title", "description", "info", "keyword", "view", "background", "grid", "axes", "speed", "var", "default", "include", "input", "output", "use",
+        "title", "description", "info", "keyword", "view", "background", "grid", "axes", "speed", "print", "var", "default", "include", "input", "output", "use",
         "draw", "steps", "copy", "set", "step", "textstep", "point", "segment", "line", "ray", "circle", "arc", "sector", "polygon", "angle",
         "text", "number", "length", "degrees", "area", "perimeter", "show", "hide", "all", "highlight", "unhighlight", "keep", "move", "rotate", "reflect", "along", "around", "across", "in", "by", "pause", "together", "end", "midpoint", "intersect", "parallel", "perpendicular", "center", "through",
         "radius", "at", "from", "to", "on", "x", "y", "below", "gap", "align", "left", "right",
@@ -186,6 +186,27 @@ internal sealed partial class Parser
                 break;
             case "speed":
                 statement = new SpeedStatement(l, c, ExpectPositive("the speed"));
+                break;
+            case "print":
+                {
+                    // "print scale 6mm", "print width 12cm": the size of the figures in the book (mm, cm, pt, in; mm without one)
+                    Token what = Current;
+                    if (what.Kind != TokenKind.Name || what.Text is not ("scale" or "width"))
+                    {
+                        throw Error(what, "\"print\" needs \"scale\" (a unit's length, print scale 6mm) or \"width\" (the view's width, print width 12cm).");
+                    }
+                    Next();
+                    double length = ExpectPositive(what.Text == "scale" ? "the length of a unit" : "the width");
+                    string unit = Current.Kind == TokenKind.Name && Current.Text is "mm" or "cm" or "pt" or "in" ? Next().Text : "mm";
+                    double points = unit switch
+                    {
+                        "cm" => length * 720 / 25.4,
+                        "pt" => length,
+                        "in" => length * 72,
+                        _ => length * 72 / 25.4,
+                    };
+                    statement = new PrintStatement(l, c, what.Text == "width", points);
+                }
                 break;
             case "var":
                 ParseVar();

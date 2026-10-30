@@ -153,6 +153,7 @@ internal static partial class Program
                     progress.Warning($"{entry.Source}:{problem.Line}:{problem.Column}: {problem.Message}");
                 }
                 string title = HtmlExporter.PlainText(page.Title ?? DisplayName(Path.GetFileName(entry.Source)[..^".geo.md".Length]));
+                warn = message => progress.Warning($"{entry.Source}:{message}");
                 pages[entry.File] = "#import \"../style.typ\": *\n\n" + Convert(page, entry, book, title, progress);
             }
             WriteProject(output, book, pages);
@@ -440,8 +441,17 @@ internal static partial class Program
             {
                 animation = animations[figure.Key] = FigureAnimation.Parse(figure.AnimationJson);
             }
-            return BookPictures.Of(figure, animation, style);
+            List<FigureImage> images = BookPictures.Of(figure, animation, style, out FigureStyle used);
+            if (BookPictures.TextWarning(figure, animation, used) is { } warning && warned.Add(figure.Key))
+            {
+                warn?.Invoke($"{figure.Reference.Line}:{figure.Reference.Column}: {warning}");
+            }
+            return images;
         }
+
+        // the warnings of the figures of the page being made ("line:column: …"), and the figures warned about
+        private Action<string>? warn;
+        private readonly HashSet<string> warned = new(StringComparer.Ordinal);
 
         // a picture in the project, once for the same content: its path ("figures/1f2e….svg")
         private string Picture(string folder, byte[] content)

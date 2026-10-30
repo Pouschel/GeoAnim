@@ -102,6 +102,12 @@ public sealed class Construction
     /// <summary>The colour of the axes and their numbers (null: grey).</summary>
     public Color? AxesColor { get; set; }
 
+    /// <summary>The length of a unit in the book's figures in points ("print scale"; null: the book's).</summary>
+    public double? PrintScale { get; set; }
+
+    /// <summary>The width of the view in the book's figures in points ("print width"; null: from the scale).</summary>
+    public double? PrintWidth { get; set; }
+
     /// <summary>
     /// Speed of the whole animation: 1 as given by the durations, 0.5 half as fast (everything takes twice as long),
     /// 2 twice as fast. Applied when the animation is built; <see cref="Time"/> stays unscaled.
@@ -973,6 +979,8 @@ public sealed class Construction
         {
             AxesSize = AxesSize,
             AxesColor = AxesColor,
+            PrintScale = PrintScale,
+            PrintWidth = PrintWidth,
             Description = Description,
             Keywords = keywords.ToList(),
             Inspection = inspector == null ? [] : inspector.Ghosts

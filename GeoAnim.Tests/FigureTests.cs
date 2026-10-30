@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using GeoAnim.Cli;
 using GeoAnim.Figures;
 using GeoAnim.Script;
+using GeoAnim.Viewer;
 
 namespace GeoAnim.Tests;
 
@@ -293,5 +294,58 @@ public sealed class TypstTests : IDisposable
         Write("style.typ", "// mein Stil\n");
         Assert.Equal(0, Program.Typst([folder, "-o", output]));
         Assert.Equal("// mein Stil\n", File.ReadAllText(Path.Combine(output, "style.typ")));
+    }
+}
+
+public sealed class FigureSizeTests
+{
+    private static PageFigure Figure(string script, string? scale = null, string? width = null, bool crop = true)
+    {
+        AnimationData animation = ScriptCompiler.Compile(script);
+        var reference = new GeoReference("a.geo", null, null, "", 3, 1, crop) { Scale = scale, Width = width };
+        return new PageFigure("k", reference, animation.ToJson(), null, null, false, 1);
+    }
+
+    private const string Script = "view x -5 .. 5 y -2 .. 2\npoint A = -4 0 nolabel\npoint B = 4 0 nolabel\nsegment s = A B\nstep Eins";
+
+    [Fact]
+    public void AScriptSaysItsSizeInPrint()
+    {
+        AnimationData scaled = ScriptCompiler.Compile("print scale 6mm\n" + Script);
+        Assert.Equal(6 * 72 / 25.4, scaled.PrintScale!.Value, 6);
+        Assert.Null(scaled.PrintWidth);
+        AnimationData wide = ScriptCompiler.Compile("print width 12 cm\n" + Script);
+        Assert.Equal(120 * 72 / 25.4, wide.PrintWidth!.Value, 6);
+        Assert.Equal(72, ScriptCompiler.Compile("print scale 1in\n" + Script).PrintScale!.Value, 6);
+        Assert.Contains("\"print\" needs", Assert.Throws<ScriptError>(() => ScriptCompiler.Compile("print size 3mm\n" + Script)).Message);
+    }
+
+    [Fact]
+    public void TheFigureTheScriptOrTheBookGivesTheSize()
+    {
+        var book = new FigureStyle(FigureStyle.Millimetres(5), 0.25);
+        double Width(PageFigure figure) =>
+            BookPictures.Of(figure, FigureAnimation.Parse(figure.AnimationJson), book, out FigureStyle used).Sum(i => i.Width);
+        double plain = Width(Figure(Script, crop: false));
+        Assert.Equal(10 * FigureStyle.Millimetres(5), plain, 3);
+        // the script's scale and width (of the view)
+        Assert.Equal(10 * FigureStyle.Millimetres(8), Width(Figure("print scale 8mm\n" + Script, crop: false)), 3);
+        Assert.Equal(FigureStyle.Millimetres(120), Width(Figure("print width 12cm\n" + Script, crop: false)), 1);
+        // the figure's: before the script's; its width is the width after cutting
+        Assert.Equal(10 * FigureStyle.Millimetres(3), Width(Figure("print scale 8mm\n" + Script, scale: "3mm", crop: false)), 3);
+        Assert.Equal(FigureStyle.Millimetres(70), Width(Figure(Script, width: "7cm")), 1);
+    }
+
+    [Fact]
+    public void SmallFiguresWarnThatTheirTextsAreLarger()
+    {
+        var book = new FigureStyle(FigureStyle.Millimetres(5), 9.0 / 34);
+        PageFigure figure = Figure(Script, crop: false);
+        var animation = FigureAnimation.Parse(figure.AnimationJson);
+        BookPictures.Of(figure, animation, book, out FigureStyle used);
+        // 10 units of 5 mm: 5 cm instead of the player's 12 cm
+        Assert.Contains("2.4 times as large", BookPictures.TextWarning(figure, animation, used));
+        BookPictures.Of(Figure(Script, width: "12cm", crop: false), animation, book, out used);
+        Assert.Null(BookPictures.TextWarning(figure, animation, used));
     }
 }
