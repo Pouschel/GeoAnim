@@ -477,8 +477,9 @@ internal static partial class Program
             }
         }
 
-        // the pages by their chapters (folders), as nested lists: (chapter or null, page or null, children)
-        private sealed record TocEntry(string Label, string? File, List<TocEntry> Children);
+        // the pages by their chapters (folders), as nested lists: a chapter (its folder's path; its introduction's file, if it
+        // has one) or a page, with its children
+        private sealed record TocEntry(string Label, string? File, List<TocEntry> Children, string? Folder = null);
 
         private List<TocEntry> Contents(List<EpubPage> book)
         {
@@ -489,17 +490,23 @@ internal static partial class Program
             {
                 List<TocEntry> level = top;
                 string[] folders = page.Source.Split('/')[..^1];
+                bool introduction = IsIntroduction(page.Source);
                 for (int i = 0; i < folders.Length; i++)
                 {
                     string path = string.Join("/", folders[..(i + 1)]);
-                    string label = (numbers.TryGetValue(path, out string? number) ? number + " " : "") + DisplayName(folders[i]);
-                    if (level.Count == 0 || level[^1].File != null || level[^1].Label != label)
+                    if (level.Count == 0 || level[^1].Folder != path)
                     {
-                        level.Add(new TocEntry(label, null, []));
+                        // a chapter with an introduction: its title, leading to it
+                        bool introduced = introduction && i == folders.Length - 1;
+                        string label = (numbers.TryGetValue(path, out string? number) ? number + " " : "") + (introduced ? page.Title : DisplayName(folders[i]));
+                        level.Add(new TocEntry(label, introduced ? page.File : null, [], path));
                     }
                     level = level[^1].Children;
                 }
-                level.Add(new TocEntry((page.Number != null ? page.Number + " " : "") + page.Title, page.File, []));
+                if (!introduction)
+                {
+                    level.Add(new TocEntry((page.Number != null ? page.Number + " " : "") + page.Title, page.File, []));
+                }
             }
             return top;
         }

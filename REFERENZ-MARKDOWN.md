@@ -182,6 +182,7 @@ Durch zwei verschiedene Punkte verläuft **genau eine Gerade**.
 | Aussage | `::: axiom {#ax-gerade} …` | Axiom 2, Satz 2.14 |
 | Formel | `$$…$$ {#gl-pythagoras}` | (2.3) – „nach §gl-pythagoras“, „aus Ungleichung §gl-dreieck“ |
 | Seite | `# Abstandsaxiome {#abstandsaxiome}` (die `#`-Überschrift, der Seitentitel) | Abschnitt 2.1 |
+| Kapitel | `# Geraden und ihre Ordnung {#kap-geraden}` in der Kapiteleinführung (`00_….geo.md`) | Kapitel 2 |
 | Abschnitt in einer Seite | `## Die Gerade {#abschnitt-gerade}` | „Die Gerade“ (`##`, `###` … haben keine Nummern) |
 
 **Verweis** – `§name` irgendwo im Text: `Nach §ax-gerade ist die Gerade in §abb-gerade eindeutig.` → „Nach Axiom 2 ist
@@ -190,6 +191,7 @@ die Gerade in Abb. 3 eindeutig.“ (im Web und im E-Book ein Link).
 | Schreibweise | Bedeutung |
 |---|---|
 | `§name` | Verweis: zeigt, was die Marke ist („Abb. 3“) |
+| `§*name` | mit Titel in Klammern: „Abschnitt 2.4 (Das Axiom von Pasch)“, „Axiom 8 (Axiom von Pasch)“ – bei Seiten, Kapiteln und Aussagen mit Titel; ohne Titel (Abbildung, Formel, Aussage ohne Titel) wie `§name` |
 | `§§name` | ebenso, im gedruckten Buch zusätzlich mit Seitenzahl („Abb. 3 auf S. 14“; noch nicht umgesetzt) |
 | `[eigener Text](#name)` | gewöhnlicher Link mit eigenem Text |
 | `\§name`, `§ 5` | das Paragraphenzeichen selbst |
@@ -215,6 +217,13 @@ erste Ordner ist. Seiten und Unterordner eines Kapitels werden gemeinsam in ihre
 (etwa ein Vorwort) haben keine Nummer. Die `#`-Überschrift einer Seite bekommt ihre Nummer davor („1.2 Abstandsaxiome“),
 das Inhaltsverzeichnis des E-Books die Nummern der Kapitel und Seiten. `##`-Überschriften und tiefere bleiben ohne
 Nummer.
+
+**Kapiteleinführung:** Eine Seite mit der Nummer 0 in einem Kapitelordner (`20_Geraden/00_Einleitung.geo.md`) führt ins
+Kapitel ein. Ihre `#`-Überschrift ist die des Kapitels, mit dessen Nummer („2 Geraden und ihre Ordnung“; ohne
+Einführung steht dort der Ordnername), ihr Text steht vor dem ersten Abschnitt, und sie hat keine eigene Nummer – die
+Seite danach bleibt 2.1. Eine Marke an ihrer Überschrift ergibt „Kapitel 2“. Ihre Aussagen und Abbildungen zählen im
+Kapitel vor denen von 2.1. Im Inhaltsverzeichnis (PDF, E-Book, HTML) steht das Kapitel mit ihrem Titel und führt zu ihr;
+im PDF beginnt das Kapitel mit ihr auf einer rechten Seite. Das gilt ebenso für einen Unterordner („2.3“, Verweis „Abschnitt 2.3“).
 
 **Zähler:** Jede nummerierte Art zählt entweder mit einem eigenen Zähler oder mit dem gemeinsamen. Ein Zähler gilt im
 ganzen Buch, in jedem Kapitel oder auf jeder Seite; im Kapitel steht die Kapitelnummer davor (Satz 2.14), auf der Seite

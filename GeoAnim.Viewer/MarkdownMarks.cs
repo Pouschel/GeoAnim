@@ -23,6 +23,9 @@ public sealed record PageMark(string Name, string Kind, string Label, string Tex
 
     /// <summary>Its place in its counter on the page (from 1).</summary>
     public int Index { get; init; }
+
+    /// <summary>Its title (Markdown), which "§*name" shows after the label: a heading's text, a statement's title; else null.</summary>
+    public string? Title { get; init; }
 }
 
 /// <summary>The marks of a page and how many of each counter it has (for the numbers of the pages after it).</summary>
@@ -61,6 +64,7 @@ public sealed partial class MarkdownPage
 
     private const string FigureName = "Abb.";
     private const string SectionName = "Abschnitt";
+    private const string ChapterName = "Kapitel";
 
     private const string HeadingCounter = "heading";
 
@@ -78,9 +82,12 @@ public sealed partial class MarkdownPage
     // what a number shows: "Satz 2.3", a formula's "(2.3)"
     private static string LabelOf(string kind, string number) => kind == "equation" ? "(" + number + ")" : NameOf(kind) + " " + number;
 
-    // what a reference to a heading shows: the page's section ("Abschnitt 2.1"), else its text in quotes
+    // what a reference to a heading shows: the page's section ("Abschnitt 2.1"; the introduction of a chapter: "Kapitel 2"),
+    // else its text in quotes
     private static string HeadingLabel(PageNumbering numbering, string text) =>
-        numbering.Section != null && numbering.Book.Headings ? SectionName + " " + numbering.Section : "„" + HtmlExporter.PlainText(text) + "“";
+        numbering.Section != null && numbering.Book.Headings
+            ? (numbering.Section.Contains('.') ? SectionName : ChapterName) + " " + numbering.Section
+            : "„" + HtmlExporter.PlainText(text) + "“";
 
     // a statement as read: its kind, title (Markdown) and what references show
     private sealed record Statement(string Kind, string? Title, string Label);
@@ -114,7 +121,7 @@ public sealed partial class MarkdownPage
                         // the page's heading (the first "#"): its section in front; the others ("##" …) have no numbers
                         bool first = heading.Level == 1 && !pageHeading;
                         pageHeading |= heading.Level == 1;
-                        string headingText = HeadingText(text, heading);
+                        string headingText = Attributes().Replace(HeadingText(text, heading), "").Trim();
                         if (first && numbering.Section != null && book.Headings && heading.Inline != null)
                         {
                             var number = new HtmlInline("<span class=\"section-number\">" + numbering.Section + "</span> ");
@@ -129,9 +136,9 @@ public sealed partial class MarkdownPage
                         }
                         if (heading.TryGetAttributes()?.Id is { } id)
                         {
-                            marks.Add(first
+                            marks.Add((first
                                 ? Mark(id, "section", HeadingLabel(numbering, headingText), headingText, heading) with { Counter = HeadingCounter }
-                                : Mark(id, "section", HeadingLabel(PageNumbering.None, headingText), headingText, heading));
+                                : Mark(id, "section", HeadingLabel(PageNumbering.None, headingText), headingText, heading)) with { Title = first ? headingText : null });
                         }
                         break;
                     }
@@ -185,7 +192,7 @@ public sealed partial class MarkdownPage
                             }
                             else
                             {
-                                PageMark mark = Mark(id, statement.Kind, label, statement.Title ?? StartOf(text, container), container);
+                                PageMark mark = Mark(id, statement.Kind, label, statement.Title ?? StartOf(text, container), container) with { Title = statement.Title };
                                 marks.Add(numbered ? mark with { Counter = book.CounterOf(statement.Kind), Index = index } : mark);
                             }
                         }
@@ -307,14 +314,33 @@ public sealed partial class MarkdownPage
 
     // ------------------------------------------------------------------ references
 
-    // "§name" (what the mark is: "Abb. 3"), "§§name" (in print also its page); "\§" is the sign itself, "§ 5" too
-    [GeneratedRegex(@"(\\?)(§§?)([\p{L}\p{N}_](?:[\p{L}\p{N}_-]*[\p{L}\p{N}_])?)")]
+    // "§name" (what the mark is: "Abb. 3"), "§*name" (with its title: "Abschnitt 2.4 (Das Axiom von Pasch)"), "§§name" (in
+    // print also its page); "\§" is the sign itself, "§ 5" too
+    [GeneratedRegex(@"(\\?)(§§?\*?)([\p{L}\p{N}_](?:[\p{L}\p{N}_-]*[\p{L}\p{N}_])?)")]
     private static partial Regex ReferencePattern();
 
     private static void ResolveReferences(MarkdownDocument document, Func<int, (int, int)> locate, List<PageMark> marks,
         string? page, IReadOnlyDictionary<string, BookMark>? bookMarks, List<MarkdownProblem> errors)
     {
         var own = marks.GroupBy(m => m.Name).ToDictionary(g => g.Key, g => g.First());
+        // "§*name": Markdig leaves the "*" (no emphasis) as a text of its own; one text again
+        foreach (LiteralInline literal in document.Descendants<LiteralInline>().ToList())
+        {
+            while (literal.Parent != null && literal.Content.ToString().EndsWith('§')
+                && literal.NextSibling is LiteralInline next && next.Span.Start == literal.Span.End + 1 && next.Content.ToString().StartsWith('*'))
+            {
+                string joined = literal.Content.ToString() + next.Content.ToString();
+                // the text after the "*" may be a text of its own too
+                if (next.NextSibling is LiteralInline after && after.Span.Start == next.Span.End + 1)
+                {
+                    joined += after.Content.ToString();
+                    after.Remove();
+                }
+                literal.Content = new Markdig.Helpers.StringSlice(joined);
+                literal.Span = new SourceSpan(literal.Span.Start, literal.Span.Start + joined.Length - 1);
+                next.Remove();
+            }
+        }
         foreach (LiteralInline literal in document.Descendants<LiteralInline>().ToList())
         {
             string content = literal.Content.ToString();
@@ -338,15 +364,18 @@ public sealed partial class MarkdownPage
                     continue;
                 }
                 string name = match.Groups[3].Value;
-                var reference = new MarkReferenceInline(name, match.Groups[2].Length == 2);
+                var reference = new MarkReferenceInline(name, match.Groups[2].Value.StartsWith("§§", StringComparison.Ordinal));
+                bool withTitle = match.Groups[2].Value.EndsWith('*');
                 if (own.TryGetValue(name, out PageMark? mark))
                 {
                     reference.Label = mark.Label;
+                    reference.Title = withTitle ? mark.Title : null;
                     reference.Href = "#" + name;
                 }
                 else if (bookMarks != null && bookMarks.TryGetValue(name, out BookMark? other))
                 {
                     reference.Label = other.Mark.Label;
+                    reference.Title = withTitle ? other.Mark.Title : null;
                     reference.Href = (page == null ? other.File : Path.GetRelativePath(Path.GetDirectoryName(page)!, other.File)).Replace('\\', '/') + "#" + name;
                 }
                 else
@@ -373,6 +402,9 @@ public sealed partial class MarkdownPage
 
         public string? Label { get; set; }
 
+        // "§*name": the mark's title (Markdown), shown in brackets after the label
+        public string? Title { get; set; }
+
         public string? Href { get; set; }
     }
 
@@ -385,7 +417,12 @@ public sealed partial class MarkdownPage
                 renderer.Write("<span class=\"ref-missing\" title=\"").WriteEscape(reference.Name).Write("\">??</span>");
                 return;
             }
-            renderer.Write("<a class=\"ref\" href=\"").WriteEscapeUrl(reference.Href).Write("\">").WriteEscape(reference.Label).Write("</a>");
+            renderer.Write("<a class=\"ref\" href=\"").WriteEscapeUrl(reference.Href).Write("\">").WriteEscape(reference.Label);
+            if (reference.Title != null)
+            {
+                renderer.Write(" (").Write(InlineHtml(reference.Title)).Write(")");
+            }
+            renderer.Write("</a>");
         }
     }
 

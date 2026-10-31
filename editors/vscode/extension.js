@@ -1147,14 +1147,14 @@ async function revealInPage (message) {
 
 // "§name" at the position (not "\§name"): the mark's name and the range of the reference
 function markReferenceAt (document, position) {
-  const range = document.getWordRangeAtPosition(position, /§§?[\p{L}\p{N}_](?:[\p{L}\p{N}_-]*[\p{L}\p{N}_])?/u)
+  const range = document.getWordRangeAtPosition(position, /§§?\*?[\p{L}\p{N}_](?:[\p{L}\p{N}_-]*[\p{L}\p{N}_])?/u)
   if (!range) {
     return null
   }
   if (range.start.character > 0 && document.lineAt(range.start.line).text[range.start.character - 1] === '\\') {
     return null
   }
-  return { name: document.getText(range).replace(/^§§?/, ''), range }
+  return { name: document.getText(range).replace(/^§§?\*?/, ''), range }
 }
 
 // the marks of the book, from the last answer for the page: [{ name, kind, label, text, file, line }]
@@ -1203,7 +1203,7 @@ const ownScript = document => document.uri.scheme === 'file' && /\.geo\.md$/i.te
 // completion: after "§" the marks of the book; in "![](#" or "![](datei.geo#" (also after "..") the steps of the script
 async function providePageCompletions (document, position) {
   const before = document.lineAt(position.line).text.slice(0, position.character)
-  const reference = /(\\?)§§?([\p{L}\p{N}_-]*)$/u.exec(before)
+  const reference = /(\\?)§§?\*?([\p{L}\p{N}_-]*)$/u.exec(before)
   if (reference && !reference[1]) {
     const range = new vscode.Range(position.translate(0, -reference[2].length), position)
     return marksOf(document).map(mark => {

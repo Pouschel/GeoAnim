@@ -190,8 +190,17 @@ internal static partial class Program
             }
             var context = new PageContext(entry, book, page, footnotes, progress);
             var markup = new StringBuilder();
-            markup.Append("#metadata(none) <").Append(LabelOf(entry)).Append(">\n\n");
-            if (body.QuerySelector("h1") == null)
+            // the introduction of a chapter: its heading is the chapter's (on a new page: the page's label after it)
+            bool introduction = IsIntroduction(entry.Source);
+            if (!introduction)
+            {
+                markup.Append("#metadata(none) <").Append(LabelOf(entry)).Append(">\n\n");
+            }
+            if (body.QuerySelector("h1") == null && introduction)
+            {
+                markup.Append(Chapter(entry, page.SectionNumber, Escape(title), "")).Append("\n\n");
+            }
+            else if (body.QuerySelector("h1") == null)
             {
                 markup.Append("#heading(level: ").Append(PageLevel(entry)).Append(")[")
                     .Append(page.SectionNumber != null ? "#section-number[" + Escape(page.SectionNumber) + "]" : "").Append(Escape(title)).Append("]\n\n");
@@ -201,6 +210,16 @@ internal static partial class Program
             string result = Regex.Replace(markup.ToString(), @"#linebreak\(\)\s*(#display-formula)", "$1");
             result = Regex.Replace(result, @"(#display-formula\[(?:[^\[\]]|\[[^\[\]]*\])*\])\s*#linebreak\(\)", "$1");
             return Regex.Replace(result, @"\n{3,}", "\n\n").TrimEnd() + "\n";
+        }
+
+        // the heading of a chapter from its introduction, with the labels of the page and of the heading's mark after it (the
+        // chapter starts on a new page)
+        private static string Chapter(TypstPage page, string? number, string title, string label)
+        {
+            int level = page.Source.Count(c => c == '/');
+            return "#chapter(" + (number is { Length: > 0 } ? String(number) : "none") + ", [" + title + "]"
+                + (level > 1 ? ", level: " + level.ToString(CultureInfo.InvariantCulture) : "") + ")\n"
+                + "#metadata(none) <" + LabelOf(page) + ">" + (label.Length > 0 ? "\n#metadata(none)" + label : "");
         }
 
         private sealed record PageContext(TypstPage Page, List<TypstPage> Book, MarkdownPage Markdown, Dictionary<string, IElement> Footnotes, Progress Progress)
@@ -260,6 +279,12 @@ internal static partial class Program
                         // the page's heading below its chapters, the others below it; only the page's in the contents
                         bool pageHeading = level == 1 && !context.PageHeadingDone;
                         context.PageHeadingDone |= pageHeading;
+                        if (pageHeading && IsIntroduction(context.Page.Source))
+                        {
+                            IElement? number = element.QuerySelector(".section-number");
+                            number?.Remove();
+                            return Chapter(context.Page, number?.TextContent.Trim(), Inlines(element.ChildNodes, context).Trim(), label);
+                        }
                         int typstLevel = PageLevel(context.Page) + level - 1;
                         return $"#heading(level: {typstLevel}{(pageHeading ? "" : ", outlined: false")})[{Inlines(element.ChildNodes, context).Trim()}]{label}";
                     }
@@ -576,7 +601,9 @@ internal static partial class Program
                 {
                     same++;
                 }
-                for (int i = same; i < folders.Length; i++)
+                // a chapter with an introduction: the introduction makes its heading
+                int last = IsIntroduction(page.Source) ? folders.Length - 1 : folders.Length;
+                for (int i = same; i < last; i++)
                 {
                     string path = string.Join("/", folders[..(i + 1)]);
                     string number = numbers.TryGetValue(path, out string? n) ? String(n) : "none";

@@ -323,6 +323,38 @@ public sealed class TypstTests : IDisposable
         Assert.Equal(0, Program.Typst([folder, "-o", output]));
         Assert.Equal("// mein Stil\n", File.ReadAllText(Path.Combine(output, "style.typ")));
     }
+
+    [Fact]
+    public void TheIntroductionOfAChapterMakesItsHeading()
+    {
+        Write("index.yaml", "title: Buch\n");
+        Write("10_Kapitel/00_Einleitung.geo.md", "# Geraden und Ebenen {#kap}\n\nWorum es geht.\n");
+        Write("10_Kapitel/10_Erste.geo.md", "# Erste Seite\n\nSiehe §*kap.\n");
+        string output = Path.Combine(folder, "out");
+        Assert.Equal(0, Program.Typst([folder, "-o", output]));
+
+        string main = File.ReadAllText(Path.Combine(output, "book.typ"));
+        Assert.DoesNotContain("#chapter(", main);
+        string introduction = File.ReadAllText(Path.Combine(output, "pages", "p01-Einleitung.typ"));
+        Assert.Contains("#chapter(\"1\", [Geraden und Ebenen])\n#metadata(none) <p1>\n#metadata(none) <p1-kap>", introduction);
+        string first = File.ReadAllText(Path.Combine(output, "pages", "p02-Erste.typ"));
+        Assert.Contains("#heading(level: 2)[#section-number[1.1] Erste Seite]", first);
+        Assert.Contains("#link(<p1-kap>)[Kapitel 1 (Geraden und Ebenen)]", first);
+
+        // the contents of the e-book and of the HTML file: the chapter with its title, leading to the introduction
+        Assert.Equal(0, Program.Epub([folder, "-o", Path.Combine(folder, "buch.epub")]));
+        using (System.IO.Compression.ZipArchive zip = System.IO.Compression.ZipFile.OpenRead(Path.Combine(folder, "buch.epub")))
+        {
+            using var reader = new StreamReader(zip.GetEntry("OEBPS/nav.xhtml")!.Open());
+            string nav = reader.ReadToEnd();
+            Assert.Contains("<a href=\"text/p01-Einleitung.xhtml\">1 Geraden und Ebenen</a>", nav);
+            Assert.DoesNotContain(">Kapitel<", nav);
+            Assert.Contains(">1.1 Erste Seite<", nav);
+        }
+        Assert.Equal(0, Program.HtmlBook([folder, "-o", Path.Combine(folder, "buch.html")]));
+        string html = File.ReadAllText(Path.Combine(folder, "buch.html"));
+        Assert.Contains("<li class=\"contents-chapter\"><a href=\"#p1\">1 Geraden und Ebenen</a><ol>\n<li><a href=\"#p2\">1.1 Erste Seite</a></li>", html);
+    }
 }
 
 public sealed class FigureSizeTests

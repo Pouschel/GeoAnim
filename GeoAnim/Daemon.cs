@@ -503,8 +503,8 @@ internal static class Daemon
     /// <summary>
     /// The numbers of the chapters and pages of a book from its pages (relative paths with "/", in book order): a folder in
     /// the book's folder is a chapter ("2"), the pages and folders in it are numbered together in their order ("2.1",
-    /// "2.2", a folder "2.3" with its pages "2.3.1" …). Pages in the book's folder itself (a preface) have none. Folders
-    /// without pages do not count. Keys: the pages' paths and the folders' paths (without "/" at the end).
+    /// "2.2", a folder "2.3" with its pages "2.3.1" …); the introduction of a folder ("00_Einleitung.geo.md") has the folder's
+    /// number. Pages in the book's folder itself (a preface) have none. Folders without pages do not count. Keys: the pages' paths and the folders' paths (without "/" at the end).
     /// </summary>
     internal static Dictionary<string, string> BookNumbers(IEnumerable<string> pages)
     {
@@ -519,9 +519,16 @@ internal static class Daemon
             }
             string parent = "";
             string prefix = "";
+            bool introduction = Program.IsIntroduction(pagePath);
             for (int i = 0; i < parts.Length; i++)
             {
                 string path = i == 0 ? parts[0] : parent + "/" + parts[i];
+                // the introduction of a chapter: the chapter's number
+                if (introduction && i == parts.Length - 1)
+                {
+                    numbers[path] = prefix.TrimEnd('.');
+                    break;
+                }
                 if (!numbers.TryGetValue(path, out string? number))
                 {
                     int index = next[parent] = next.GetValueOrDefault(parent) + 1;

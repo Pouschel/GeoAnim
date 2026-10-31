@@ -496,6 +496,39 @@ public sealed class MarkdownTests : IDisposable
     }
 
     [Fact]
+    public void AChapterHasAnIntroductionAndReferencesShowTitles()
+    {
+        File.WriteAllText(Path.Combine(folder, "index.yaml"), "title: Buch\n");
+        Directory.CreateDirectory(Path.Combine(folder, "10_Eins"));
+        Directory.CreateDirectory(Path.Combine(folder, "20_Zwei"));
+        File.WriteAllText(Path.Combine(folder, "10_Eins", "10_A.geo.md"), "# Erste {#erste}\n\nText.\n");
+        File.WriteAllText(Path.Combine(folder, "20_Zwei", "00_Einleitung.geo.md"),
+            "# Geraden und ihre Ordnung {#kap-geraden}\n\n::: axiom Axiom von Pasch {#ax-pasch}\nx\n:::\n\n::: def {#def-x}\nx\n:::\n");
+        File.WriteAllText(Path.Combine(folder, "20_Zwei", "10_B.geo.md"),
+            "# Zweite\n\n::: theorem {#satz-b}\nx\n:::\n\nIn §*erste, §kap-geraden, §*kap-geraden, nach dem *wichtigen* §*ax-pasch, §*def-x und §*satz-b.\n");
+
+        Dictionary<string, string> numbers = Daemon.BookNumbers(["10_Eins/10_A.geo.md", "20_Zwei/00_Einleitung.geo.md", "20_Zwei/10_B.geo.md"]);
+        // the introduction has the chapter's number, the first page after it is the chapter's first section
+        Assert.Equal("2", numbers["20_Zwei/00_Einleitung.geo.md"]);
+        Assert.Equal("2.1", numbers["20_Zwei/10_B.geo.md"]);
+
+        MarkdownPage introduction = PageOfBook("20_Zwei/00_Einleitung.geo.md");
+        Assert.Contains("<span class=\"section-number\">2</span> Geraden und ihre Ordnung", introduction.Html);
+        Assert.Equal(["Kapitel 2", "Axiom 1", "Definition 2.1"], introduction.Marks.Select(m => m.Label));
+
+        MarkdownPage second = PageOfBook("20_Zwei/10_B.geo.md");
+        // its statements count after the introduction's
+        Assert.Equal(["Satz 2.2"], second.Marks.Select(m => m.Label));
+        Assert.Contains(">Abschnitt 1.1 (Erste)</a>", second.Html);
+        Assert.Contains(">Kapitel 2</a>, <a", second.Html);
+        Assert.Contains(">Kapitel 2 (Geraden und ihre Ordnung)</a>", second.Html);
+        Assert.Contains(">Axiom 1 (Axiom von Pasch)</a>", second.Html);
+        // without a title: the label alone
+        Assert.Contains(">Definition 2.1</a> und <a class=\"ref\" href=\"#satz-b\">Satz 2.2</a>.", second.Html);
+        Assert.Empty(second.Errors);
+    }
+
+    [Fact]
     public void UnknownNumberingIsAWarning()
     {
         File.WriteAllText(Path.Combine(folder, "index.yaml"), "numbering:\n  axiom: eigen\n  within: kapitel\n  bild: own\n  figure: own page\n");

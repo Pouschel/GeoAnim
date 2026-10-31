@@ -303,14 +303,20 @@ internal static partial class Program
                 {
                     html.Append("</ol></li>\n");
                 }
+                bool introduction = IsIntroduction(page.Source);
                 for (int i = same; i < folders.Length; i++)
                 {
+                    // a chapter with an introduction: its title
                     string path = string.Join("/", folders[..(i + 1)]);
-                    string label = (numbers.TryGetValue(path, out string? number) ? number + " " : "") + DisplayName(folders[i]);
+                    string label = (numbers.TryGetValue(path, out string? number) ? number + " " : "")
+                        + (introduction && i == folders.Length - 1 ? page.Title : DisplayName(folders[i]));
                     html.Append("<li class=\"contents-chapter\"><a href=\"#").Append(page.Id).Append("\">").Append(X(label)).Append("</a><ol>\n");
                 }
                 open = folders;
-                html.Append("<li><a href=\"#").Append(page.Id).Append("\">").Append(X((page.Number != null ? page.Number + " " : "") + page.Title)).Append("</a></li>\n");
+                if (!introduction)
+                {
+                    html.Append("<li><a href=\"#").Append(page.Id).Append("\">").Append(X((page.Number != null ? page.Number + " " : "") + page.Title)).Append("</a></li>\n");
+                }
             }
             for (int i = open.Length; i > 0; i--)
             {

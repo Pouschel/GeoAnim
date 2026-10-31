@@ -443,6 +443,14 @@ internal static partial class Program
     [System.Text.RegularExpressions.GeneratedRegex(@"^\d+_(?=.)")]
     private static partial System.Text.RegularExpressions.Regex SortNumber();
 
+    /// <summary>
+    /// A page that introduces the chapter (or part of a chapter) in its folder: the number 0 ("00_Einleitung.geo.md"), not in
+    /// the book's folder. Its heading is the chapter's (with the chapter's number), its text stands before the chapter's
+    /// first page; it has no number of its own.
+    /// </summary>
+    internal static bool IsIntroduction(string relative) =>
+        relative.Contains('/') && System.Text.RegularExpressions.Regex.IsMatch(relative[(relative.LastIndexOf('/') + 1)..], @"^0+_.*\.geo\.md$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
     // a link of a page to another one by its script's name ("../10_Grundlagen/20_Strecken.html#2") → by its page's name;
     // null: not a link to a page of the book (a site, a file, a page written with its new name)
     private static string? PageAddress(string source, string page, string href, Dictionary<string, string> pageOfSource)
