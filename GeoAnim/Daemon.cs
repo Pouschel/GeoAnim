@@ -293,7 +293,8 @@ internal static class Daemon
     // the pictures of figures as in print, made once for each figure and size
     private static readonly Dictionary<string, (List<(FigureImage Image, string? Caption)> Pictures, string? Warning)> PrintCache = new(StringComparer.Ordinal);
 
-    // the pictures of a figure as in print; in a row of stills each with its step's number and description (HTML)
+    // the pictures of a figure as in print; in a row of stills each with its step's description (HTML; no number: in the
+    // script the steps may be 3, 4, 5)
     private static (List<(FigureImage Image, string? Caption)> Pictures, string? Warning) PrintPictures(PageFigure figure, FigureStyle style)
     {
         string key = figure.Key + "|" + style.PointsPerUnit.ToString("R", System.Globalization.CultureInfo.InvariantCulture)
@@ -311,8 +312,7 @@ internal static class Daemon
         List<int> steps = BookPictures.Steps(figure, animation);
         bool row = images.Count > 1;
         var pictures = images.Select((image, i) => (image, row && steps[i] >= 0 && steps[i] < animation.Steps.Count
-            ? "<span class=\"step-number\">" + (steps[i] + 1).ToString(System.Globalization.CultureInfo.InvariantCulture) + "</span> "
-                + MarkdownPage.InlineHtml(animation.Steps[steps[i]].Caption.Split('\n')[0])
+            ? MarkdownPage.InlineHtml(animation.Steps[steps[i]].Caption.Split('\n')[0])
             : null)).ToList();
         var result = (pictures, BookPictures.TextWarning(figure, animation, used));
         PrintCache[key] = result;

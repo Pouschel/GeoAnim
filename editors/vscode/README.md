@@ -82,7 +82,7 @@ Datei-Symbol-Design (etwa Seti, die Voreinstellung) für die Sprache kein eigene
   Strg+K V oder „GeoAnim: Vorschau öffnen“. Sie zeigt die Seite, wie GeoAnim sie setzt (Schrift, Formeln als SVG, Abbildungen). Oben rechts
   schaltet „Buch“/„Web“ um, wie die Abbildungen erscheinen: wie im Druck (Voreinstellung) oder wie im Web (Player). **Im
   Druck** zeigt die Vorschau die Bilder, die GeoAnim für das Buch macht (dieselben wie `geoanim typst` und `geoanim epub`):
-  `#2` ein Standbild, `#3..4` die Standbilder der Schritte nebeneinander mit Nummer und Schrittbeschreibung, eine ganze
+  `#2` ein Standbild, `#3..4` die Standbilder der Schritte nebeneinander, jedes mit seiner Schrittbeschreibung (ohne Nummer), eine ganze
   Animation ihr letztes Bild; jede Abbildung auf ihren Inhalt zugeschnitten (außer mit `{crop=no}`) und abgeschnitten am
   `view` des Skripts. Ihre Größe steht im selben Verhältnis zum Text wie im Buch: Der Text der Vorschau gilt als Text der
   Größe `print: text` (11 pt), die Abbildung hat den Maßstab `print: scale` und die Beschriftungen `print: labels` aus der

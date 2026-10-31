@@ -248,7 +248,7 @@
   }
 
   // the book: the pictures as GeoAnim makes them for print, in proportion to the text as in print (the text of the
-  // preview stands for the book's text of "print: text"); a row of stills with their steps' numbers and descriptions;
+  // preview stands for the book's text of "print: text"); a row of stills with their steps' descriptions;
   // narrower if the column is too narrow
   function printPictures (item, data) {
     const pixelsPerPoint = parseFloat(getComputedStyle(page).fontSize) / (data.textSize || 11)

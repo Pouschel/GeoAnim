@@ -199,10 +199,6 @@ svg.formula {
   line-height: 1.3;
 }
 
-.geo-print-caption .step-number {
-  font-weight: 700;
-}
-
 /* the switch between book and web */
 #mode {
   position: fixed;
