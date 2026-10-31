@@ -238,6 +238,34 @@ public sealed class EpubTests : IDisposable
     }
 
     [Fact]
+    public void TheBookBecomesOneHtmlFileWithItsPagesAndLinksInside()
+    {
+        Write("index.yaml", "title: Buch\nauthor: Thomas\n");
+        Write("10_Kapitel/10_Erste.geo", "view x -5 .. 5 y -5 .. 5\nstep Eins #eins\npoint A = 0 0\nstep Zwei\npoint B = 2 2");
+        Write("10_Kapitel/10_Erste.geo.md", "# Erste Seite\n\nDer **Punkt**{kw} $A$.\n\n![Ein Punkt](#eins)\n\n![](#1..2)\n\n::: axiom {#ax} Eins\nText.\n:::\n");
+        Write("10_Kapitel/20_Zweite.geo.md", "# Zweite Seite\n\nNach §ax gilt es für jeden Punkt.\n");
+        string output = Path.Combine(folder, "buch.html");
+        Assert.Equal(0, Program.HtmlBook([folder, "-o", output]));
+        string html = File.ReadAllText(output);
+        // the pages one after another, their ids unique in the file
+        Assert.Contains("<section class=\"book-page\" id=\"p1\">", html);
+        Assert.Contains("<section class=\"book-page\" id=\"p2\">", html);
+        Assert.Contains("id=\"p1-ax\"", html);
+        // references and keywords lead to their place in the file
+        Assert.Contains("href=\"#p1-ax\"", html);
+        Assert.Matches("<a href=\"#p1-[^\"]+\"[^>]*>Punkt</a>", html);
+        // the still and the row of two stills with their steps' descriptions; formulas as SVG
+        Assert.Equal(3, System.Text.RegularExpressions.Regex.Matches(html, "data:image/svg\\+xml;base64").Count);
+        Assert.Contains("<div class=\"geo-print-caption\">Eins</div>", html);
+        Assert.Contains("<div class=\"geo-print-caption\">Zwei</div>", html);
+        Assert.Contains("<svg", html);
+        Assert.DoesNotContain("data-figure", html);
+        // the contents with the chapter
+        Assert.Contains("<li class=\"contents-chapter\"><a href=\"#p1\">1 Kapitel</a>", html);
+        Assert.Contains("<p class=\"book-author\">Thomas</p>", html);
+    }
+
+    [Fact]
     public void AFolderWithoutIndexYamlIsNoBook()
     {
         Write("a.geo.md", "# A");

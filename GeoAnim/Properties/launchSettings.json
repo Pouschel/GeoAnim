@@ -12,7 +12,7 @@
     },
     "export dir": {
       "commandName": "Project",
-      "commandLineArgs": "exportdir C:/Code/GeoBook/src -o C:/Code/GeoBook/html -assets -serve -sheet",
+      "commandLineArgs": "exportdir C:/Code/GeoBook/src-new -o C:/Code/GeoBook/html -assets -serve",
       "workingDirectory": "$(ProjectDir).."
     },
     "export ebook": {
@@ -23,6 +23,11 @@
     "export book": {
       "commandName": "Project",
       "commandLineArgs": "typst C:/Code/GeoBook/src-new -o C:/Code/GeoBook/eb-geo-typst -pdf",
+      "workingDirectory": "$(ProjectDir).."
+    },
+    "export htmlbook": {
+      "commandName": "Project",
+      "commandLineArgs": "html C:/Code/GeoBook/src-new -o C:/Code/GeoBook/eb-geo.html",
       "workingDirectory": "$(ProjectDir).."
     }
   }

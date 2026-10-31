@@ -13,6 +13,7 @@ namespace GeoAnim.Cli;
 /// geoanim formula "abs(A-B)" [-o file.png]: a formula as a picture (PNG on white, or SVG).<br/>
 /// geoanim epub &lt;dir&gt; [-o book.epub]: the pages of a book as an e-book (EPUB 3).<br/>
 /// geoanim typst &lt;dir&gt; [-o folder] [-pdf [file.pdf]]: the pages of a book as a Typst project (and PDF) for print.<br/>
+/// geoanim html &lt;dir&gt; [-o book.html]: the whole book in one HTML file to read through and search.<br/>
 /// geoanim daemon: compiles for an editor over standard input and output (see <see cref="Daemon"/>).
 /// </summary>
 internal static partial class Program
@@ -48,6 +49,10 @@ internal static partial class Program
               book.typ, pages/, figures and formulas as SVG, and style.typ with the look (the book's own style.typ
               beside index.yaml, else the standard). -pdf: then makes the PDF with Typst, in the project's folder and
               named after it (or as given, relative to that folder).
+          geoanim html <dir> [-o <book.html>]
+              Writes the whole book in dir as one HTML file to read through and search in the browser (not for a web
+              server): the pages one after another, figures as stills in their size in print, the contents at the side.
+              Default: dir.html next to the folder.
           geoanim daemon
               Compiles for an editor (the VS Code extension): JSON requests on standard input, answers on standard output.
         """;
@@ -60,7 +65,7 @@ internal static partial class Program
             Console.InputEncoding = Encoding.UTF8;
             return Daemon.Run(Console.In, Console.Out);
         }
-        if (args.Length >= 2 && args[0] is "figure" or "formula" or "epub" or "typst")
+        if (args.Length >= 2 && args[0] is "figure" or "formula" or "epub" or "typst" or "html")
         {
             try
             {
@@ -70,6 +75,7 @@ internal static partial class Program
                     "figure" => Figure(rest),
                     "formula" => Formula(rest),
                     "typst" => Typst(rest),
+                    "html" => HtmlBook(rest),
                     _ => Epub(rest),
                 };
             }

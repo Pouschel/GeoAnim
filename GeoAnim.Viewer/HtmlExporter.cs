@@ -194,6 +194,9 @@ public static partial class HtmlExporter
         return html;
     }
 
+    /// <summary>The look of a book page as in the preview (fonts inside), for a page of its own.</summary>
+    internal static string PageStyles() => InlineCss("fonts/fonts.css") + "\n" + InlineCss("page.css");
+
     private static string InlineCss(string path)
     {
         string folder = path.Contains('/') ? path.Substring(0, path.LastIndexOf('/') + 1) : string.Empty;
