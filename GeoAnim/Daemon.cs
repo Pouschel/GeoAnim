@@ -309,11 +309,8 @@ internal static class Daemon
         }
         var animation = FigureAnimation.Parse(figure.AnimationJson);
         List<FigureImage> images = BookPictures.Of(figure, animation, style, out FigureStyle used);
-        List<int> steps = BookPictures.Steps(figure, animation);
-        bool row = images.Count > 1;
-        var pictures = images.Select((image, i) => (image, row && steps[i] >= 0 && steps[i] < animation.Steps.Count
-            ? MarkdownPage.InlineHtml(animation.Steps[steps[i]].Caption.Split('\n')[0])
-            : null)).ToList();
+        List<string?> captions = BookPictures.Captions(figure, animation, images.Count);
+        var pictures = images.Select((image, i) => (image, captions[i] is { } caption ? MarkdownPage.InlineHtml(caption) : null)).ToList();
         var result = (pictures, BookPictures.TextWarning(figure, animation, used));
         PrintCache[key] = result;
         return result;

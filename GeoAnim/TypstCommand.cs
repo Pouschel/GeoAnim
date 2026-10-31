@@ -418,7 +418,7 @@ internal static partial class Program
 
         private string Em(double points) => (Math.Round(points / textSize, 3) + 0.0).ToString("0.###", CultureInfo.InvariantCulture) + "em";
 
-        // a figure: its pictures in their size in print, the caption below
+        // a figure: its pictures in their size in print (in a row of stills each with its step's description), the caption below
         private string Figure(IElement figure, PageContext context)
         {
             var pictures = new List<string>();
@@ -427,9 +427,13 @@ internal static partial class Program
             {
                 if (item.GetAttribute("data-figure") is { } key && known.TryGetValue(key, out PageFigure? shown))
                 {
-                    foreach (FigureImage image in Pictures(shown))
+                    (List<FigureImage> images, List<string?> captions) = Pictures(shown);
+                    for (int i = 0; i < images.Count; i++)
                     {
-                        pictures.Add($"image(\"../{Picture("figures", Encoding.UTF8.GetBytes(image.Svg))}\")");
+                        string image = $"image(\"../{Picture("figures", Encoding.UTF8.GetBytes(images[i].Svg))}\")";
+                        pictures.Add(captions[i] is { } description
+                            ? "geo-still(" + image + ", caption: [" + Inlines(Fragment(MarkdownPage.InlineHtml(description)), context).Trim() + "])"
+                            : image);
                     }
                 }
                 else
@@ -443,8 +447,13 @@ internal static partial class Program
             return "#geo-figure(" + string.Join(", ", pictures) + captionMarkup + ")" + label;
         }
 
-        // the pictures of a figure as in the book: a still, a row of stills (cut alike), or the last picture
-        private List<FigureImage> Pictures(PageFigure figure)
+        // the nodes of a piece of HTML
+        private static INodeList Fragment(string html) =>
+            new HtmlParser().ParseDocument("<!DOCTYPE html><html><body>" + html + "</body></html>").Body!.ChildNodes;
+
+        // the pictures of a figure as in the book: a still, a row of stills (cut alike), or the last picture; what stands under
+        // each (in a row of stills its step's description)
+        private (List<FigureImage> Images, List<string?> Captions) Pictures(PageFigure figure)
         {
             if (!animations.TryGetValue(figure.Key, out FigureAnimation? animation))
             {
@@ -455,7 +464,7 @@ internal static partial class Program
             {
                 warn?.Invoke($"{figure.Reference.Line}:{figure.Reference.Column}: {warning}");
             }
-            return images;
+            return (images, BookPictures.Captions(figure, animation, images.Count));
         }
 
         // the warnings of the figures of the page being made ("line:column: …"), and the figures warned about

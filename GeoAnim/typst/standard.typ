@@ -203,5 +203,11 @@
   }
 })
 
+// a still in a row of stills: its step's description below, as wide as the picture
+#let geo-still(picture, caption: none) = context {
+  let width = measure(picture).width
+  stack(dir: ttb, spacing: 0.5em, picture, block(width: width, align(center, text(size: 0.8em, hyphenate: true, caption))))
+}
+
 // a figure GeoAnim could not make (a faulty script): its address in a frame
 #let missing-figure(source) = box(stroke: 0.6pt + red, inset: 1em, text(fill: red, raw(source)))

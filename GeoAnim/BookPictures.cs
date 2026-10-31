@@ -69,6 +69,17 @@ internal static class BookPictures
                 ? [figure.To!.Value]
                 : Enumerable.Range(figure.From.Value, figure.To!.Value - figure.From.Value + 1).ToList();
 
+    /// <summary>
+    /// What stands under each of <paramref name="count"/> pictures: in a row of stills the first line of its step's
+    /// description (inline Markdown; no number – in the script the steps may be 3, 4, 5), under a single picture nothing.
+    /// </summary>
+    public static List<string?> Captions(PageFigure figure, FigureAnimation animation, int count)
+    {
+        List<int> steps = Steps(figure, animation);
+        return Enumerable.Range(0, count).Select(i => count > 1 && i < steps.Count && steps[i] >= 0 && steps[i] < animation.Steps.Count
+            && animation.Steps[steps[i]].Caption.Split('\n')[0].Trim() is { Length: > 0 } caption ? caption : null).ToList();
+    }
+
     private static List<double> Times(PageFigure figure, FigureAnimation animation) => Steps(figure, animation).Select(animation.EndOf).ToList();
 
     /// <summary>The size of the figures and the font size of the text of the book in <paramref name="folder"/> or above it (quietly).</summary>
