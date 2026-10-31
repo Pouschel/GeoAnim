@@ -53,6 +53,16 @@ internal sealed class Inspector
                     ghost.Animate("r", span, circle.Radius);
                 }
                 break;
+            case GeoEllipse ellipse:
+                if (defined)
+                {
+                    ghost.Animate("cx", span, ellipse.Center.X);
+                    ghost.Animate("cy", span, ellipse.Center.Y);
+                    ghost.Animate("rx", span, ellipse.A);
+                    ghost.Animate("ry", span, ellipse.B);
+                    ghost.Animate("rot", span, ellipse.Rotation);
+                }
+                break;
             case GeoArc arc:
                 if (arc.IsSector)
                 {
@@ -127,6 +137,7 @@ internal sealed class Inspector
         GeoPoint => "dot",
         GeoStraight => "line",
         GeoCircle => "arc",
+        GeoEllipse => "ellipse",
         GeoArc => "part",
         GeoText { Above: null } => "text",
         GeoPolygon => "polygon",
@@ -143,6 +154,7 @@ internal sealed class Inspector
             GeoStraight { StraightKind: StraightKind.Segment } s => $"{Position(s.A)} – {Position(s.B)}, Länge {F(s.Direction.Length)}",
             GeoStraight s => $"durch {Position(s.A)} und {Position(s.B)}",
             GeoCircle circle => $"Mittelpunkt {Position(circle.Center)}, Radius {F(circle.Radius)}",
+            GeoEllipse ellipse => $"Brennpunkte {Position(ellipse.Focus1)} und {Position(ellipse.Focus2)}, Halbachsen {F(ellipse.A)} und {F(ellipse.B)}",
             GeoAngle angle => $"Scheitel {Position(angle.Vertex)}, {F(angle.Degrees)}°",
             GeoArc arc => $"von {End(arc.Clockwise ? arc.To : arc.From)} bis {End(arc.Clockwise ? arc.From : arc.To)}{(arc.Clockwise ? " im Uhrzeigersinn" : "")}, {F(arc.Degrees)}°, " + (arc.IsSector ? $"Fläche {F(arc.Area)}" : $"Länge {F(arc.Length)}"),
             GeoPolygon polygon => "Ecken " + string.Join(", ", polygon.Vertices.Select(Position)),
@@ -152,7 +164,7 @@ internal sealed class Inspector
         };
         if (!item.IsDefined)
         {
-            values = item is GeoPoint or GeoStraight or GeoCircle or GeoArc or GeoAngle or GeoPolygon ? "existiert hier nicht (zuletzt " + values + ")" : "existiert hier nicht";
+            values = item is GeoPoint or GeoStraight or GeoCircle or GeoEllipse or GeoArc or GeoAngle or GeoPolygon ? "existiert hier nicht (zuletzt " + values + ")" : "existiert hier nicht";
         }
         var notes = new List<string>();
         if (item is not GeoNumber)

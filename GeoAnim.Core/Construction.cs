@@ -153,6 +153,10 @@ public sealed class Construction
     public GeoPoint PointOn(string name, GeoCircle circle, double angle, Options? options = null) =>
         Define(GeoPoint.OnCircle(name, circle, angle, options ?? Options.None));
 
+    /// <summary>A point on an ellipse at the parameter <paramref name="degrees"/> (0: the vertex beyond the second focus, counterclockwise).</summary>
+    public GeoPoint PointOn(string name, GeoEllipse ellipse, double degrees, Options? options = null) =>
+        Define(GeoPoint.OnEllipse(name, ellipse, degrees, options ?? Options.None));
+
     /// <summary>A point A + t·(B − A) on a segment, line or ray (t = 0 is A, t = 1 is B).</summary>
     public GeoPoint PointOn(string name, GeoStraight straight, double t, Options? options = null) =>
         Define(GeoPoint.OnStraight(name, straight, t, options ?? Options.None));
@@ -174,11 +178,11 @@ public sealed class Construction
         int max = Intersections.MaxCount(a, b);
         if (max == 0)
         {
-            throw new GeoException($"Cannot intersect {a} and {b} (only segments, lines, rays and circles).");
+            throw new GeoException($"Cannot intersect {a} and {b} (segments, lines, rays and circles with each other, ellipses with them but not with ellipses).");
         }
         if (names.Count == 0 || names.Count > max)
         {
-            throw new GeoException($"{a} and {b} have at most {max} intersection{(max == 1 ? "" : "s")}; give 1{(max == 2 ? " or 2" : "")} names.");
+            throw new GeoException($"{a} and {b} have at most {max} intersection{(max == 1 ? "" : "s")}; give {(max == 1 ? "1" : max == 2 ? "1 or 2" : "1 to " + max)} names.");
         }
         // which of the (up to 2) intersections exist now; on a segment or ray one of them may lie outside
         List<int> existing = Enumerable.Range(0, max).Where(i => Intersections.Find(a, b, i) != null).ToList();
@@ -188,7 +192,9 @@ public sealed class Construction
         }
         if (names.Count > existing.Count)
         {
-            throw new GeoException($"{a.Name} and {b.Name} have only one intersection; give one name.");
+            throw new GeoException(existing.Count == 1
+                ? $"{a.Name} and {b.Name} have only one intersection; give one name."
+                : $"{a.Name} and {b.Name} have only {existing.Count} intersections; give at most {existing.Count} names.");
         }
         // one name: the first intersection that exists (it keeps its number while points move)
         List<int> indices = names.Count == max ? Enumerable.Range(0, max).ToList() : existing.Take(names.Count).ToList();
@@ -238,6 +244,28 @@ public sealed class Construction
     /// <summary>A circle around <paramref name="center"/> with a number as its radius (it follows it when it is measured).</summary>
     public GeoCircle Circle(string name, GeoPoint center, GeoNumber radius, Options? options = null) =>
         Define(new GeoCircle(name, center, () => radius.IsDefined ? radius.Value : null, options ?? Options.None, radius));
+
+    /// <summary>An ellipse with the foci <paramref name="focus1"/> and <paramref name="focus2"/> through <paramref name="through"/>.</summary>
+    public GeoEllipse Ellipse(string name, GeoPoint focus1, GeoPoint focus2, GeoPoint through, Options? options = null) =>
+        Define(new GeoEllipse(name, focus1, focus2, through, options ?? Options.None));
+
+    /// <summary>An ellipse with the foci <paramref name="focus1"/> and <paramref name="focus2"/> whose distances add up to <paramref name="sum"/>.</summary>
+    public GeoEllipse Ellipse(string name, GeoPoint focus1, GeoPoint focus2, double sum, Options? options = null)
+    {
+        if (!(sum > 0))
+        {
+            throw new GeoException($"The sum of the distances of {name} must be positive.");
+        }
+        return Define(new GeoEllipse(name, focus1, focus2, () => sum, options ?? Options.None));
+    }
+
+    /// <summary>An ellipse whose sum of distances is the distance of <paramref name="a"/> and <paramref name="b"/> (it follows them).</summary>
+    public GeoEllipse Ellipse(string name, GeoPoint focus1, GeoPoint focus2, GeoPoint a, GeoPoint b, Options? options = null) =>
+        Define(new GeoEllipse(name, focus1, focus2, () => a.IsDefined && b.IsDefined ? (b.Position - a.Position).Length : null, options ?? Options.None, a, b));
+
+    /// <summary>An ellipse whose sum of distances is a number (it follows it).</summary>
+    public GeoEllipse Ellipse(string name, GeoPoint focus1, GeoPoint focus2, GeoNumber sum, Options? options = null) =>
+        Define(new GeoEllipse(name, focus1, focus2, () => sum.IsDefined ? sum.Value : null, options ?? Options.None, sum));
 
     /// <summary>
     /// The point C + (B − A) for the straight <paramref name="straight"/> AB: with C, a parallel to it
@@ -669,7 +697,8 @@ public sealed class Construction
     }
 
     /// <summary>
-    /// Moves a point on a circle to the angle <paramref name="target"/> (degrees; going beyond 360 runs round further) or a
+    /// Moves a point on a circle to the angle <paramref name="target"/> (on an ellipse its parameter; degrees, going beyond
+    /// 360 runs round further) or a
     /// point on a straight to the parameter <paramref name="target"/>; dependent objects follow.
     /// </summary>
     public void Move(GeoPoint point, double target, double? duration = null, Easing? easing = null)

@@ -912,6 +912,7 @@ const SYMBOL_KINDS = {
   line: vscode.SymbolKind.Interface,
   ray: vscode.SymbolKind.Interface,
   circle: vscode.SymbolKind.Struct,
+  ellipse: vscode.SymbolKind.Struct,
   arc: vscode.SymbolKind.Struct,
   sector: vscode.SymbolKind.Struct,
   polygon: vscode.SymbolKind.Class,

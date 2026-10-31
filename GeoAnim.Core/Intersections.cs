@@ -1,9 +1,10 @@
 namespace GeoAnim;
 
 /// <summary>
-/// Intersections of segments, lines, rays and circles. The order of two intersections stays the same while points move:
-/// for a straight and a circle along the direction A → B, for two circles first the one to the left of the direction
-/// from the first centre to the second.
+/// Intersections of segments, lines, rays, circles and ellipses. The order of two intersections stays the same while points
+/// move: for a straight and a circle or ellipse along the direction A → B, for two circles first the one to the left of
+/// the direction from the first centre to the second; a circle and an ellipse (up to four) in the order of the ellipse's
+/// parameter, from the vertex beyond its second focus counterclockwise.
 /// </summary>
 internal static class Intersections
 {
@@ -14,6 +15,8 @@ internal static class Intersections
     {
         (GeoStraight, GeoStraight) => 1,
         (GeoStraight, GeoCircle) or (GeoCircle, GeoStraight) or (GeoCircle, GeoCircle) => 2,
+        (GeoStraight, GeoEllipse) or (GeoEllipse, GeoStraight) => 2,
+        (GeoCircle, GeoEllipse) or (GeoEllipse, GeoCircle) => 4,
         _ => 0,
     };
 
@@ -30,6 +33,10 @@ internal static class Intersections
             (GeoStraight s, GeoCircle c) => StraightCircle(s, c, index),
             (GeoCircle c, GeoStraight s) => StraightCircle(s, c, index),
             (GeoCircle c, GeoCircle d) => CircleCircle(c, d, index),
+            (GeoStraight s, GeoEllipse e) => StraightEllipse(s, e, index),
+            (GeoEllipse e, GeoStraight s) => StraightEllipse(s, e, index),
+            (GeoCircle c, GeoEllipse e) => CircleEllipse(c, e, index),
+            (GeoEllipse e, GeoCircle c) => CircleEllipse(c, e, index),
             _ => null,
         };
     }
@@ -72,6 +79,75 @@ internal static class Intersections
         double root = Math.Sqrt(Math.Max(0, discriminant));
         double t = index == 0 ? (-b - root) / (2 * a) : (-b + root) / (2 * a);
         return InRange(s, t) ? p + t * d : null;
+    }
+
+    // in the ellipse's coordinates stretched across to a circle of radius a: as with a circle
+    private static Vec? StraightEllipse(GeoStraight s, GeoEllipse e, int index)
+    {
+        if (e.B < Epsilon)
+        {
+            return null;
+        }
+        double stretch = e.A / e.B;
+        Vec p = e.ToLocal(s.A.Position);
+        Vec q = e.ToLocal(s.A.Position + s.Direction);
+        p = new Vec(p.X, p.Y * stretch);
+        Vec d = new Vec(q.X, q.Y * stretch) - p;
+        double a = Vec.Dot(d, d);
+        double b = 2 * Vec.Dot(p, d);
+        double cc = Vec.Dot(p, p) - e.A * e.A;
+        double discriminant = b * b - 4 * a * cc;
+        if (discriminant < -Epsilon * a)
+        {
+            return null;
+        }
+        double root = Math.Sqrt(Math.Max(0, discriminant));
+        double t = index == 0 ? (-b - root) / (2 * a) : (-b + root) / (2 * a);
+        return InRange(s, t) ? s.A.Position + t * s.Direction : null;
+    }
+
+    // the parameters where the squared distance from the centre minus r² changes its sign (an equation of degree four:
+    // found by sampling and halving, far more exactly than drawing needs); a circle touching the ellipse may be missed
+    private static Vec? CircleEllipse(GeoCircle c, GeoEllipse e, int index)
+    {
+        Vec m = c.Center.Position;
+        double r2 = c.Radius * c.Radius;
+        double F(double degrees)
+        {
+            Vec d = e.PointAt(degrees) - m;
+            return Vec.Dot(d, d) - r2;
+        }
+        const int samples = 720;
+        int found = -1;
+        double previous = F(0);
+        for (int i = 1; i <= samples; i++)
+        {
+            double t0 = 360.0 * (i - 1) / samples, t1 = 360.0 * i / samples;
+            double value = F(t1);
+            if (previous == 0 || (previous < 0) != (value < 0) && value != 0)
+            {
+                if (++found == index)
+                {
+                    double low = t0, high = t1, atLow = previous;
+                    for (int k = 0; k < 60 && atLow != 0; k++)
+                    {
+                        double middle = (low + high) / 2;
+                        double atMiddle = F(middle);
+                        if ((atMiddle < 0) == (atLow < 0))
+                        {
+                            (low, atLow) = (middle, atMiddle);
+                        }
+                        else
+                        {
+                            high = middle;
+                        }
+                    }
+                    return e.PointAt(atLow == 0 ? low : (low + high) / 2);
+                }
+            }
+            previous = value;
+        }
+        return null;
     }
 
     private static Vec? CircleCircle(GeoCircle c1, GeoCircle c2, int index)

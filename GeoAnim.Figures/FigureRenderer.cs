@@ -196,6 +196,12 @@ public static partial class FigureRenderer
                     case "disc":
                         DrawDisc(values, counts);
                         break;
+                    case "ellipse":
+                        DrawEllipse(values, counts, inside: false);
+                        break;
+                    case "ellipsedisc":
+                        DrawEllipse(values, counts, inside: true);
+                        break;
                     case "polygon":
                         DrawPolygon(values, counts);
                         break;
@@ -459,6 +465,43 @@ public static partial class FigureRenderer
                 double labelOpacity = v.ContainsKey("labelOpacity") ? Number(v, "labelOpacity") : 1;
                 PlaceText(layout, x, y, labelOpacity, Flag(v, "halo") ? animation.Background : null, size, counts);
             }
+        }
+
+        // an ellipse (centre, semi-axes rx and ry, its major axis turned by rot degrees) from the parameter start on by sweep
+        // degrees, as in the player; "inside": its inside (filled; while it is drawn closed over the centre)
+        private void DrawEllipse(Dictionary<string, object> v, bool counts, bool inside)
+        {
+            double cx = Number(v, "cx"), cy = Number(v, "cy"), rx = Number(v, "rx"), ry = Number(v, "ry"), rot = Number(v, "rot");
+            double start = Number(v, "start"), sweep = Math.Max(0, Math.Min(Number(v, "sweep"), 360));
+            if (!(rx > 0) || !(sweep > 0.01))
+            {
+                return;
+            }
+            double r = rot * Math.PI / 180;
+            string Point(double degrees)
+            {
+                double t = degrees * Math.PI / 180;
+                double x = cx + rx * Math.Cos(t) * Math.Cos(r) - ry * Math.Sin(t) * Math.Sin(r);
+                double y = cy + rx * Math.Cos(t) * Math.Sin(r) + ry * Math.Sin(t) * Math.Cos(r);
+                return N(ToX(x)) + " " + N(ToY(y));
+            }
+            // turned the other way round on the page (its y axis points down); counterclockwise is sweep-flag 0
+            string arc = $"A{N(rx * scale)} {N(ry * scale)} {N(-rot)} ";
+            bool full = sweep >= 359.99;
+            string d = full
+                ? $"M{Point(start)}{arc}1 0 {Point(start + 180)}{arc}1 0 {Point(start + 360)}"
+                : $"M{Point(start)}{arc}{(sweep > 180 ? 1 : 0)} 0 {Point(start + sweep)}";
+            if (inside)
+            {
+                d = full ? d + "Z" : $"M{N(ToX(cx))} {N(ToY(cy))}L{d[1..]}Z";
+                items.Append("<path d=\"").Append(d).Append("\" fill=\"").Append(Text(v, "fill")).Append("\" fill-opacity=\"").Append(N(Number(v, "fillOpacity", 1))).Append("\"/>");
+                CountPath(d, 0, counts);
+                return;
+            }
+            double width = Number(v, "width") * unit;
+            items.Append("<path d=\"").Append(d).Append("\" fill=\"none\" stroke=\"").Append(Text(v, "color")).Append("\" stroke-width=\"").Append(N(width))
+                .Append("\" stroke-linecap=\"round\"/>");
+            CountPath(d, width, counts);
         }
 
         private void DrawDisc(Dictionary<string, object> v, bool counts)

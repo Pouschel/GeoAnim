@@ -146,6 +146,15 @@ internal sealed record ArcEndRef(NameRef? Point, double Degrees);
 /// <summary>"circle k = center M radius A B" (the distance of two points) or "radius l" (a number; <paramref name="B"/> null).</summary>
 internal sealed record CircleRadiusOfDefinition(NameRef Center, NameRef A, NameRef? B) : Definition;
 
+/// <summary>"ellipse e = foci F G through P".</summary>
+internal sealed record EllipseThroughDefinition(NameRef Focus1, NameRef Focus2, NameRef Through) : Definition;
+
+/// <summary>"ellipse e = foci F G sum 8".</summary>
+internal sealed record EllipseSumDefinition(NameRef Focus1, NameRef Focus2, double Sum) : Definition;
+
+/// <summary>"ellipse e = foci F G sum A B" (the distance of two points) or "sum l" (a number; <paramref name="B"/> null).</summary>
+internal sealed record EllipseSumOfDefinition(NameRef Focus1, NameRef Focus2, NameRef A, NameRef? B) : Definition;
+
 /// <summary>"parallel g through C" / "perpendicular g through C": a point, or a segment, ray or line.</summary>
 internal sealed record ParallelDefinition(NameRef Straight, NameRef Through, bool Perpendicular) : Definition;
 

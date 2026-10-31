@@ -299,7 +299,7 @@ public sealed class AnimationData
     private double ToleranceFor(string type, string property)
     {
         bool coordinate = property is "x" or "y" or "x1" or "y1" or "x2" or "y2" or "cx" or "cy" or "points"
-            || (type == "arc" && property == "r");
+            || (type == "arc" && property == "r") || property is "rx" or "ry";
         return coordinate ? 0.25 * (View.XMax - View.XMin) / 1280 : 1e-3;
     }
 

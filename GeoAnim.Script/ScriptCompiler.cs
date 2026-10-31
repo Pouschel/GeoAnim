@@ -575,7 +575,7 @@ public static class ScriptCompiler
             "segment" or "ray" => ["color", "width", "label", "labelsize", "labelpos", "offset", "shift", "arrow", "stacking", "halo", "draw"],
             "line" => ["color", "width", "label", "labelsize", "labelpos", "offset", "shift", "stacking", "halo", "draw"],
             "angle" => ["color", "width", "fill", "opacity", "label", "labelsize", "radius", "offset", "shift", "arrow", "stacking", "halo", "draw"],
-            "circle" => ["color", "width", "fill", "opacity", "stacking", "draw"],
+            "circle" or "ellipse" => ["color", "width", "fill", "opacity", "stacking", "draw"],
             "arc" => ["color", "width", "label", "labelsize", "shift", "arrow", "clockwise", "stacking", "halo", "draw"],
             "sector" => ["color", "width", "fill", "opacity", "label", "labelsize", "shift", "clockwise", "stacking", "halo", "draw"],
             _ => ["color", "width", "stacking", "draw"],
@@ -652,8 +652,9 @@ public static class ScriptCompiler
                         created = path switch
                         {
                             GeoCircle circle => c.PointOn(name0, circle, d.Parameter, options),
+                            GeoEllipse ellipse => c.PointOn(name0, ellipse, d.Parameter, options),
                             GeoStraight straight => c.PointOn(name0, straight, d.Parameter, options),
-                            _ => throw new ScriptError(d.Path.Line, d.Path.Column, $"A point can lie on a circle, segment, line or ray, not on the {path.Kind} {path.Name}."),
+                            _ => throw new ScriptError(d.Path.Line, d.Path.Column, $"A point can lie on a circle, ellipse, segment, line or ray, not on the {path.Kind} {path.Name}."),
                         };
                         break;
                     }
@@ -710,6 +711,22 @@ public static class ScriptCompiler
                         GeoObject radius = Resolve(d.A);
                         created = c.Circle(name0, ResolvePoint(d.Center), radius as GeoNumber
                             ?? throw new ScriptError(d.A.Line, d.A.Column, $"{d.A.Name} is a {radius.Kind}: the radius is a number, a number's name or two points (radius A B)."), options);
+                        break;
+                    }
+                case EllipseThroughDefinition d:
+                    created = c.Ellipse(name0, ResolvePoint(d.Focus1), ResolvePoint(d.Focus2), ResolvePoint(d.Through), options);
+                    break;
+                case EllipseSumDefinition d:
+                    created = c.Ellipse(name0, ResolvePoint(d.Focus1), ResolvePoint(d.Focus2), d.Sum, options);
+                    break;
+                case EllipseSumOfDefinition d when d.B != null:
+                    created = c.Ellipse(name0, ResolvePoint(d.Focus1), ResolvePoint(d.Focus2), ResolvePoint(d.A), ResolvePoint(d.B), options);
+                    break;
+                case EllipseSumOfDefinition d:
+                    {
+                        GeoObject sum = Resolve(d.A);
+                        created = c.Ellipse(name0, ResolvePoint(d.Focus1), ResolvePoint(d.Focus2), sum as GeoNumber
+                            ?? throw new ScriptError(d.A.Line, d.A.Column, $"{d.A.Name} is a {sum.Kind}: the sum is a number, a number's name or two points (sum A B)."), options);
                         break;
                     }
                 case ParallelDefinition d:

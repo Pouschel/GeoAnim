@@ -2,14 +2,14 @@
 
 Alle Befehle mit allen Schreibweisen und den Optionen, die jeweils erlaubt sind. Erklärungen und Beispiele stehen in der [README](README.md); diese Datei ist zum Nachschlagen.
 
-**Schreibweise hier:** `A`, `B`, `P` stehen für Namen von Punkten, `k` für einen Kreis, `g` für eine Strecke, Gerade oder einen Strahl, `D` für ein Vieleck, `w` für einen Winkel, `x y` für Koordinaten, `n` für eine Zahl. `[…]` ist freiwillig, `…` heißt „beliebig viele“. *Optionen* sind die in der Spalte genannten (siehe [Optionen](#optionen)).
+**Schreibweise hier:** `A`, `B`, `P` stehen für Namen von Punkten, `k` für einen Kreis, `e` für eine Ellipse, `g` für eine Strecke, Gerade oder einen Strahl, `D` für ein Vieleck, `w` für einen Winkel, `x y` für Koordinaten, `n` für eine Zahl. `[…]` ist freiwillig, `…` heißt „beliebig viele“. *Optionen* sind die in der Spalte genannten (siehe [Optionen](#optionen)).
 
 ## Inhalt
 
 - [Grundregeln](#grundregeln)
 - [Einstellungen](#einstellungen): `title`, `description`, `view`, `background`, `grid`, `axes`, `speed`, `keyword`
 - [Texte, Vars, Voreinstellungen](#texte-vars-voreinstellungen): `set`, `var`, `default`
-- [Objekte](#objekte): `point`, `segment`, `line`, `ray`, `circle`, `arc`, `sector`, `polygon`, `angle`, `text`
+- [Objekte](#objekte): `point`, `segment`, `line`, `ray`, `circle`, `ellipse`, `arc`, `sector`, `polygon`, `angle`, `text`
 - [Zahlen](#zahlen): `number`
 - [Schritte und Aktionen](#schritte-und-aktionen): `step`, `textstep`, `info`, `show`, `hide`, `highlight`, `unhighlight`, `move`, `rotate`, `reflect`, `pause`, `together`
 - [Dateien](#dateien): `include`, `use`, `input`, `output`
@@ -55,7 +55,7 @@ Vor dem ersten `step` (außer `keyword`).
 |---|---|---|
 | `set` | `set name = Text …` | benannter Text für `text` und `label`; mit `|` fortsetzbar; gilt ab seiner Zeile |
 | `var` | `var name Optionen…` | Optionen mit Namen; darf andere Vars enthalten; gilt ab seiner Zeile, eine spätere gleichnamige ersetzt sie; was für ein Objekt nicht passt, wird übergangen |
-| `default` | `default [Arten…] Optionen…` | Voreinstellung für alle folgenden Objekte der Arten `point` `segment` `line` `ray` `circle` `arc` `sector` `polygon` `angle` `text` `show` `hide` `highlight` `unhighlight` `move` `rotate` `reflect`; ohne Art für alle; was nicht passt, wird übergangen |
+| `default` | `default [Arten…] Optionen…` | Voreinstellung für alle folgenden Objekte der Arten `point` `segment` `line` `ray` `circle` `ellipse` `arc` `sector` `polygon` `angle` `text` `show` `hide` `highlight` `unhighlight` `move` `rotate` `reflect`; ohne Art für alle; was nicht passt, wird übergangen |
 
 Reihenfolge der Optionen eines Objekts: Voreinstellungen ohne Art, dann die der Art, dann die eigenen – die spätere gewinnt.
 
@@ -70,8 +70,9 @@ Alle Objekte: `art name = Definition Optionen…`. Vor dem ersten `step` gehöre
 | `point A = x y` | freier Punkt (kann sich bewegen) |
 | `point M = midpoint A B` | Mittelpunkt von A und B |
 | `point D = parallel g through C` · `point D = perpendicular g through C` | C + (B − A) für g = AB (bzw. um 90° gedreht): mit C die Parallele bzw. Senkrechte zu g durch C |
-| `point S = intersect o1 o2` · `point S T = intersect o1 o2` | Schnittpunkt(e) zweier Kreise, Strecken, Geraden, Strahlen |
+| `point S = intersect o1 o2` · `point S T = intersect o1 o2` | Schnittpunkt(e) zweier Kreise, Strecken, Geraden, Strahlen; eine Ellipse mit einem von ihnen (nicht mit einer Ellipse): mit einer Geraden bis zu 2, mit einem Kreis bis zu 4 (`point S T U V = intersect k e`, in der Reihenfolge des Ellipsenparameters) |
 | `point P = on k at n` | auf einem Kreis, bei n Grad |
+| `point P = on e at n` | auf einer Ellipse beim Parameter n Grad: 0 ist der Scheitel hinter dem zweiten Brennpunkt, 90 das Ende der kleinen Achse links von F→G; `move P to n` bewegt ihn auf ihr |
 | `point P = on g at n` | auf einer Strecke/Geraden/einem Strahl bei A + n·(B − A) |
 | `point X = copy P` | freier Punkt an der Stelle, an der P gerade ist |
 | `point D = use datei A B …` | Ergebnis einer anderen Datei (siehe [`use`](#dateien)) |
@@ -107,6 +108,19 @@ Alle Objekte: `art name = Definition Optionen…`. Vor dem ersten `step` gehöre
 | `circle k = use datei A B …` | Ergebnis einer anderen Datei |
 
 **Optionen:** `color` `width`, `fill` (gefüllte Kreisscheibe: `fill lightblue` oder `fill` allein in der Linienfarbe) mit `opacity` (Standard 0,2), *Zeichnen*. Die Füllung wächst beim Zeichnen mit dem Zirkelstrich mit und liegt bei den Flächen der Vielecke und Winkel.
+
+### `ellipse` – Ellipse
+
+| Schreibweise | Ellipse |
+|---|---|
+| `ellipse e = foci F G sum n` | Brennpunkte F und G, Summe der Abstände n (= Länge der großen Achse); liegt, wie F und G liegen |
+| `ellipse e = foci F G sum A B` · `sum l` | Summe = Abstand von A und B bzw. die Zahl l (folgt der Zeichnung) |
+| `ellipse e = foci F G through P` | durch P (wird ab P gezogen) |
+| `ellipse e = use datei A B …` | Ergebnis einer anderen Datei |
+
+Ist die Summe kleiner als der Abstand von F und G, gibt es die Ellipse nicht: beim Anlegen ein Fehler, später (wenn sich Punkte bewegen) verschwindet sie, wie ein Schnittpunkt, der fehlt; ist sie gleich, ist es die Strecke FG. Ohne `through` wird sie ab dem Scheitel hinter G gezogen.
+
+**Optionen:** wie beim Kreis: `color` `width`, `fill` mit `opacity`, *Zeichnen*.
 
 ### `polygon` – Vieleck
 
@@ -154,8 +168,8 @@ Alle Objekte: `art name = Definition Optionen…`. Vor dem ersten `step` gehöre
 | `number n = length s` | Länge einer Strecke (eines Bogens: Bogenlänge) |
 | `number n = length A B` | Abstand zweier Punkte |
 | `number n = degrees w` | Größe eines Winkels in Grad (eines Bogens oder Sektors: Mittelpunktswinkel) |
-| `number n = area D` · `number n = area k` | Flächeninhalt eines Vielecks, Kreises oder Sektors |
-| `number n = perimeter D` · `number n = perimeter k` | Umfang eines Vielecks, Kreises oder Sektors |
+| `number n = area D` · `number n = area k` | Flächeninhalt eines Vielecks, Kreises, einer Ellipse oder eines Sektors |
+| `number n = perimeter D` · `number n = perimeter k` | Umfang eines Vielecks, Kreises, einer Ellipse (sehr genau genähert) oder eines Sektors |
 | `number n = radius k` | Radius eines Kreises |
 | `number n = 5.2` · `number n = a * sqrt(3) / 2` | berechnet aus Zahlen und anderen Zahlen: `+ - * / ^`, Klammern, `sqrt( )`, `abs( )`, `pi`; Leerzeichen beliebig, `#` beginnt einen Kommentar. Nur aus festen Zahlen berechnet: eine **Konstante**, überall verwendbar, wo eine Zahl steht (Koordinaten, Optionen, `move … to`, `rotate … by`, `pause`, …); mit gemessenen Zahlen: folgt ihnen, nur für Texte (`{n}`) |
 
@@ -208,7 +222,7 @@ Aktionen stehen in einem Schritt und laufen nacheinander. Die Optionen *Ablauf* 
 
 ## Optionen
 
-| Option | Werte | `point` | `segment` `ray` | `line` | `circle` | `polygon` | `angle` | `text` | Aktionen |
+| Option | Werte | `point` | `segment` `ray` | `line` | `circle` `ellipse` | `polygon` | `angle` | `text` | Aktionen |
 |---|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
 | `color` | Farbe | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | |
 | `width` | n (pt) | | ✓ | ✓ | ✓ | ✓ | ✓ | | |
@@ -261,4 +275,4 @@ Aktionen stehen in einem Schritt und laufen nacheinander. Die Optionen *Ablauf* 
 
 Diese Wörter können keine Namen sein:
 
-`title` `description` `info` `keyword` `view` `background` `grid` `axes` `speed` `var` `default` `include` `input` `output` `use` `draw` `steps` `copy` `set` `step` `textstep` `point` `segment` `line` `ray` `circle` `arc` `sector` `polygon` `angle` `text` `number` `length` `degrees` `area` `perimeter` `show` `hide` `all` `highlight` `unhighlight` `keep` `move` `rotate` `reflect` `along` `around` `across` `in` `by` `pause` `together` `end` `midpoint` `intersect` `parallel` `perpendicular` `center` `through` `radius` `at` `from` `to` `on` `x` `y` `below` `gap` `align` `left` `right` `duration` `color` `width` `fill` `opacity` `size` `labelsize` `labelpos` `labeldir` `labelgap` `label` `nolabel` `hidden` `offset` `shift` `arrow` `start` `both` `straight` `back` `front` `halo` `clockwise` `linear` `ease` `easein` `easeout` `easeinout`
+`title` `description` `info` `keyword` `view` `background` `grid` `axes` `speed` `var` `default` `include` `input` `output` `use` `draw` `steps` `copy` `set` `step` `textstep` `point` `segment` `line` `ray` `circle` `ellipse` `arc` `sector` `polygon` `angle` `text` `number` `length` `degrees` `area` `perimeter` `show` `hide` `all` `highlight` `unhighlight` `keep` `move` `rotate` `reflect` `along` `around` `across` `in` `by` `pause` `together` `end` `midpoint` `intersect` `parallel` `perpendicular` `center` `through` `radius` `foci` `sum` `at` `from` `to` `on` `x` `y` `below` `gap` `align` `left` `right` `duration` `color` `width` `fill` `opacity` `size` `labelsize` `labelpos` `labeldir` `labelgap` `label` `nolabel` `hidden` `offset` `shift` `arrow` `start` `both` `straight` `back` `front` `halo` `clockwise` `linear` `ease` `easein` `easeout` `easeinout`

@@ -9,9 +9,9 @@ internal sealed partial class Parser
     internal static readonly HashSet<string> Keywords = new(StringComparer.Ordinal)
     {
         "title", "description", "info", "keyword", "view", "background", "grid", "axes", "speed", "print", "var", "default", "include", "input", "output", "use",
-        "draw", "steps", "copy", "set", "step", "textstep", "point", "segment", "line", "ray", "circle", "arc", "sector", "polygon", "angle",
+        "draw", "steps", "copy", "set", "step", "textstep", "point", "segment", "line", "ray", "circle", "ellipse", "arc", "sector", "polygon", "angle",
         "text", "number", "length", "degrees", "area", "perimeter", "show", "hide", "all", "highlight", "unhighlight", "keep", "move", "rotate", "reflect", "along", "around", "across", "in", "by", "pause", "together", "end", "midpoint", "intersect", "parallel", "perpendicular", "center", "through",
-        "radius", "at", "from", "to", "on", "x", "y", "below", "gap", "align", "left", "right",
+        "radius", "foci", "sum", "at", "from", "to", "on", "x", "y", "below", "gap", "align", "left", "right",
         "duration", "color", "width", "fill", "opacity", "size", "labelsize", "labelpos", "labeldir", "labelgap", "label", "nolabel", "hidden", "offset", "shift",
         "arrow", "start", "both", "straight", "back", "front", "halo", "clockwise", "linear", "ease", "easein", "easeout", "easeinout",
     };
@@ -25,7 +25,7 @@ internal sealed partial class Parser
     /// <summary>The kinds a "default" can name.</summary>
     private static readonly HashSet<string> DefaultKinds = new(StringComparer.Ordinal)
     {
-        "point", "segment", "line", "ray", "circle", "arc", "sector", "polygon", "angle", "text", "show", "hide", "highlight", "unhighlight", "move", "rotate", "reflect",
+        "point", "segment", "line", "ray", "circle", "ellipse", "arc", "sector", "polygon", "angle", "text", "show", "hide", "highlight", "unhighlight", "move", "rotate", "reflect",
     };
 
     private readonly List<Token> tokens;
@@ -256,6 +256,7 @@ internal sealed partial class Parser
                         "point" => ParsePoint(Next()),
                         "segment" or "line" or "ray" => ParseStraight(Next()),
                         "circle" => ParseCircle(Next()),
+                        "ellipse" => ParseEllipse(Next()),
                         "arc" or "sector" => ParseArc(Next()),
                         "polygon" => ParsePolygon(Next()),
                         "angle" => ParseAngle(Next()),
@@ -316,6 +317,9 @@ internal sealed partial class Parser
                 break;
             case "circle":
                 statement = ParseCircle(word);
+                break;
+            case "ellipse":
+                statement = ParseEllipse(word);
                 break;
             case "polygon":
                 statement = ParsePolygon(word);
@@ -554,7 +558,7 @@ internal sealed partial class Parser
             position++;
             NameRef path = ExpectName();
             ExpectWord("at");
-            definition = new OnDefinition(path, ExpectNumber("the angle (on a circle) or the position (on a straight)"));
+            definition = new OnDefinition(path, ExpectNumber("the angle (on a circle), the parameter (on an ellipse) or the position (on a straight)"));
         }
         else
         {
@@ -569,9 +573,9 @@ internal sealed partial class Parser
         {
             throw Error(names[1], "Several names are only possible for intersections and \"use\".");
         }
-        if (names.Count > 2 && definition is IntersectDefinition)
+        if (names.Count > 4 && definition is IntersectDefinition)
         {
-            throw Error(names[2], "Two objects have at most 2 intersections.");
+            throw Error(names[4], "Two objects have at most 4 intersections (a circle and an ellipse).");
         }
         return new DefineStatement(word.Line, word.Column, "point", names, definition, ParseOptions());
     }
@@ -653,6 +657,45 @@ internal sealed partial class Parser
             throw Error(Current, $"Expected \"through <point>\" or \"radius <number>\", \"radius A B\", \"radius l\", not {Current.Describe()}.");
         }
         return new DefineStatement(word.Line, word.Column, "circle", [name], definition, ParseOptions());
+    }
+
+    // "ellipse e = foci F G sum 8" / "sum A B" / "sum l" / "through P"
+    private DefineStatement ParseEllipse(Token word)
+    {
+        NameRef name = ExpectNewName();
+        ExpectSymbol("=");
+        if (TryParseUse() is { } use)
+        {
+            return new DefineStatement(word.Line, word.Column, "ellipse", [name], use, ParseOptions());
+        }
+        ExpectWord("foci");
+        NameRef focus1 = ExpectName();
+        NameRef focus2 = ExpectName();
+        Definition definition;
+        if (Current.Is("through"))
+        {
+            position++;
+            definition = new EllipseThroughDefinition(focus1, focus2, ExpectName());
+        }
+        else if (Current.Is("sum"))
+        {
+            position++;
+            if (IsNumberAt(position))
+            {
+                definition = new EllipseSumDefinition(focus1, focus2, ExpectPositive("the sum of the distances"));
+            }
+            else
+            {
+                NameRef first = ExpectName();
+                NameRef? second = Current.Kind == TokenKind.Name && !IsOption(Current.Text) ? ExpectName() : null;
+                definition = new EllipseSumOfDefinition(focus1, focus2, first, second);
+            }
+        }
+        else
+        {
+            throw Error(Current, $"Expected \"sum <number>\" (the sum of the distances to the foci), \"sum A B\", \"sum l\" or \"through <point>\", not {Current.Describe()}.");
+        }
+        return new DefineStatement(word.Line, word.Column, "ellipse", [name], definition, ParseOptions());
     }
 
     private DefineStatement ParsePolygon(Token word)

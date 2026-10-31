@@ -23,10 +23,10 @@ public sealed class GeoPoint : GeoObject
     /// <summary>The space between the point and its label in points, with a direction.</summary>
     internal double LabelGap { get; set; }
 
-    /// <summary>For a point on a circle its angle in degrees, for a point on a straight its parameter (0 = A, 1 = B).</summary>
+    /// <summary>For a point on a circle its angle in degrees, on an ellipse its parameter in degrees, on a straight its parameter (0 = A, 1 = B).</summary>
     internal double Parameter { get; private set; }
 
-    /// <summary>The circle or straight a point "on" an object belongs to, otherwise null.</summary>
+    /// <summary>The circle, ellipse or straight a point "on" an object belongs to, otherwise null.</summary>
     public GeoObject? Path { get; private init; }
 
     public override string Kind => "point";
@@ -61,6 +61,14 @@ public sealed class GeoPoint : GeoObject
             return circle.Center.Position + circle.Radius * new Vec(Math.Cos(radians), Math.Sin(radians));
         }, false, circle) { Path = circle };
         point.Parameter = angle;
+        return point;
+    }
+
+    /// <summary>A point on an ellipse at the parameter <paramref name="degrees"/> (see <see cref="GeoEllipse.PointAt"/>); it can move along it.</summary>
+    internal static GeoPoint OnEllipse(string name, GeoEllipse ellipse, double degrees, Options options)
+    {
+        var point = new GeoPoint(name, options, p => ellipse.IsDefined ? ellipse.PointAt(p.Parameter) : null, false, ellipse) { Path = ellipse };
+        point.Parameter = degrees;
         return point;
     }
 

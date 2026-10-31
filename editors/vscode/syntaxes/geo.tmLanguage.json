@@ -113,7 +113,7 @@
       ]
     },
     {
-      "begin": "^\\s*(default)\\b((?:\\s+(?:point|segment|line|ray|circle|arc|sector|polygon|angle|text|show|hide|highlight|unhighlight|move|rotate|reflect)\\b)*)",
+      "begin": "^\\s*(default)\\b((?:\\s+(?:point|segment|line|ray|circle|ellipse|arc|sector|polygon|angle|text|show|hide|highlight|unhighlight|move|rotate|reflect)\\b)*)",
       "beginCaptures": {
         "1": {
           "name": "keyword.control.geo"
@@ -130,7 +130,7 @@
       ]
     },
     {
-      "match": "^\\s*(output)\\b(?!\\s+(?:point|segment|line|ray|circle|arc|sector|polygon|angle|text)\\b)(?!(?:\\s+[A-Za-z_][A-Za-z0-9_]*'*)+\\s*=)(.*?)(?=\\s*(?:#|$))",
+      "match": "^\\s*(output)\\b(?!\\s+(?:point|segment|line|ray|circle|ellipse|arc|sector|polygon|angle|text)\\b)(?!(?:\\s+[A-Za-z_][A-Za-z0-9_]*'*)+\\s*=)(.*?)(?=\\s*(?:#|$))",
       "captures": {
         "1": {
           "name": "keyword.control.geo"
@@ -163,7 +163,7 @@
       ]
     },
     {
-      "begin": "^\\s*(?:(input|output)\\s+)?(?:(point|segment|line|ray|circle|arc|sector|polygon|angle|text)\\s+)?((?:[A-Za-z_][A-Za-z0-9_]*'*\\s+)*[A-Za-z_][A-Za-z0-9_]*'*)\\s*(=)(?=\\s*use\\b)",
+      "begin": "^\\s*(?:(input|output)\\s+)?(?:(point|segment|line|ray|circle|ellipse|arc|sector|polygon|angle|text)\\s+)?((?:[A-Za-z_][A-Za-z0-9_]*'*\\s+)*[A-Za-z_][A-Za-z0-9_]*'*)\\s*(=)(?=\\s*use\\b)",
       "beginCaptures": {
         "1": {
           "name": "keyword.control.geo"
@@ -335,6 +335,41 @@
           "name": "keyword.other.geo"
         },
         "10": {
+          "name": "constant.numeric.geo"
+        }
+      },
+      "end": "$",
+      "patterns": [
+        {
+          "include": "#tail"
+        }
+      ]
+    },
+    {
+      "begin": "^\\s*(?:(output)\\s+)?(ellipse)\\s+([A-Za-z_][A-Za-z0-9_]*'*)\\s*(=)\\s*(foci)\\s+([A-Za-z_][A-Za-z0-9_]*'*)\\s+([A-Za-z_][A-Za-z0-9_]*'*)(?:\\s+(?:(through)\\s+([A-Za-z_][A-Za-z0-9_]*'*)|(sum)\\s+(-?(?:\\d+(?:\\.\\d+)?|\\.\\d+))?))?",
+      "beginCaptures": {
+        "1": {
+          "name": "keyword.control.geo"
+        },
+        "2": {
+          "name": "keyword.control.geo"
+        },
+        "3": {
+          "name": "entity.name.type.object.geo"
+        },
+        "4": {
+          "name": "keyword.operator.geo"
+        },
+        "5": {
+          "name": "keyword.other.geo"
+        },
+        "8": {
+          "name": "keyword.other.geo"
+        },
+        "10": {
+          "name": "keyword.other.geo"
+        },
+        "11": {
           "name": "constant.numeric.geo"
         }
       },
@@ -616,7 +651,7 @@
       ]
     },
     {
-      "begin": "^\\s*(background|grid|axes|speed|print|pause|together|end|point|segment|line|ray|circle|arc|sector|polygon|angle|text|move|input)\\b",
+      "begin": "^\\s*(background|grid|axes|speed|print|pause|together|end|point|segment|line|ray|circle|ellipse|arc|sector|polygon|angle|text|move|input)\\b",
       "beginCaptures": {
         "1": {
           "name": "keyword.control.geo"

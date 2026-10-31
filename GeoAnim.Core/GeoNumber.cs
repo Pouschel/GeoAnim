@@ -54,24 +54,35 @@ public sealed class GeoNumber : GeoObject
     internal static GeoNumber Degrees(string name, GeoArc arc) =>
         new(name, () => arc.IsDefined ? arc.Degrees : null, 0, arc);
 
-    /// <summary>The area of a polygon or circle.</summary>
+    /// <summary>The area of a polygon, circle, ellipse or sector.</summary>
     internal static GeoNumber Area(string name, GeoObject item) => item switch
     {
         GeoPolygon polygon => new(name, () => polygon.IsDefined ? Math.Abs(SignedArea(polygon)) : null, 1, polygon),
         GeoCircle circle => new(name, () => circle.IsDefined ? Math.PI * circle.Radius * circle.Radius : null, 1, circle),
+        GeoEllipse ellipse => new(name, () => ellipse.IsDefined ? Math.PI * ellipse.A * ellipse.B : null, 1, ellipse),
         GeoArc { IsSector: true } sector => new(name, () => sector.IsDefined ? sector.Area : null, 1, sector),
-        _ => throw new GeoException($"A {item.Kind} has no area; area measures a polygon, a circle or a sector."),
+        _ => throw new GeoException($"A {item.Kind} has no area; area measures a polygon, a circle, an ellipse or a sector."),
     };
 
-    /// <summary>The perimeter of a polygon or the circumference of a circle.</summary>
+    /// <summary>The perimeter of a polygon, circle, ellipse or sector.</summary>
     internal static GeoNumber Perimeter(string name, GeoObject item) => item switch
     {
         GeoPolygon polygon => new(name, () => polygon.IsDefined
             ? polygon.Vertices.Select((v, i) => (polygon.Vertices[(i + 1) % polygon.Vertices.Count].Position - v.Position).Length).Sum()
             : null, 1, polygon),
         GeoCircle circle => new(name, () => circle.IsDefined ? 2 * Math.PI * circle.Radius : null, 1, circle),
+        // Ramanujan's second formula: far more exact than drawing and rounding need
+        GeoEllipse ellipse => new(name, () =>
+        {
+            if (!ellipse.IsDefined)
+            {
+                return null;
+            }
+            double a = ellipse.A, b = ellipse.B, h = (a - b) * (a - b) / ((a + b) * (a + b));
+            return Math.PI * (a + b) * (1 + 3 * h / (10 + Math.Sqrt(4 - 3 * h)));
+        }, 1, ellipse),
         GeoArc { IsSector: true } sector => new(name, () => sector.IsDefined ? 2 * sector.Circle.Radius + sector.Length : null, 1, sector),
-        _ => throw new GeoException($"A {item.Kind} has no perimeter; perimeter measures a polygon, a circle or a sector."),
+        _ => throw new GeoException($"A {item.Kind} has no perimeter; perimeter measures a polygon, a circle, an ellipse or a sector."),
     };
 
     /// <summary>The radius of a circle.</summary>

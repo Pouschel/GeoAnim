@@ -144,7 +144,41 @@
     return `M ${x0} ${y0} A ${R} ${R} 0 ${sweep > 180 ? 1 : 0} 0 ${x1} ${y1}`
   }
 
+  // an ellipse (centre, semi-axes rx and ry, major axis turned by rot degrees) from the parameter start on by sweep degrees
+  // (counterclockwise); with "fromCentre" closed over the centre (its inside while it is drawn)
+  function ellipsePath (v, fromCentre) {
+    const sweep = Math.max(0, Math.min(v.sweep, 360))
+    if (!(v.rx > 0) || !(sweep > 0.01)) {
+      return ''
+    }
+    const r = v.rot * Math.PI / 180
+    const point = degrees => {
+      const t = degrees * Math.PI / 180
+      const x = v.cx + v.rx * Math.cos(t) * Math.cos(r) - v.ry * Math.sin(t) * Math.sin(r)
+      const y = v.cy + v.rx * Math.cos(t) * Math.sin(r) + v.ry * Math.sin(t) * Math.cos(r)
+      return toX(x) + ' ' + toY(y)
+    }
+    // turned on the screen the other way round (its y axis points down); counterclockwise is sweep-flag 0
+    const arc = `A ${v.rx * scale} ${v.ry * scale} ${-v.rot} `
+    const full = sweep >= 359.99
+    const d = full
+      ? `M ${point(v.start)} ${arc}1 0 ${point(v.start + 180)} ${arc}1 0 ${point(v.start + 360)}`
+      : `M ${point(v.start)} ${arc}${sweep > 180 ? 1 : 0} 0 ${point(v.start + sweep)}`
+    return fromCentre && !full ? `M ${toX(v.cx)} ${toY(v.cy)} L ${d.slice(2)} Z` : full && fromCentre ? d + ' Z' : d
+  }
+
   const RENDERERS = {
+    ellipse (element, v) {
+      element.setAttribute('d', ellipsePath(v, false))
+      element.setAttribute('stroke', v.color)
+      element.setAttribute('stroke-width', v.width * unit)
+    },
+    ellipsedisc (element, v) {
+      element.setAttribute('d', ellipsePath(v, true))
+      element.setAttribute('stroke', 'none')
+      element.setAttribute('fill', v.fill)
+      element.setAttribute('fill-opacity', v.fillOpacity)
+    },
     dot (element, v) {
       element.setAttribute('cx', toX(v.x))
       element.setAttribute('cy', toY(v.y))
@@ -451,7 +485,7 @@
     element[name].setAttribute('fill', color)
   }
 
-  const TAGS = { dot: 'circle', line: 'g', arc: 'path', disc: 'path', part: 'g', polygon: 'polygon', text: 'g', angle: 'g' }
+  const TAGS = { dot: 'circle', line: 'g', arc: 'path', disc: 'path', ellipse: 'path', ellipsedisc: 'path', part: 'g', polygon: 'polygon', text: 'g', angle: 'g' }
 
   // ------------------------------------------------------------------ angles
 
@@ -950,7 +984,7 @@
     const sorted = animation.primitives.filter(primitive => primitive.type !== 'number').sort((a, b) => a.layer - b.layer || a.id - b.id)
     items = sorted.map(primitive => {
       const element = create(TAGS[primitive.type], { 'data-id': primitive.id }, scene)
-      if (primitive.type === 'arc') {
+      if (primitive.type === 'arc' || primitive.type === 'ellipse') {
         element.setAttribute('fill', 'none')
         element.setAttribute('stroke-linecap', 'round')
       }
@@ -1019,7 +1053,7 @@
         Object.assign(values, { color: GHOST_COLOR, width: 2.5, fill: GHOST_COLOR, fillOpacity: 0.12, reveal: 1, labelOpacity: 1 })
         values.base = 36
         values.size = values.size || 24
-        if (entry.type === 'arc' && values.sweep === undefined) {
+        if ((entry.type === 'arc' || entry.type === 'ellipse') && values.sweep === undefined) {
           Object.assign(values, { start: 0, sweep: 360 })
         } else if (entry.type === 'dot') {
           values.r = 4

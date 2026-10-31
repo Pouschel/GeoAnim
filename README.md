@@ -146,6 +146,7 @@ Koordinaten sind mathematisch: die y-Achse zeigt nach oben. Der Maßstab ist in 
 | `point X = copy P` | freier Punkt an der Stelle, an der P gerade ist (z. B. um eine Kopie zu bewegen, ohne die Konstruktion zu ändern) |
 | `point S T = intersect k1 k2` | Schnittpunkte (ein oder zwei Namen) |
 | `point P = on k at 60` | Punkt auf einem Kreis, Winkel in Grad (gegen den Uhrzeigersinn ab der x-Richtung) |
+| `point P = on e at 60` | Punkt auf einer Ellipse beim Parameter 60° (0 ist der Scheitel hinter dem zweiten Brennpunkt) |
 | `point Q = on AB at 0.25` | Punkt auf Strecke/Gerade/Strahl: A + 0.25·(B − A) |
 | `segment s = A B` | Strecke (Kurzform `segment A B` heißt `AB`) |
 | `line g = A B` | Gerade (am Bildrand abgeschnitten) |
@@ -153,6 +154,8 @@ Koordinaten sind mathematisch: die y-Achse zeigt nach oben. Der Maßstab ist in 
 | `circle k = center M through P` | Kreis um M durch P |
 | `circle k = center M radius 2.5` | Kreis mit festem Radius |
 | `circle k = center M radius A B` / `circle k = center M radius l` | Kreis, dessen Radius der Zeichnung folgt – „mit dem Zirkel abgegriffen“: der Abstand von A und B bzw. eine Zahl (gemessen oder berechnet, etwa `number r = l + 0.5` oder `number r = l1 + l2`); so lassen sich Strecken übertragen (Dreieck aus drei Seiten, Parallele mit dem Zirkel, …) |
+| `ellipse e = foci F G sum 8` / `… sum A B` / `… sum l` | Ellipse mit den Brennpunkten F und G und der Abstandssumme 8 (Länge der großen Achse), schräg, wie F und G liegen; die Summe auch als Abstand zweier Punkte oder als Zahl, dann folgt sie der Zeichnung; Optionen wie beim Kreis, auch `fill`. Schnittpunkte mit Geraden, Strecken, Strahlen (bis zu 2) und Kreisen (bis zu 4) |
+| `ellipse e = foci F G through P` | Ellipse durch P (wird ab P gezogen) |
 | `line p = parallel g through C` / `line s = perpendicular g through C` | Parallele bzw. Senkrechte zu g durch C (ebenso `segment` – von C aus, so lang wie g – und `ray`); sie folgt g und C |
 | `arc b = k from A to B` | Kreisbogen auf k gegen den Uhrzeigersinn von A bis B (A, B geben die Richtungen vom Mittelpunkt an; der Bogen bleibt auf dem Kreis, wenn er sich ändert); Optionen wie bei einer Strecke, auch `arrow` |
 | `sector s = k from A to B` | Kreissektor: die beiden Radien und der Bogen dazwischen, gefüllt wie ein Vieleck (`fill`, `opacity`), Beschriftung innen |
