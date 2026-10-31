@@ -24,7 +24,7 @@ namespace GeoAnim.Cli;
 /// "figures": {"key": {"animation": {…}, "from": 2 or null, "to": 3 or null, "still": false, "crop": true}, …}, "marks":
 /// [{"name": "ax-gerade", "kind": "axiom", "label": "Axiom 2", "text": "…", "file": "C:\\…", "line": 4}, …] (of all pages of
 /// the book: completion and "go to definition" for "§name"), "keywords": [{"term": "Strahl", "anchor": "kw-strahl" or
-/// null, "file": "C:\\…", "line": 3, "column": 17}, …] (of all pages of the book: where a keyword link leads), "errors":
+/// null, "file": "C:\\…", "line": 3, "column": 17, "forms": ["Strahl", "Strahlen"]}, …] (of all pages of the book: where a keyword link leads), "errors":
 /// […], "warnings": […] (as for "compile"; a keyword of two pages is a warning)} – a page
 /// of a book in Markdown, its figures from the scripts beside the file (as saved; compiled scripts are kept while their
 /// files stay the same), its references to the marks of the book's pages (the other pages as saved).</item>
@@ -277,6 +277,12 @@ internal static class Daemon
                 json.WriteString("file", keywordFile);
                 json.WriteNumber("line", keyword.Line);
                 json.WriteNumber("column", keyword.Column);
+                json.WriteStartArray("forms");
+                foreach (string form in keyword.Forms)
+                {
+                    json.WriteStringValue(form);
+                }
+                json.WriteEndArray();
                 json.WriteEndObject();
             }
             json.WriteEndArray();

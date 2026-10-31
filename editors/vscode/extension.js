@@ -1262,10 +1262,124 @@ function providePageHover (document, position) {
   return new vscode.Hover(text, reference.range)
 }
 
-// F12 / Ctrl+click on a reference: the mark
-function providePageDefinition (document, position) {
+// F12 / Ctrl+click: on a reference its mark; on a link or figure ("[…](seite.geo.md#marke)", "![…](datei.geo#3..4)") the
+// page at the mark or the script at the step; on a keyword of the book (as the page links it) the place of its term
+async function providePageDefinition (document, position) {
   const found = markAt(document, position)
-  return found && found.mark ? markLocation(document, found.mark) : null
+  if (found) {
+    return found.mark ? markLocation(document, found.mark) : null
+  }
+  const link = linkAt(document, position)
+  if (link) {
+    return linkLocation(document, link)
+  }
+  return keywordLocation(document, position)
+}
+
+// the link or figure under the cursor: { image, href }
+function linkAt (document, position) {
+  const text = document.lineAt(position.line).text
+  const pattern = /(!?)\[(?:[^\[\]]|\[[^\]]*\])*\]\(\s*<?([^()\s>]*)>?(?:\s+"[^"]*")?\s*\)/g
+  for (let match; (match = pattern.exec(text));) {
+    if (position.character >= match.index && position.character <= match.index + match[0].length) {
+      return { image: match[1] === '!', href: match[2] }
+    }
+  }
+  return null
+}
+
+// the text of a file: as in its editor (unsaved changes too), else as saved
+function linesOf (file) {
+  const open = vscode.workspace.textDocuments.find(d => d.uri.scheme === 'file' && d.uri.fsPath.toLowerCase() === file.toLowerCase())
+  if (open) {
+    return open.getText().split(/\r?\n/)
+  }
+  try {
+    return fs.readFileSync(file, 'utf8').split(/\r?\n/)
+  } catch (error) {
+    return null
+  }
+}
+
+async function linkLocation (document, { image, href }) {
+  if (/^[a-z][a-z0-9+.-]*:/i.test(href) || document.uri.scheme !== 'file') {
+    return null
+  }
+  const hash = href.indexOf('#')
+  const file = decodeURIComponent(hash < 0 ? href : href.slice(0, hash))
+  const anchor = hash < 0 ? '' : decodeURIComponent(href.slice(hash + 1))
+  // a figure of the page's own script ("![](#3)"), else the file beside the page
+  const target = file ? path.resolve(path.dirname(document.uri.fsPath), file) : image ? ownScript(document) : document.uri.fsPath
+  if (!target) {
+    return null
+  }
+  const script = target.replace(/\.html?$/i, '.geo')
+  if (/\.geo$/i.test(script)) {
+    return fs.existsSync(script) ? new vscode.Location(vscode.Uri.file(script), await stepPosition(script, anchor)) : null
+  }
+  if (!fs.existsSync(target)) {
+    return null
+  }
+  return new vscode.Location(vscode.Uri.file(target), anchor ? markPosition(document, target, anchor) : new vscode.Position(0, 0))
+}
+
+// the place of a mark on a page ("{#def-strecke}"), else of a keyword's term ("kw-strecke"), else the start
+function markPosition (from, file, anchor) {
+  const lines = linesOf(file) || []
+  const pattern = new RegExp('\\{[^}]*#' + anchor.replace(/[^\p{L}\p{N}_-]/gu, '') + '(?![\\p{L}\\p{N}_-])', 'u')
+  const line = lines.findIndex(l => pattern.test(l))
+  if (line >= 0) {
+    return new vscode.Position(line, lines[line].search(pattern))
+  }
+  const result = lastResults.get(from.uri.toString())
+  const keyword = ((result && result.keywords) || []).find(k => k.anchor === anchor && k.file && k.file.toLowerCase() === file.toLowerCase())
+  return keyword ? new vscode.Position(Math.max(0, keyword.line - 1), Math.max(0, keyword.column - 1)) : new vscode.Position(0, 0)
+}
+
+// the "step" line of a step of a script: by its number, mark or name ("3", "gleich", "3..4": the first), else the start
+async function stepPosition (script, anchor) {
+  const first = anchor.split('..')[0]
+  let number = /^\d+$/.test(first) ? Number(first) : 0
+  if (first && !number) {
+    try {
+      const steps = (await request({ type: 'steps', file: script })).steps || []
+      const step = steps.find(s => s.mark === first) || steps.find(s => s.name === first)
+      number = step ? step.number : 0
+    } catch (error) {
+    }
+  }
+  const lines = linesOf(script) || []
+  for (let i = 0, count = 0; number > 0 && i < lines.length; i++) {
+    if (/^\s*(?:text)?step\b/.test(lines[i]) && ++count === number) {
+      return new vscode.Position(i, lines[i].search(/\S/))
+    }
+  }
+  return new vscode.Position(0, 0)
+}
+
+// a keyword of the book under the cursor (one of its forms, as the page links it): the place of its term
+function keywordLocation (document, position) {
+  const result = lastResults.get(document.uri.toString())
+  const keywords = ((result && result.keywords) || []).filter(k => k.file && k.forms)
+  const text = document.lineAt(position.line).text
+  let best = null
+  for (const keyword of keywords) {
+    for (const form of keyword.forms) {
+      const escaped = form.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/ /g, '\\s+')
+      const pattern = new RegExp('(?<![\\p{L}\\p{N}])' + escaped + '(?![\\p{L}\\p{N}])', 'gu')
+      for (let match; (match = pattern.exec(text));) {
+        if (position.character >= match.index && position.character <= match.index + match[0].length
+          && (!best || match[0].length > best.length)) {
+          best = { keyword, length: match[0].length }
+        }
+      }
+    }
+  }
+  if (!best) {
+    return null
+  }
+  const { keyword } = best
+  return new vscode.Location(vscode.Uri.file(keyword.file), new vscode.Position(Math.max(0, keyword.line - 1), Math.max(0, keyword.column - 1)))
 }
 
 // ------------------------------------------------------------------ pages (.geo.md): outline and folding

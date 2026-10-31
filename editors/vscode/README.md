@@ -98,7 +98,9 @@ Datei-Symbol-Design (etwa Seti, die Voreinstellung) für die Sprache kein eigene
   Marken des ganzen Buchs an (Abbildungen, Aussagen, Abschnitte – mit Nummer und Text), in `![](#` bzw.
   `![](datei.geo#` (auch nach `..`) die Schritte des Skripts mit Nummer und Schrittbeschreibung; das Tooltip auf
   `§name` zeigt das Ziel, F12 bzw. Strg+Klick springt zur Marke (auch auf eine andere Seite), ebenso ein Klick auf einen
-  Verweis in der Vorschau. **Editor und Vorschau gemeinsam:** Der Absatz, in dem der Cursor steht, ist in der Vorschau
+  Verweis in der Vorschau. F12/Strg+Klick geht auch auf Links (`[…](seite.geo.md#marke)`: die Seite an der Marke), auf
+  Abbildungen (`![…](datei.geo#3..4)`, `![](#gleich)`: das Skript am Schritt) und auf Stichwörter anderer Seiten im Text
+  (in jeder ihrer Formen: zur Stelle, an der das Stichwort steht). **Editor und Vorschau gemeinsam:** Der Absatz, in dem der Cursor steht, ist in der Vorschau
   links gelb markiert; ein markierter Text (auf einer Zeile, ohne Formeln) ist dort gelb hinterlegt – genau die Stelle,
   auch wenn das Wort im Absatz mehrmals vorkommt – und die Vorschau blättert hin, wenn sie nicht zu sehen ist.
   Umgekehrt setzt ein Doppelklick (oder Strg+Klick) auf ein Wort oder eine Formel in der Vorschau den Cursor im Editor
