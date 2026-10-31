@@ -21,7 +21,8 @@ internal sealed record GridStatement(int Line, int Column, double Step) : Statem
 // "print scale 6mm" (the length of a unit in print) or "print width 12cm" (the width of the view in print), in points
 internal sealed record PrintStatement(int Line, int Column, bool Width, double Points) : Statement(Line, Column);
 
-internal sealed record AxesStatement(int Line, int Column, double? Size, Color? Color) : Statement(Line, Column);
+/// <summary>"axes size 18 color gray step 0.5 0.1": the numbers' size, the colour, the distance of ticks and numbers (x, y).</summary>
+internal sealed record AxesStatement(int Line, int Column, double? Size, Color? Color, double? StepX = null, double? StepY = null) : Statement(Line, Column);
 
 internal sealed record SpeedStatement(int Line, int Column, double Speed) : Statement(Line, Column);
 

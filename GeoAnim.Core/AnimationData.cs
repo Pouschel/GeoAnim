@@ -64,6 +64,12 @@ public sealed class AnimationData
     /// <summary>The colour of the axes and their numbers (null: the player's grey).</summary>
     public Color? AxesColor { get; init; }
 
+    /// <summary>The distance of the ticks and numbers on the x axis ("axes step"), or null.</summary>
+    public double? AxesStepX { get; init; }
+
+    /// <summary>The same on the y axis.</summary>
+    public double? AxesStepY { get; init; }
+
     /// <summary>The length of a unit in the book's figures in points ("print scale"; null: the book's).</summary>
     public double? PrintScale { get; init; }
 
@@ -112,6 +118,8 @@ public sealed class AnimationData
         {
             AxesSize = AxesSize,
             AxesColor = AxesColor,
+            AxesStepX = AxesStepX,
+            AxesStepY = AxesStepY,
             PrintScale = PrintScale,
             PrintWidth = PrintWidth,
             Description = description,
@@ -160,6 +168,11 @@ public sealed class AnimationData
             if (AxesColor != null)
             {
                 json.WriteString("axesColor", AxesColor.Value.ToHex());
+            }
+            if (AxesStepX != null)
+            {
+                json.WriteNumber("axesStepX", AxesStepX.Value);
+                json.WriteNumber("axesStepY", AxesStepY ?? AxesStepX.Value);
             }
             if (PrintScale != null)
             {

@@ -841,11 +841,20 @@ public static partial class FigureRenderer
             double arrow = 9 * unit;
             decor.Append("<g stroke=\"").Append(color).Append("\" stroke-width=\"").Append(N(1.5 * unit)).Append("\" fill=\"").Append(color).Append("\">");
             var labels = new StringBuilder();
-            // labels on every k-th unit, at least 36 sizes apart (more for larger numbers)
+            // labels on every k-th unit, at least 36 sizes apart (more for larger numbers); "axes step": as given
             double k = 1;
             while (k * scale < 36 * f * unit)
             {
                 k = k == 1 ? 2 : k == 2 ? 5 : k * 2;
+            }
+            double kx = animation.AxesStepX ?? k, ky = animation.AxesStepY ?? k;
+            // the places of the ticks: whole multiples of the step (no sums that drift)
+            static IEnumerable<double> Ticks(double from, double to, double step)
+            {
+                for (long i = (long)Math.Ceiling(from / step - 1e-9); i * step < to - 1e-9; i++)
+                {
+                    yield return i * step;
+                }
             }
             void Label(string text, double x, double y, string anchor)
             {
@@ -859,7 +868,7 @@ public static partial class FigureRenderer
                 decor.Append("<path d=\"M").Append(N(ToX(area.XMin))).Append(' ').Append(N(y0)).Append('H').Append(N(xEnd)).Append("\"/>");
                 decor.Append("<path stroke=\"none\" d=\"M").Append(N(xEnd)).Append(' ').Append(N(y0)).Append('L').Append(N(xEnd - arrow)).Append(' ')
                     .Append(N(y0 - arrow / 2)).Append('L').Append(N(xEnd - arrow)).Append(' ').Append(N(y0 + arrow / 2)).Append("Z\"/>");
-                for (double x = Math.Ceiling(area.XMin / k) * k; x < area.XMax; x += k)
+                foreach (double x in Ticks(area.XMin, area.XMax, kx))
                 {
                     if (Math.Abs(x) < 1e-9 || ToX(x) - ToX(area.XMin) < 12 * f * unit || ToX(x) > ToX(area.XMax) - 24 * f * unit)
                     {
@@ -875,7 +884,7 @@ public static partial class FigureRenderer
                 decor.Append("<path d=\"M").Append(N(x0)).Append(' ').Append(N(ToY(area.YMin))).Append('V').Append(N(yEnd)).Append("\"/>");
                 decor.Append("<path stroke=\"none\" d=\"M").Append(N(x0)).Append(' ').Append(N(yEnd)).Append('L').Append(N(x0 - arrow / 2)).Append(' ').Append(N(yEnd + arrow)).Append('L')
                     .Append(N(x0 + arrow / 2)).Append(' ').Append(N(yEnd + arrow)).Append("Z\"/>");
-                for (double y = Math.Ceiling(area.YMin / k) * k; y < area.YMax; y += k)
+                foreach (double y in Ticks(area.YMin, area.YMax, ky))
                 {
                     if (Math.Abs(y) < 1e-9 || ToY(y) - ToY(area.YMax) < 24 * f * unit || ToY(y) > ToY(area.YMin) - 12 * f * unit)
                     {
@@ -888,7 +897,8 @@ public static partial class FigureRenderer
             decor.Append("</g><g fill=\"").Append(color).Append("\">").Append(labels).Append("</g>");
         }
 
+        // with a decimal comma: "0,25", "−1,5"
         private static string FormatNumber(double n) =>
-            (Math.Round(n * 1000) / 1000).ToString(CultureInfo.InvariantCulture).Replace("-", "−");
+            (Math.Round(n * 1000000) / 1000000 + 0.0).ToString(CultureInfo.InvariantCulture).Replace("-", "−").Replace('.', ',');
     }
 }

@@ -102,6 +102,12 @@ public sealed class Construction
     /// <summary>The colour of the axes and their numbers (null: grey).</summary>
     public Color? AxesColor { get; set; }
 
+    /// <summary>The distance of the ticks and numbers on the x axis ("axes step 0.5"); null: every unit, wider apart if they would be too close.</summary>
+    public double? AxesStepX { get; set; }
+
+    /// <summary>The same on the y axis.</summary>
+    public double? AxesStepY { get; set; }
+
     /// <summary>The length of a unit in the book's figures in points ("print scale"; null: the book's).</summary>
     public double? PrintScale { get; set; }
 
@@ -1008,6 +1014,8 @@ public sealed class Construction
         {
             AxesSize = AxesSize,
             AxesColor = AxesColor,
+            AxesStepX = AxesStepX,
+            AxesStepY = AxesStepY,
             PrintScale = PrintScale,
             PrintWidth = PrintWidth,
             Description = Description,

@@ -1303,4 +1303,16 @@ public class ScriptTests
         Assert.DoesNotContain("axesSize", ScriptCompiler.Compile("axes\npoint A = 1 1\n").ToJson());
         Assert.Throws<ScriptError>(() => ScriptCompiler.Compile("axes size -2\n"));
     }
+
+    [Fact]
+    public void AxesHaveTheirStepsAsGiven()
+    {
+        string json = ScriptCompiler.Compile("view x -1.2 .. 1.2 y -1.2 .. 1.2\naxes step 0.2\npoint A = 1 1\n").ToJson();
+        Assert.Contains("\"axesStepX\":0.2,\"axesStepY\":0.2", json);
+        json = ScriptCompiler.Compile("view x -1.2 .. 1.2 y -1.2 .. 1.2\naxes size 12 step 0.5 0.25 color gray\npoint A = 1 1\n").ToJson();
+        Assert.Contains("\"axesStepX\":0.5,\"axesStepY\":0.25", json);
+        Assert.DoesNotContain("axesStep", ScriptCompiler.Compile("axes\npoint A = 1 1\n").ToJson());
+        Assert.Throws<ScriptError>(() => ScriptCompiler.Compile("axes step 0\n"));
+
+    }
 }

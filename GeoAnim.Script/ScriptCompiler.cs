@@ -210,6 +210,8 @@ public static class ScriptCompiler
                     c.Axes = true;
                     c.AxesSize = s.Size ?? c.AxesSize;
                     c.AxesColor = s.Color ?? c.AxesColor;
+                    c.AxesStepX = s.StepX ?? c.AxesStepX;
+                    c.AxesStepY = s.StepY ?? c.AxesStepY;
                     break;
                 case DefaultStatement s:
                     foreach (string kind in s.Kinds.Count == 0 ? [""] : s.Kinds)

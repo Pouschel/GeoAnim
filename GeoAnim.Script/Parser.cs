@@ -166,22 +166,28 @@ internal sealed partial class Parser
                 break;
             case "axes":
                 {
-                    // "axes size 18 color gray": size of the numbers, colour of axes and numbers
-                    double? size = null;
+                    // "axes size 18 color gray step 0.5 0.1": size of the numbers, colour of axes and numbers, distance of
+                    // ticks and numbers (on both axes, or x and y)
+                    double? size = null, stepX = null, stepY = null;
                     Color? color = null;
-                    while (Current.Kind == TokenKind.Name && Current.Text is "size" or "color")
+                    while (Current.Kind == TokenKind.Name && Current.Text is "size" or "color" or "step")
                     {
                         string option = Next().Text;
                         if (option == "size")
                         {
                             size = ExpectPositive("the size of the axes' numbers");
                         }
+                        else if (option == "step")
+                        {
+                            stepX = ExpectPositive("the distance of the axes' numbers");
+                            stepY = IsNumberAt(position) ? ExpectPositive("the distance of the numbers on the y axis") : stepX;
+                        }
                         else
                         {
                             color = ExpectColor();
                         }
                     }
-                    statement = new AxesStatement(l, c, size, color);
+                    statement = new AxesStatement(l, c, size, color, stepX, stepY);
                 }
                 break;
             case "speed":

@@ -1150,17 +1150,27 @@
       const axes = create('g', { stroke: color, 'stroke-width': 1.5 * unit, fill: color }, decor)
       const labels = create('g', { fill: color, 'font-size': size * unit }, decor)
       const arrow = 9 * unit
-      // labels on every k-th unit, at least 36 points apart (more for larger numbers)
+      // labels on every k-th unit, at least 36 points apart (more for larger numbers); "axes step": as given
       let k = 1
       while (k * scale < 36 * f * unit) {
         k = k === 1 ? 2 : k === 2 ? 5 : k * 2
+      }
+      const kx = animation.axesStepX || k
+      const ky = animation.axesStepY || k
+      // the places of the ticks: whole multiples of the step (no sums that drift)
+      const ticks = (from, to, step) => {
+        const places = []
+        for (let i = Math.ceil(from / step - 1e-9); i * step < to - 1e-9; i++) {
+          places.push(i * step)
+        }
+        return places
       }
       if (view.ymin <= 0 && view.ymax >= 0) {
         const y0 = toY(0)
         const xEnd = toX(view.xmax)
         create('line', { x1: 0, y1: y0, x2: xEnd, y2: y0 }, axes)
         create('polygon', { points: `${xEnd},${y0} ${xEnd - arrow},${y0 - arrow / 2} ${xEnd - arrow},${y0 + arrow / 2}`, stroke: 'none' }, axes)
-        for (let x = Math.ceil(view.xmin / k) * k; x < view.xmax; x += k) {
+        for (const x of ticks(view.xmin, view.xmax, kx)) {
           // no number at 0 and none cut off at the edges
           if (Math.abs(x) < 1e-9 || toX(x) < 12 * f * unit || toX(x) > toX(view.xmax) - 24 * f * unit) {
             continue
@@ -1173,7 +1183,7 @@
         const x0 = toX(0)
         create('line', { x1: x0, y1: toY(view.ymin), x2: x0, y2: 0 }, axes)
         create('polygon', { points: `${x0},0 ${x0 - arrow / 2},${arrow} ${x0 + arrow / 2},${arrow}`, stroke: 'none' }, axes)
-        for (let y = Math.ceil(view.ymin / k) * k; y < view.ymax; y += k) {
+        for (const y of ticks(view.ymin, view.ymax, ky)) {
           if (Math.abs(y) < 1e-9 || toY(y) < 24 * f * unit || toY(y) > toY(view.ymin) - 12 * f * unit) {
             continue
           }
@@ -1184,7 +1194,8 @@
     }
   }
 
-  const formatNumber = n => String(Math.round(n * 1000) / 1000).replace('-', '−')
+  // with a decimal comma: "0,25", "−1,5"
+  const formatNumber = n => String(Math.round(n * 1000000) / 1000000 + 0).replace('-', '−').replace('.', ',')
 
   // the description below the picture keeps the height of the tallest one (formulas, several lines), so that the
   // picture does not change its size while the animation plays
