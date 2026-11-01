@@ -67,6 +67,12 @@ internal static partial class Program
         FigureStyle style = playerWidth is double pixels
             ? new FigureStyle(pixels / (animation.View.XMax - animation.View.XMin), pixels / 1280)
             : StyleOf(Path.GetDirectoryName(Path.GetFullPath(file))!);
+        // the script's own size ("print scale", "print width"), as in the book
+        double viewWidth = animation.View.XMax - animation.View.XMin;
+        if (playerWidth == null && (animation.PrintScale ?? (animation.PrintWidth is double printWidth && viewWidth > 0 ? printWidth / viewWidth : null)) is double unit)
+        {
+            style = style with { PointsPerUnit = unit };
+        }
         // the steps shown: indices from 0 (-1: the starting picture)
         List<int> shown;
         try

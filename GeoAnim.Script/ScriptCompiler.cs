@@ -573,7 +573,7 @@ public static class ScriptCompiler
         {
             "point" => ["color", "size", "labelsize", "labeldir", "labelgap", "label", "offset", "shift", "stacking", "halo", "draw"],
             "polygon" => ["color", "width", "fill", "opacity", "stacking", "draw"],
-            "text" => ["color", "size", "offset", "shift", "align", "stacking", "halo", "draw"],
+            "text" => ["color", "size", "offset", "shift", "align", "labeldir", "labelgap", "stacking", "halo", "draw"],
             "segment" or "ray" => ["color", "width", "label", "labelsize", "labelpos", "offset", "shift", "arrow", "stacking", "halo", "draw"],
             "line" => ["color", "width", "label", "labelsize", "labelpos", "offset", "shift", "stacking", "halo", "draw"],
             "angle" => ["color", "width", "fill", "opacity", "label", "labelsize", "radius", "offset", "shift", "arrow", "stacking", "halo", "draw"],

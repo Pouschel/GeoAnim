@@ -112,7 +112,6 @@ internal static partial class Program
                 }
                 entry.Title = HtmlExporter.PlainText(page.Title ?? DisplayName(Path.GetFileName(entry.Source)[..^".geo.md".Length]));
                 entry.Number = page.SectionNumber;
-                warn = message => progress.Warning($"{entry.Source}:{message}");
                 entry.Body = Convert(page, entry, book);
             }
             File.WriteAllText(output, Document(book), new UTF8Encoding(false));
@@ -168,11 +167,7 @@ internal static partial class Program
             {
                 animation = animations[figure.Key] = FigureAnimation.Parse(figure.AnimationJson);
             }
-            List<FigureImage> images = BookPictures.Of(figure, animation, style, out FigureStyle used);
-            if (BookPictures.TextWarning(figure, animation, used) is { } warning && warned.Add(figure.Key))
-            {
-                warn?.Invoke($"{figure.Reference.Line}:{figure.Reference.Column}: {warning}");
-            }
+            List<FigureImage> images = BookPictures.Of(figure, animation, style);
             List<string?> captions = BookPictures.Captions(figure, animation, images.Count);
             var html = new StringBuilder("<div class=\"geo-print\">");
             for (int i = 0; i < images.Count; i++)
@@ -191,10 +186,6 @@ internal static partial class Program
             }
             return html.Append("</div>").ToString();
         }
-
-        // the warnings of the figures of the page being made ("line:column: …"), and the figures warned about
-        private Action<string>? warn;
-        private readonly HashSet<string> warned = new(StringComparer.Ordinal);
 
         // a link into the book: to its place in the file; to a script without a page: to the web (with "url") or none;
         // others stay as they are

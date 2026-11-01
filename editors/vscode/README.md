@@ -30,7 +30,7 @@ Datei-Symbol-Design (etwa Seti, die Voreinstellung) für die Sprache kein eigene
   Schritts so, wie es ins Buch kommt – derselbe Renderer wie für PDF und E-Book, mit `print:` aus der `index.yaml` des
   Buchs und `print scale`/`print width` des Skripts, auf den Inhalt zugeschnitten, so groß wie die Vorschau. Texte stehen
   darin im Verhältnis zur Zeichnung wie im Druck: Was hier nicht in eine Linie rutscht, rutscht auch im Buch nicht.
-  Darunter stehen Größe in mm und Maßstab, gegebenenfalls die Warnung zu den Texten. Das Bild folgt dem Schritt (Cursor,
+  Darunter stehen Größe in mm und Maßstab. Das Bild folgt dem Schritt (Cursor,
   Schaltflächen) und aktualisiert sich beim Tippen. Erneut klicken schaltet zurück zum Player.
 - **Schritt folgt Cursor:** Steht der Cursor in einem Schritt, zeigt die Vorschau dessen Ende (vor dem ersten `step`:
   das Startbild). Gezählt werden die `step`-Zeilen der Datei selbst.

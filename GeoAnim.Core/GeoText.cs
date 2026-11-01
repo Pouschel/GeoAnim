@@ -102,15 +102,38 @@ public sealed class GeoText : GeoObject
         ghost.Animate("anchor", span, Alignment switch { TextAlign.Left => "start", TextAlign.Right => "end", _ => "middle" });
         ghost.Animate("size", span, Options.Size ?? Defaults.TextSize);
         RenderShift(ghost, span);
+        WritePlace(ghost, span);
+    }
+
+    // where it stands: with "labeldir" like a point's label – its box in that direction from its place, its edge
+    // "labelgap" points away (beside a point: from the point's edge), so that it keeps its distance in print whatever the
+    // scale; else at its place (beside a point: the default distance in points), "offset" in coordinates
+    private void WritePlace(Primitive primitive, Span span)
+    {
+        if (Options.LabelDir is double direction)
+        {
+            double radians = direction * Math.PI / 180;
+            if (IsDefined)
+            {
+                primitive.Animate("x", span, Position.X);
+                primitive.Animate("y", span, Position.Y);
+            }
+            double pointSize = OwnPosition == null ? anchor.Options.Size ?? Defaults.PointSize : 0;
+            AnimateFromStart(primitive, "dir", Span.At(span.Start), 1.0, 0.0);
+            AnimateFromStart(primitive, "nx", span, Math.Cos(radians), 0.0);
+            AnimateFromStart(primitive, "ny", span, Math.Sin(radians), 0.0);
+            AnimateFromStart(primitive, "gap", span, pointSize + (Options.LabelGap ?? Defaults.LabelGap), 0.0);
+            return;
+        }
         Vec offset = Options.Offset ?? new Vec(0, 0);
         Vec distance = Options.Offset == null && OwnPosition == null ? Defaults.LabelOffset : new Vec(0, 0);
         if (IsDefined)
         {
-            ghost.Animate("x", span, Position.X + offset.X);
-            ghost.Animate("y", span, Position.Y + offset.Y);
+            primitive.Animate("x", span, Position.X + offset.X);
+            primitive.Animate("y", span, Position.Y + offset.Y);
         }
-        ghost.Animate("dx", span, distance.X);
-        ghost.Animate("dy", span, distance.Y);
+        primitive.Animate("dx", span, distance.X);
+        primitive.Animate("dy", span, distance.Y);
     }
 
     private void WriteLayout(Span span)
@@ -128,15 +151,7 @@ public sealed class GeoText : GeoObject
             // the player places it below the text above
             return;
         }
-        Vec offset = Options.Offset ?? new Vec(0, 0);
-        Vec distance = Options.Offset == null && OwnPosition == null ? Defaults.LabelOffset : new Vec(0, 0);
-        if (IsDefined)
-        {
-            text.Animate("x", span, Position.X + offset.X);
-            text.Animate("y", span, Position.Y + offset.Y);
-        }
-        text.Animate("dx", span, distance.X);
-        text.Animate("dy", span, distance.Y);
+        WritePlace(text, span);
     }
 }
 

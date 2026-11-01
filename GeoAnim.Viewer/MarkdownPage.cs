@@ -33,7 +33,7 @@ public sealed record GeoReference(string File, string? From, string? To, string 
     /// <summary>The figure's width in print after cutting ("{width=8cm}"; a percentage is for the web), or null.</summary>
     public string? Width { get; init; }
 
-    /// <summary>No warning about the size of its texts in print ("{nowarn}": checked, it fits).</summary>
+    /// <summary>"{nowarn}": once no warning about the size of its texts in print; there is none any more (the print view shows them), it is still allowed.</summary>
     public bool NoWarn { get; init; }
 
     /// <summary>The address as written: file and steps.</summary>

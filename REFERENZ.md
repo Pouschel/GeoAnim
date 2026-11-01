@@ -159,7 +159,9 @@ Ist die Summe kleiner als der Abstand von F und G, gibt es die Ellipse nicht: be
 | `text t = "…" at P` · `text t = name at P` | neben einem Punkt, wandert mit ihm |
 | `text t = "…" below s` · `text t = "…" below s gap n` | eine Zeile unter dem Text s (einem Text an Koordinaten oder selbst unter einem), mit dessen Ausrichtung; `gap`: n Einheiten Abstand zusätzlich; wandert mit s |
 
-**Optionen:** `color` `size` `align` · `align left` · `align center` · `align right` `shift` (`offset` veraltet), *Zeichnen*. Ein Text an festen Koordinaten steht standardmäßig mit seiner Mitte dort (`align center`); `align left` beginnt dort, `align right` endet dort (mehrzeilige Texte entsprechend bündig). `shift` verschiebt ihn von da aus.
+**Optionen:** `color` `size` `align` · `align left` · `align center` · `align right` `labeldir` `labelgap` `shift` (`offset` veraltet), *Zeichnen*. Ein Text an festen Koordinaten steht standardmäßig mit seiner Mitte dort (`align center`); `align left` beginnt dort, `align right` endet dort (mehrzeilige Texte entsprechend bündig). `shift` verschiebt ihn von da aus.
+
+**Mit Richtung** (`labeldir`, wie bei der Beschriftung eines Punkts): `text t = "…" at 2 3 labeldir N` steht über der Stelle (2|3), mit seiner Unterkante `labelgap` pt (Standard 4) darüber; `labeldir SE` rechts darunter mit der nächsten Ecke dort, ebenso `N` `NE` `E` … oder Grad. Der Abstand ist in pt, nicht in Koordinaten: Wird die Abbildung im Druck kleiner, rückt die Stelle mit der Zeichnung, der Text bleibt gleich weit davon entfernt. Man legt die Stelle also auf die Linie oder den Punkt, an dem der Text stehen soll. Neben einem Punkt (`at P labeldir E`) zählt der Abstand ab dem Rand des Punkts. `align` gilt dann nicht.
 
 ## Zahlen
 
@@ -233,8 +235,8 @@ Aktionen stehen in einem Schritt und laufen nacheinander. Die Optionen *Ablauf* 
 | `nolabel` | – | ✓ | ✓ | ✓ | | | ✓ | | |
 | `labelsize` | n (pt) | ✓ | ✓ | ✓ | | | ✓ | | |
 | `labelpos` | n (0 bei A, 1 bei B) | | ✓ | ✓ | | | | | |
-| `labeldir` | `N` `NE` `E` `SE` `S` `SW` `W` `NW` oder Grad (gegen den Uhrzeigersinn ab Osten): Richtung der Beschriftung vom Punkt aus | ✓ | | | | | | | |
-| `labelgap` | n (pt, Standard 4): Zwischenraum zwischen Punkt und Beschriftung bei `labeldir` | ✓ | | | | | | | |
+| `labeldir` | `N` `NE` `E` `SE` `S` `SW` `W` `NW` oder Grad (gegen den Uhrzeigersinn ab Osten): Richtung der Beschriftung vom Punkt aus, beim Text die Richtung von seiner Stelle aus | ✓ | | | | | | ✓ | |
+| `labelgap` | n (pt, Standard 4): Zwischenraum zwischen Punkt und Beschriftung bzw. zwischen Stelle und Text bei `labeldir` | ✓ | | | | | | ✓ | |
 | `shift` | x y (Koordinateneinheiten) – Verschiebung der Beschriftung von ihrem gewohnten Platz aus | ✓ | ✓ | ✓ | | | ✓ | ✓ | |
 | `offset` | x y – *veraltet*: Lage relativ zum Punkt selbst (ohne den gewohnten Abstand); beim Winkel wie `shift` | ✓ | ✓ | ✓ | | | ✓ | ✓ | |
 | `radius` | n (Einheiten) | | | | | | ✓ | | |

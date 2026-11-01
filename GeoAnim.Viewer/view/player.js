@@ -1448,7 +1448,7 @@
     host.postMessage({ type: 'print', step })
   }
 
-  // the picture GeoAnim made, with its size in mm and the scale and a warning about its texts; a script with an error
+  // the picture GeoAnim made, with its size in mm and the scale; a script with an error
   // keeps the last good picture (as the player keeps the last good animation): the error itself is the red box's, which
   // the preview updates while typing, in both views
   function showPrint (message) {
@@ -1460,12 +1460,6 @@
     $('print-picture').src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(message.svg)
     const mm = points => (points * 25.4 / 72).toFixed(1).replace('.', ',')
     info.textContent = `${mm(message.width)} × ${mm(message.height)} mm · ${mm(message.pointsPerUnit)} mm je Einheit`
-    if (message.warning) {
-      const line = document.createElement('div')
-      line.className = 'warning'
-      line.textContent = message.warning
-      info.appendChild(line)
-    }
   }
 
   function pause () {

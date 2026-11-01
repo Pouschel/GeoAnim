@@ -32,7 +32,7 @@ namespace GeoAnim.Cli;
 /// "name": "gleiche-punkte", "caption": "…"}, …], "error": "…" or null} – the steps of a script, for the completion of
 /// figures.</item>
 /// <item>{"id": 7, "type": "print", "file": "C:\\…\\a.geo", "text": "…", "step": 2} → {"id": 7, "svg": "…", "width": 170.1,
-/// "height": 99.2 (pt), "pointsPerUnit": 14.17, "warning": "…" or null, "error": "…" or null} – the picture of the script at
+/// "height": 99.2 (pt), "pointsPerUnit": 14.17, "error": "…" or null} – the picture of the script at
 /// the end of the step (-1: the starting picture) as in print, cut to its content, in the size of its book ("print:" in
 /// index.yaml) or of the script ("print scale").</item>
 /// <item>{"id": 5, "type": "page"} → {"id": 5, "html": "…"} – the page for the preview of a Markdown page.</item>
@@ -101,14 +101,14 @@ internal static class Daemon
     // the picture of a script at the end of a step as in print (the print view of its preview)
     private static string Print(JsonElement id, string file, string text, int step)
     {
-        string? svg = null, warning = null, error = null;
+        string? svg = null, error = null;
         double width = 0, height = 0, pointsPerUnit = 0;
         try
         {
             ScriptSource source = Path.IsPathRooted(file) ? ScriptSource.FromFile(file, text) : ScriptSource.FromText(text);
             var animation = FigureAnimation.Parse(ScriptCompiler.Compile(source).ToJson());
             FigureStyle style = Path.IsPathRooted(file) ? BookPictures.PrintOf(Path.GetDirectoryName(Path.GetFullPath(file))!).Style : FigureStyle.Default;
-            (FigureImage image, FigureStyle used, warning) = BookPictures.OfScript(Path.GetFileName(file), animation, style, step);
+            (FigureImage image, FigureStyle used) = BookPictures.OfScript(animation, style, step);
             (svg, width, height, pointsPerUnit) = (image.Svg, image.Width, image.Height, used.PointsPerUnit);
         }
         catch (Exception e) when (e is ScriptError or IOException or FormatException or GeoException)
@@ -121,7 +121,6 @@ internal static class Daemon
             json.WriteNumber("width", Math.Round(width, 2));
             json.WriteNumber("height", Math.Round(height, 2));
             json.WriteNumber("pointsPerUnit", Math.Round(pointsPerUnit, 4));
-            json.WriteString("warning", warning);
             json.WriteString("error", error);
         });
     }
@@ -261,7 +260,7 @@ internal static class Daemon
                 // as in print: the pictures in their size (pt) and the font size of the text they go with
                 json.WriteNumber("textSize", print.TextSize);
                 json.WriteStartArray("pictures");
-                foreach ((FigureImage image, string? caption) in PrintPictures(figure, print.Style).Pictures)
+                foreach ((FigureImage image, string? caption) in PrintPictures(figure, print.Style))
                 {
                     json.WriteStartObject();
                     json.WriteString("svg", image.Svg);
@@ -321,21 +320,16 @@ internal static class Daemon
             }
             json.WriteEndArray();
             Problems("errors", page.Errors);
-            // a figure whose texts are larger next to its drawing in print than in the player
-            IEnumerable<MarkdownProblem> figureWarnings = page.PageFigures.DistinctBy(f => f.Key)
-                .Select(f => (Figure: f, Warning: PrintPictures(f, print.Style).Warning))
-                .Where(f => f.Warning != null)
-                .Select(f => new MarkdownProblem(f.Figure.Reference.Line, f.Figure.Reference.Column, f.Warning!));
-            Problems("warnings", page.Warnings.Concat(book.Warnings).Concat(figureWarnings));
+            Problems("warnings", page.Warnings.Concat(book.Warnings));
         });
     }
 
     // the pictures of figures as in print, made once for each figure and size
-    private static readonly Dictionary<string, (List<(FigureImage Image, string? Caption)> Pictures, string? Warning)> PrintCache = new(StringComparer.Ordinal);
+    private static readonly Dictionary<string, List<(FigureImage Image, string? Caption)>> PrintCache = new(StringComparer.Ordinal);
 
     // the pictures of a figure as in print; in a row of stills each with its step's description (HTML; no number: in the
     // script the steps may be 3, 4, 5)
-    private static (List<(FigureImage Image, string? Caption)> Pictures, string? Warning) PrintPictures(PageFigure figure, FigureStyle style)
+    private static List<(FigureImage Image, string? Caption)> PrintPictures(PageFigure figure, FigureStyle style)
     {
         string key = figure.Key + "|" + style.PointsPerUnit.ToString("R", System.Globalization.CultureInfo.InvariantCulture)
             + "|" + style.SizeFactor.ToString("R", System.Globalization.CultureInfo.InvariantCulture);
@@ -348,12 +342,11 @@ internal static class Daemon
             PrintCache.Clear();
         }
         var animation = FigureAnimation.Parse(figure.AnimationJson);
-        List<FigureImage> images = BookPictures.Of(figure, animation, style, out FigureStyle used);
+        List<FigureImage> images = BookPictures.Of(figure, animation, style);
         List<string?> captions = BookPictures.Captions(figure, animation, images.Count);
         var pictures = images.Select((image, i) => (image, captions[i] is { } caption ? MarkdownPage.InlineHtml(caption) : null)).ToList();
-        var result = (pictures, BookPictures.TextWarning(figure, animation, used));
-        PrintCache[key] = result;
-        return result;
+        PrintCache[key] = pictures;
+        return pictures;
     }
 
     // what a page needs of its book: the marks of the other pages, its numbers (section, counts before it), the links of the

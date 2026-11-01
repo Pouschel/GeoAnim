@@ -116,7 +116,7 @@ steht auch die Marke: `![](#2){#abb-strahl crop=no}`.
 | `float` | `left` · `right` | der folgende Text fließt um die Abbildung – **festgelegt, noch nicht umgesetzt**: im Web und im E-Book später, im gedruckten Buch bleiben Abbildungen zentriert |
 | `width` | `8cm` · `60mm` · `200pt` · `3in` · `40%` | im Buch die Breite der Abbildung nach dem Zuschnitt (bei einer Bildfolge der ganzen Reihe); der Maßstab ergibt sich daraus. Prozent: Breite zu `float` im Web – **festgelegt, noch nicht umgesetzt** |
 | `scale` | `6mm` · `0.5cm` · `14pt` | im Buch die Länge einer Einheit für diese Abbildung |
-| `nowarn` | (ohne Wert) | keine Warnung zur Größe der Texte im Druck (geprüft, passt): `![](#2){nowarn}` |
+| `nowarn` | (ohne Wert) | *wirkungslos*: schaltete eine Warnung zur Größe der Texte im Druck ab, die es nicht mehr gibt; bleibt erlaubt |
 
 `float`, `width` und `scale` gelten für die ganze Abbildung; haben zwei ihrer Bilder verschiedene Werte, ist das ein
 Fehler.
@@ -124,11 +124,10 @@ Fehler.
 **Größe im Buch:** Es gilt die genaueste Angabe – `width` oder `scale` an der Abbildung, sonst `print width`/`print scale`
 im Skript (REFERENZ.md), sonst `print: scale` der `index.yaml`. Die Beschriftungen bleiben dabei so groß, wie die
 `index.yaml` sagt (`labels`); eine kleinere Abbildung hat also im Verhältnis größere Texte als der Player, in dem Texte
-ein fester Anteil der Bildbreite sind. Ist eine Abbildung so schmal, dass ihre Texte mehr als 1,2-mal so groß wirken wie
-im Player (bei 9 pt für Größe 34: schmaler als etwa 10 cm für den ganzen `view`), meldet GeoAnim eine Warnung an der
-Abbildung – Texte können dann in Linien rutschen (frei platzierte mit `at x y` eher als solche an Objekten). Die Warnung
-kommt, woher die Größe auch stammt; erst `{nowarn}` an der Abbildung schaltet sie ab – als Vermerk, dass sie im Druck
-geprüft ist (ohne `{nowarn}` ist sie wieder da).
+ein fester Anteil der Bildbreite sind. Wie die Abbildung im Druck aussieht, zeigt die Druckansicht der Skriptvorschau
+(Druckersymbol) und die Buchansicht der Seitenvorschau. Beschriftungen an Objekten halten ihren Abstand in pt; ein
+freier Text bleibt mit `labeldir`/`labelgap` ebenso auf Abstand (REFERENZ.md, `text`), ein Text nur mit `at x y` rückt
+bei kleineren Abbildungen näher an die Linien.
 
 ## Aussagen
 

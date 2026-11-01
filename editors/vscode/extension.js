@@ -657,7 +657,7 @@ async function showPrintPicture (document, step) {
   }
   if (preview) {
     preview.webview.postMessage({ type: 'printPicture', step, svg: answer.svg, width: answer.width, height: answer.height,
-      pointsPerUnit: answer.pointsPerUnit, warning: answer.warning, error: answer.error })
+      pointsPerUnit: answer.pointsPerUnit, error: answer.error })
   }
 }
 

@@ -397,30 +397,7 @@ public sealed class FigureSizeTests
     }
 
     [Fact]
-    public void SmallFiguresWarnThatTheirTextsAreLarger()
-    {
-        var book = new FigureStyle(FigureStyle.Millimetres(5), 9.0 / 34);
-        PageFigure figure = Figure(Script, crop: false);
-        var animation = FigureAnimation.Parse(figure.AnimationJson);
-        BookPictures.Of(figure, animation, book, out FigureStyle used);
-        // 10 units of 5 mm: 5 cm instead of the player's 12 cm
-        Assert.Contains("2.4 times as large", BookPictures.TextWarning(figure, animation, used));
-        // a size chosen on purpose warns too
-        PageFigure scaled = Figure("print scale 4mm\n" + Script, crop: false);
-        var scaledAnimation = FigureAnimation.Parse(scaled.AnimationJson);
-        BookPictures.Of(scaled, scaledAnimation, book, out used);
-        Assert.Contains("3.0 times as large", BookPictures.TextWarning(scaled, scaledAnimation, used));
-        PageFigure large = Figure(Script, width: "12cm", crop: false);
-        BookPictures.Of(large, animation, book, out used);
-        Assert.Null(BookPictures.TextWarning(large, animation, used));
-        // checked: "{nowarn}"
-        PageFigure checkedFigure = figure with { Reference = figure.Reference with { NoWarn = true } };
-        BookPictures.Of(checkedFigure, animation, book, out used);
-        Assert.Null(BookPictures.TextWarning(checkedFigure, animation, used));
-    }
-
-    [Fact]
-    public void AFigureTakesItsSizeAndNoWarnFromItsAttributes()
+    public void AFigureTakesItsSizeFromItsAttributesAndStillAllowsNoWarn()
     {
         MarkdownPage page = MarkdownPage.Parse("![](a.geo#1){#abb-a scale=4mm nowarn}\n\n![](a.geo){width=8cm}\n");
         Assert.Empty(page.Errors);
@@ -478,5 +455,25 @@ public sealed class PrintViewTests : IDisposable
 
         text = "point A = 0 0\npoint A = 1 1\n";
         Assert.Contains("A", Ask(0).GetProperty("error").GetString());
+    }
+}
+
+public sealed class TextDirectionTests
+{
+    [Fact]
+    public void ATextWithADirectionStandsLikeAPointsLabel()
+    {
+        AnimationData animation = ScriptCompiler.Compile("point A = 0 0\ntext t = \"oben\" at 2 3 labeldir N labelgap 6\ntext u = \"rechts\" at A labeldir E\ntext v = \"frei\" at 1 1\n");
+        System.Text.Json.JsonElement[] texts = System.Text.Json.JsonDocument.Parse(animation.ToJson()).RootElement.GetProperty("primitives").EnumerateArray()
+            .Where(p => p.GetProperty("type").GetString() == "text").ToArray();
+        string Json(int i) => texts[i].GetRawText();
+        // the point's label first, then the three texts
+        Assert.Equal(4, texts.Length);
+        // in the direction (north: nx 0, ny 1), 6 points away from its place
+        Assert.Contains("\"nx\"", Json(1));
+        Assert.Contains("\"gap\":[[0,6,", Json(1).Replace(" ", ""));
+        // beside a point: from the point's edge (its size 5 and the default gap 4)
+        Assert.Contains("\"gap\":[[0,9,", Json(2).Replace(" ", ""));
+        Assert.DoesNotContain("\"nx\"", Json(3));
     }
 }
