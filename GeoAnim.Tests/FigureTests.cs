@@ -477,3 +477,28 @@ public sealed class TextDirectionTests
         Assert.DoesNotContain("\"nx\"", Json(3));
     }
 }
+
+public sealed class InvisibleTests
+{
+    [Fact]
+    public void AnInvisibleObjectCountsForTheCutButIsNotDrawn()
+    {
+        const string Script = "view x -10 .. 10 y -10 .. 10\npoint A = 0 0\npoint B = 2 0\nsegment s = A B\n";
+        FigureImage Picture(string script)
+        {
+            var animation = FigureAnimation.Parse(ScriptCompiler.Compile(script).ToJson());
+            return FigureRenderer.Render(animation, animation.Duration, FigureStyle.Default, [animation.Duration]);
+        }
+        FigureImage plain = Picture(Script);
+        FigureImage invisible = Picture(Script + "point R = 6 4 invisible\n");
+        FigureImage hidden = Picture(Script + "point R = 6 4 hidden\n");
+        // the invisible point widens the picture, a hidden one does not
+        Assert.True(invisible.Width > plain.Width + 50);
+        Assert.Equal(plain.Width, hidden.Width, 3);
+        // nothing of it is drawn: as many shapes as without it (the picture is only larger)
+        int Shapes(FigureImage image) => Regex.Matches(image.Svg, "<(circle|path)").Count;
+        Assert.Equal(Shapes(plain), Shapes(invisible));
+        // in the player: marked as invisible
+        Assert.Contains("\"invisible\":true", ScriptCompiler.Compile(Script + "point R = 6 4 invisible\n").ToJson());
+    }
+}

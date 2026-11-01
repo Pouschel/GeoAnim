@@ -12,13 +12,13 @@ internal sealed partial class Parser
         "draw", "steps", "copy", "set", "step", "textstep", "point", "segment", "line", "ray", "circle", "ellipse", "arc", "sector", "polygon", "angle",
         "text", "number", "length", "degrees", "area", "perimeter", "show", "hide", "all", "highlight", "unhighlight", "keep", "move", "rotate", "reflect", "along", "around", "across", "in", "by", "pause", "together", "end", "midpoint", "intersect", "parallel", "perpendicular", "center", "through",
         "radius", "at", "from", "to", "on", "x", "y", "below", "gap", "align", "left", "right",
-        "duration", "color", "width", "fill", "opacity", "size", "labelsize", "labelpos", "labeldir", "labelgap", "label", "nolabel", "hidden", "offset", "shift",
+        "duration", "color", "width", "fill", "opacity", "size", "labelsize", "labelpos", "labeldir", "labelgap", "label", "nolabel", "hidden", "invisible", "offset", "shift",
         "arrow", "start", "both", "straight", "back", "front", "halo", "clockwise", "linear", "ease", "easein", "easeout", "easeinout",
     };
 
     private static readonly HashSet<string> OptionNames = new(StringComparer.Ordinal)
     {
-        "duration", "color", "width", "fill", "opacity", "size", "radius", "labelsize", "labelpos", "labeldir", "labelgap", "label", "nolabel", "hidden", "offset", "shift",
+        "duration", "color", "width", "fill", "opacity", "size", "radius", "labelsize", "labelpos", "labeldir", "labelgap", "label", "nolabel", "hidden", "invisible", "offset", "shift",
         "arrow", "align", "straight", "back", "front", "keep", "halo", "clockwise", "linear", "ease", "easein", "easeout", "easeinout",
     };
 
@@ -1038,7 +1038,7 @@ internal sealed partial class Parser
                     : throw Error(Current, $"Expected left, center or right after \"align\", not {Current.Describe()}."),
                 // "arrow" alone: at the end; "arrow start", "arrow end", "arrow both"
                 "arrow" => Current.Kind == TokenKind.Name && Current.Text is "start" or "end" or "both" ? Next().Text : "end",
-                "nolabel" or "hidden" or "straight" or "back" or "front" or "keep" or "halo" or "clockwise" or "linear" or "ease" or "easein" or "easeout" or "easeinout" => null,
+                "nolabel" or "hidden" or "invisible" or "straight" or "back" or "front" or "keep" or "halo" or "clockwise" or "linear" or "ease" or "easein" or "easeout" or "easeinout" => null,
                 _ => throw Error(option, $"Unknown option or var \"{option.Text}\" (possible options: {string.Join(", ", OptionNames.Order())})."),
             };
             values.Add(new OptionValue(option.Text, value, option.Line, option.Column));

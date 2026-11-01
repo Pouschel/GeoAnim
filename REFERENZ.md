@@ -61,7 +61,7 @@ Reihenfolge der Optionen eines Objekts: Voreinstellungen ohne Art, dann die der 
 
 ## Objekte
 
-Alle Objekte: `art name = Definition Optionen…`. Vor dem ersten `step` gehören sie zum Startbild, in einem Schritt werden sie dort gezeichnet. Die Optionen *Zeichnen* sind `duration`, `linear`/`ease`/`easein`/`easeout`/`easeinout` und `hidden`.
+Alle Objekte: `art name = Definition Optionen…`. Vor dem ersten `step` gehören sie zum Startbild, in einem Schritt werden sie dort gezeichnet. Die Optionen *Zeichnen* sind `duration`, `linear`/`ease`/`easein`/`easeout`/`easeinout`, `hidden` und `invisible`.
 
 ### `point` – Punkt
 
@@ -246,6 +246,7 @@ Aktionen stehen in einem Schritt und laufen nacheinander. Die Optionen *Ablauf* 
 | `halo` | – (schmaler Rand in Hintergrundfarbe um die Beschriftung, beim Winkel in der Farbe seiner Fläche: Linien enden vor den Buchstaben) | ✓ | ✓ | ✓ | | | ✓ | ✓ | |
 | `back` · `front` | – (ganz nach hinten, unter alle Füllungen · ganz nach vorn, über alles außer Texten) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | |
 | `hidden` | – | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | |
+| `invisible` | – unsichtbar, zählt aber beim Zuschnitt fürs Buch mit (anders als `hidden`); auch die Beschriftung; gilt für immer (`show` ändert daran nichts) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | |
 | `straight` | – | | | | | | | | `reflect` |
 | `duration` | n (ms) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | `show` `hide` `highlight` `unhighlight` `move` `rotate` `reflect` `together` |
 | `linear` `ease` `easein` `easeout` `easeinout` | – | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | `show` `hide` `highlight` `unhighlight` `move` `rotate` `reflect` |
@@ -277,4 +278,4 @@ Aktionen stehen in einem Schritt und laufen nacheinander. Die Optionen *Ablauf* 
 
 Diese Wörter können keine Namen sein (`foci` und `sum` der Ellipse dagegen schon, sie gelten nur dort):
 
-`title` `description` `info` `keyword` `view` `background` `grid` `axes` `speed` `var` `default` `include` `input` `output` `use` `draw` `steps` `copy` `set` `step` `textstep` `point` `segment` `line` `ray` `circle` `ellipse` `arc` `sector` `polygon` `angle` `text` `number` `length` `degrees` `area` `perimeter` `show` `hide` `all` `highlight` `unhighlight` `keep` `move` `rotate` `reflect` `along` `around` `across` `in` `by` `pause` `together` `end` `midpoint` `intersect` `parallel` `perpendicular` `center` `through` `radius` `at` `from` `to` `on` `x` `y` `below` `gap` `align` `left` `right` `duration` `color` `width` `fill` `opacity` `size` `labelsize` `labelpos` `labeldir` `labelgap` `label` `nolabel` `hidden` `offset` `shift` `arrow` `start` `both` `straight` `back` `front` `halo` `clockwise` `linear` `ease` `easein` `easeout` `easeinout`
+`title` `description` `info` `keyword` `view` `background` `grid` `axes` `speed` `var` `default` `include` `input` `output` `use` `draw` `steps` `copy` `set` `step` `textstep` `point` `segment` `line` `ray` `circle` `ellipse` `arc` `sector` `polygon` `angle` `text` `number` `length` `degrees` `area` `perimeter` `show` `hide` `all` `highlight` `unhighlight` `keep` `move` `rotate` `reflect` `along` `around` `across` `in` `by` `pause` `together` `end` `midpoint` `intersect` `parallel` `perpendicular` `center` `through` `radius` `at` `from` `to` `on` `x` `y` `below` `gap` `align` `left` `right` `duration` `color` `width` `fill` `opacity` `size` `labelsize` `labelpos` `labeldir` `labelgap` `label` `nolabel` `hidden` `invisible` `offset` `shift` `arrow` `start` `both` `straight` `back` `front` `halo` `clockwise` `linear` `ease` `easein` `easeout` `easeinout`

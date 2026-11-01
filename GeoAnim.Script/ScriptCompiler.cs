@@ -612,6 +612,7 @@ public static class ScriptCompiler
                     Stacking = caller.Stacking != Stacking.Normal ? caller.Stacking : own.Stacking,
                     Halo = caller.Halo || own.Halo,
                     Hidden = caller.Hidden || (own.Hidden && module.Mode != UseMode.Result),
+                    Invisible = caller.Invisible || own.Invisible,
                     Duration = caller.Duration ?? own.Duration,
                     Easing = caller.Easing ?? own.Easing,
                 };
@@ -993,7 +994,7 @@ public static class ScriptCompiler
                 string group = option.Name switch
                 {
                     "duration" => allowed.Contains("draw") ? "draw" : "duration",
-                    "hidden" => "draw",
+                    "hidden" or "invisible" => "draw",
                     "linear" or "ease" or "easein" or "easeout" or "easeinout" => allowed.Contains("draw") ? "draw" : "easing",
                     "nolabel" => "label",
                     "back" or "front" => "stacking",
@@ -1028,6 +1029,7 @@ public static class ScriptCompiler
                     "shift" => options with { Shift = (Vec)option.Value! },
                     "align" => options with { Align = (string)option.Value! switch { "left" => TextAlign.Left, "right" => TextAlign.Right, _ => TextAlign.Center } },
                     "hidden" => options with { Hidden = true },
+                    "invisible" => options with { Invisible = true },
                     "straight" => options with { Straight = true },
                     "keep" => options with { Keep = true },
                     "halo" => options with { Halo = true },

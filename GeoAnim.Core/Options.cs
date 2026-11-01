@@ -89,6 +89,12 @@ public sealed record Options
     /// <summary>Define the object without showing it (show it later with Show).</summary>
     public bool Hidden { get; init; }
 
+    /// <summary>
+    /// Draw the object without anything to see ("invisible"): it is there for cutting a figure in the book to its content
+    /// (unlike a hidden one), the player and the print show nothing of it, its label neither.
+    /// </summary>
+    public bool Invisible { get; init; }
+
     /// <summary>How long it takes to draw the object, in milliseconds.</summary>
     public double? Duration { get; init; }
 

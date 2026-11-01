@@ -184,6 +184,8 @@ public static partial class FigureRenderer
                 }
                 bool counts = !primitive.Unbounded;
                 double opacity = Number(values, "opacity", 1);
+                // an invisible object: measured (it counts for cutting), its markup left out again
+                int before = items.Length;
                 items.Append("<g opacity=\"").Append(N(opacity)).Append("\">");
                 switch (primitive.Type)
                 {
@@ -219,6 +221,10 @@ public static partial class FigureRenderer
                         break;
                 }
                 items.Append("</g>");
+                if (primitive.Invisible)
+                {
+                    items.Length = before;
+                }
             }
         }
 

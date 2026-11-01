@@ -24,6 +24,9 @@ internal sealed class Primitive(int id, string type, int layer)
     /// <summary>The object it belongs to (its label too), or null.</summary>
     public GeoObject? Owner { get; init; }
 
+    /// <summary>Of an invisible object: it counts for cutting a figure, but nothing of it is drawn.</summary>
+    public bool Invisible { get; init; }
+
     /// <summary>A line without ends (a ray or a whole line): it reaches to the border of the view.</summary>
     public bool Unbounded { get; set; }
 

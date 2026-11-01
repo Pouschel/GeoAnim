@@ -10,7 +10,11 @@ internal sealed record FigureFormula(double X, double Y, double Width, double He
 public sealed record FigureStep(double Start, double End, string Caption);
 
 /// <summary>A primitive of an animation with its tracks ([time, value] or [time, value, easing]).</summary>
-internal sealed record FigurePrimitive(int Id, string Type, int Layer, bool Unbounded, IReadOnlyDictionary<string, JsonElement> Tracks);
+internal sealed record FigurePrimitive(int Id, string Type, int Layer, bool Unbounded, IReadOnlyDictionary<string, JsonElement> Tracks)
+{
+    /// <summary>Of an invisible object: it counts for cutting the figure, but is not drawn.</summary>
+    public bool Invisible { get; init; }
+}
 
 /// <summary>
 /// An animation as the player gets it (the JSON of GeoAnim.Core's AnimationData), read for figures; values of tracks
@@ -84,7 +88,10 @@ public sealed class FigureAnimation
             }
             primitives.Add(new FigurePrimitive(primitive.GetProperty("id").GetInt32(), primitive.GetProperty("type").GetString() ?? "",
                 primitive.GetProperty("layer").GetInt32(),
-                primitive.TryGetProperty("unbounded", out JsonElement unbounded) && unbounded.GetBoolean(), tracks));
+                primitive.TryGetProperty("unbounded", out JsonElement unbounded) && unbounded.GetBoolean(), tracks)
+            {
+                Invisible = primitive.TryGetProperty("invisible", out JsonElement invisible) && invisible.GetBoolean(),
+            });
         }
         var math = new Dictionary<string, FigureFormula>(StringComparer.Ordinal);
         if (root.TryGetProperty("math", out JsonElement formulas))

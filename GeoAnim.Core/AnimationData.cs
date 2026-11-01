@@ -282,6 +282,11 @@ public sealed class AnimationData
             // a ray or a whole line: not part of what a figure is cut to
             json.WriteBoolean("unbounded", true);
         }
+        if (primitive.Invisible)
+        {
+            // of an invisible object: counts for cutting, drawn as nothing
+            json.WriteBoolean("invisible", true);
+        }
         json.WriteStartObject("tracks");
         foreach (KeyValuePair<string, List<Primitive.Key>> track in primitive.Tracks)
         {

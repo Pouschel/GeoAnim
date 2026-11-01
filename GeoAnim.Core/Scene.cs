@@ -10,7 +10,7 @@ internal sealed class Scene
     /// <summary>A new primitive of <paramref name="owner"/> (for an editor: which object a part of the picture belongs to).</summary>
     public Primitive Create(GeoObject owner, string type, int layer)
     {
-        var primitive = new Primitive(primitives.Count + 1, type, layer) { Owner = owner };
+        var primitive = new Primitive(primitives.Count + 1, type, layer) { Owner = owner, Invisible = owner.Options.Invisible };
         primitives.Add(primitive);
         return primitive;
     }

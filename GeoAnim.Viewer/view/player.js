@@ -991,6 +991,10 @@
       if (primitive.type === 'polygon') {
         element.setAttribute('stroke-linejoin', 'round')
       }
+      // an invisible object: there (it counts when a figure is cut to its content), but nothing to see
+      if (primitive.invisible) {
+        element.setAttribute('visibility', 'hidden')
+      }
       return { primitive, element, shown: true }
     })
     itemsById = {}
@@ -1485,6 +1489,9 @@
     const k = p.pointsPerUnit * zoom / scale
     const tx = (animation.view.xmin - p.left) * p.pointsPerUnit * zoom
     const ty = (p.top - animation.view.ymax) * p.pointsPerUnit * zoom
+    if (!ghosts.firstElementChild) {
+      create('use', { href: '#ghosts' }, ghosts)
+    }
     ghosts.firstElementChild.setAttribute('transform', `matrix(${k} 0 0 ${k} ${tx} ${ty})`)
     // their lines, rings and labels as large as in the print picture (a size of the script is sizeFactor pt there)
     printGhostUnit = p.sizeFactor > 0 ? p.sizeFactor * zoom / k : null
