@@ -108,6 +108,15 @@ internal static partial class Program
         // a page: its source (relative to the book), file in the project, its place in the book (for labels)
         private sealed record TypstPage(string Source, string FullPath, string File, int Index);
 
+        // a link to the web in the text: its number (the same address keeps its number), address, text (Typst markup and
+        // plain) and the page where it stands first
+        private sealed record WebLink(int Number, string Url, string Markup, string Text, TypstPage Page);
+
+        private readonly List<WebLink> webLinks = new();
+
+        // the titles of the pages (a chapter's introduction gives the chapter's)
+        private readonly Dictionary<string, string> titles = new(StringComparer.Ordinal);
+
         public int Write(string output)
         {
             List<string> sources = Directory.EnumerateFiles(root, "*.geo.md", SearchOption.AllDirectories)
@@ -153,6 +162,7 @@ internal static partial class Program
                     progress.Warning($"{entry.Source}:{problem.Line}:{problem.Column}: {problem.Message}");
                 }
                 string title = HtmlExporter.PlainText(page.Title ?? DisplayName(Path.GetFileName(entry.Source)[..^".geo.md".Length]));
+                titles[entry.Source] = title;
                 pages[entry.File] = "#import \"../style.typ\": *\n\n" + Convert(page, entry, book, title, progress);
             }
             WriteProject(output, book, pages);
@@ -398,7 +408,20 @@ internal static partial class Program
             {
                 return "#footnote[" + Blocks(note.ChildNodes, context).Trim() + "]";
             }
-            if (Uri.TryCreate(href, UriKind.Absolute, out Uri? uri) && uri.Scheme is "http" or "https" or "mailto")
+            if (Uri.TryCreate(href, UriKind.Absolute, out Uri? uri) && uri.Scheme is "http" or "https")
+            {
+                // in print with its number: the list of links at the end has it (the first place of an address gets the label)
+                WebLink? known = webLinks.FirstOrDefault(w => w.Url == href);
+                if (known == null)
+                {
+                    known = new WebLink(webLinks.Count + 1, href, content, link.TextContent.Trim(), context.Page);
+                    webLinks.Add(known);
+                    return "#link(" + String(href) + ")[" + content + "]#link-mark(" + known.Number.ToString(CultureInfo.InvariantCulture)
+                        + ")#metadata(none)<link-" + known.Number.ToString(CultureInfo.InvariantCulture) + ">";
+                }
+                return "#link(" + String(href) + ")[" + content + "]#link-mark(" + known.Number.ToString(CultureInfo.InvariantCulture) + ")";
+            }
+            if (uri?.Scheme == "mailto")
             {
                 return "#link(" + String(href) + ")[" + content + "]";
             }
@@ -557,12 +580,94 @@ internal static partial class Program
                 File.Copy(settings.IconFile!, Path.Combine(output, icon), overwrite: true);
             }
             File.WriteAllText(Path.Combine(output, "book.typ"), Main(book), utf8);
+            // the page on the web with all links ("links:" in index.yaml says where it goes)
+            File.WriteAllText(Path.Combine(output, "links.html"), LinksPage(book), utf8);
         }
 
         // the name of the book's icon in the project ("icon.svg"), if it has one Typst can show
         private string? IconFile => settings.IconFile is { } file && Path.GetExtension(file).ToLowerInvariant() is ".svg" or ".png" or ".jpg" or ".jpeg"
             ? "icon" + Path.GetExtension(file).ToLowerInvariant()
             : null;
+
+        // the links by the chapters of their pages: the chapter's title ("2 Geraden und ihre Ordnung"; pages outside the
+        // chapters: their own title) and its links in their order
+        private List<(string Title, List<WebLink> Links)> LinksByChapter(List<TypstPage> book)
+        {
+            Dictionary<string, string> numbers = settings.Numbering.Headings ? Daemon.BookNumbers(book.Select(p => p.Source)) : [];
+            var chapters = new List<(string Title, List<WebLink> Links)>();
+            foreach (WebLink link in webLinks)
+            {
+                string[] parts = link.Page.Source.Split('/');
+                string title;
+                if (parts.Length == 1)
+                {
+                    title = titles.GetValueOrDefault(link.Page.Source, DisplayName(parts[0]));
+                }
+                else
+                {
+                    TypstPage? introduction = book.FirstOrDefault(p => p.Source.StartsWith(parts[0] + "/", StringComparison.Ordinal)
+                        && p.Source.Count(c => c == '/') == 1 && IsIntroduction(p.Source));
+                    title = (numbers.TryGetValue(parts[0], out string? number) ? number + " " : "")
+                        + (introduction != null ? titles.GetValueOrDefault(introduction.Source, DisplayName(parts[0])) : DisplayName(parts[0]));
+                }
+                if (chapters.Count == 0 || chapters[^1].Title != title)
+                {
+                    chapters.Add((title, []));
+                }
+                chapters[^1].Links.Add(link);
+            }
+            return chapters;
+        }
+
+        // an address that may break after "/" and the like (zero width spaces)
+        private static string Breakable(string url) => Regex.Replace(url, "([/?&=_.-])", "$1\u200B");
+
+        // the list of links at the end of the book: per chapter, with number, page, text and address
+        private string LinkList(List<TypstPage> book)
+        {
+            var list = new StringBuilder();
+            list.Append("#link-list(base: ").Append(settings.Links != null ? String(settings.Links) : "none").Append(", chapters: (\n");
+            foreach ((string title, List<WebLink> links) in LinksByChapter(book))
+            {
+                list.Append("  (title: [").Append(Escape(title)).Append("], links: (\n");
+                foreach (WebLink link in links)
+                {
+                    list.Append("    (number: ").Append(link.Number.ToString(CultureInfo.InvariantCulture))
+                        .Append(", label: <link-").Append(link.Number.ToString(CultureInfo.InvariantCulture)).Append(">")
+                        .Append(", text: [").Append(link.Markup).Append("], url: ").Append(String(link.Url))
+                        .Append(", shown: ").Append(String(Breakable(link.Url))).Append("),\n");
+                }
+                list.Append("  )),\n");
+            }
+            return list.Append("))\n").ToString();
+        }
+
+        // the page on the web with all links by their numbers (#12): what the printed book points to
+        private string LinksPage(List<TypstPage> book)
+        {
+            string X(string text) => WebUtility.HtmlEncode(text);
+            string title = settings.Title ?? DisplayName(Path.GetFileName(root));
+            var html = new StringBuilder();
+            html.Append("<!doctype html>\n<html lang=\"").Append(X(settings.Language ?? "de")).Append("\">\n<head>\n<meta charset=\"utf-8\">\n")
+                .Append("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>Links – ").Append(X(title)).Append("</title>\n")
+                .Append("<style>body{max-width:44em;margin:2em auto;padding:0 1em;font:17px/1.5 Georgia,serif;color:#222}h1{font-size:1.6em}")
+                .Append("h2{font-size:1.15em;margin-top:1.8em}ol{list-style:none;padding:0}li{margin:.5em 0}li:target{background:#fff3c4}")
+                .Append(".n{display:inline-block;min-width:2.2em;color:#1f4e8c;font-weight:bold}.u{display:block;margin-left:2.2em;font-size:.8em;color:#666;word-break:break-all}</style>\n")
+                .Append("</head>\n<body>\n<h1>Links</h1>\n<p>Die Links aus <i>").Append(X(title)).Append("</i>").Append(settings.Author != null ? " von " + X(settings.Author) : "")
+                .Append(", nach ihren Nummern im Buch.</p>\n");
+            foreach ((string chapter, List<WebLink> links) in LinksByChapter(book))
+            {
+                html.Append("<h2>").Append(X(chapter)).Append("</h2>\n<ol>\n");
+                foreach (WebLink link in links)
+                {
+                    string number = link.Number.ToString(CultureInfo.InvariantCulture);
+                    html.Append("<li id=\"").Append(number).Append("\"><span class=\"n\">").Append(number).Append("</span><a href=\"").Append(X(link.Url)).Append("\">")
+                        .Append(X(link.Text.Length > 0 ? link.Text : link.Url)).Append("</a><span class=\"u\">").Append(X(link.Url)).Append("</span></li>\n");
+                }
+                html.Append("</ol>\n");
+            }
+            return html.Append("</body>\n</html>\n").ToString();
+        }
 
         // book.typ: the template, title page, contents, and the pages under their chapters
         private string Main(List<TypstPage> book)
@@ -603,6 +708,10 @@ internal static partial class Program
                 }
                 open = folders;
                 main.Append("#include \"pages/").Append(page.File).Append("\"\n\n");
+            }
+            if (webLinks.Count > 0)
+            {
+                main.Append(LinkList(book));
             }
             return main.ToString();
         }

@@ -141,6 +141,35 @@
   })
 }
 
+// ------------------------------------------------------------------ links to the web
+
+// the number of a link to the web, after its text: the list of links at the end of the book has its address
+#let link-mark(number) = super(text(fill: accent, str(number)))
+
+// the list of links at the end of the book: by the chapters of their pages, each with its number, page, text and address;
+// "base": the page on the web with all of them (index.yaml "links:"), where a link that moved is put right
+#let link-list(base: none, chapters: ()) = {
+  chapter(none, [Links])
+  if base != none {
+    par[Alle Links stehen auch zum Anklicken unter #link(base)[#base] – dort werden sie aktuell gehalten, falls sich eine
+      Adresse ändert. Die Nummern sind die im Text.]
+  }
+  for c in chapters {
+    heading(level: 2, outlined: false, c.title)
+    for l in c.links {
+      block(above: 0.7em, below: 0.7em, breakable: false, grid(columns: (2.2em, 1fr), gutter: 0pt,
+        text(fill: accent, weight: "bold", str(l.number)),
+        {
+          l.text
+          h(0.5em)
+          text(fill: luma(40%), [S. #context numbering("1", ..counter(page).at(l.label))])
+          linebreak()
+          text(size: 0.8em, fill: luma(35%), link(l.url, l.shown))
+        }))
+    }
+  }
+}
+
 // the number in front of a page's heading ("2.1")
 #let section-number(number) = {
   text(fill: accent, number)

@@ -38,7 +38,7 @@ internal static class BookFile
 {
     public const string Name = "index.yaml";
 
-    private static readonly string[] Keys = ["title", "author", "description", "icon", "language", "url", "home", "footer", "print", "numbering"];
+    private static readonly string[] Keys = ["title", "author", "description", "icon", "language", "url", "home", "footer", "print", "numbering", "links"];
 
     private static readonly string[] PrintKeys = ["scale", "labels", "labelsize", "text"];
 
@@ -152,6 +152,7 @@ internal static class BookFile
             FigureSize = figureSize,
             TextSize = textSize,
             Author = Text("author"),
+            Links = Text("links"),
             Numbering = ReadNumbering(map, warn),
         };
     }

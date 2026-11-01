@@ -325,6 +325,31 @@ public sealed class TypstTests : IDisposable
     }
 
     [Fact]
+    public void LinksToTheWebAreNumberedAndListedAtTheEnd()
+    {
+        Write("index.yaml", "title: Buch\nlinks: https://example.org/links\n");
+        Write("10_Kapitel/10_Erste.geo.md", "# Erste\n\nSiehe [Pasch](https://example.org/pasch) und [Hilbert](https://example.org/hilbert).\n");
+        Write("10_Kapitel/20_Zweite.geo.md", "# Zweite\n\nNoch einmal [Pasch](https://example.org/pasch), [Post](mailto:a@b.de).\n");
+        string output = Path.Combine(folder, "out");
+        Assert.Equal(0, Program.Typst([folder, "-o", output]));
+
+        string first = File.ReadAllText(Path.Combine(output, "pages", "p01-Erste.typ"));
+        Assert.Contains("#link(\"https://example.org/pasch\")[Pasch]#link-mark(1)#metadata(none)<link-1>", first);
+        Assert.Contains("#link-mark(2)#metadata(none)<link-2>", first);
+        // the same address: its number again, without a second label; a mail address has none
+        string second = File.ReadAllText(Path.Combine(output, "pages", "p02-Zweite.typ"));
+        Assert.Contains("[Pasch]#link-mark(1),", second);
+        Assert.DoesNotContain("<link-1>", second);
+        Assert.Contains("#link(\"mailto:a@b.de\")[Post].", second);
+        string main = File.ReadAllText(Path.Combine(output, "book.typ"));
+        Assert.Contains("#link-list(base: \"https://example.org/links\", chapters: (", main);
+        Assert.Contains("(title: [1 Kapitel], links: (", main);
+        Assert.Contains("(number: 2, label: <link-2>, text: [Hilbert], url: \"https://example.org/hilbert\"", main);
+        string page = File.ReadAllText(Path.Combine(output, "links.html"));
+        Assert.Contains("<li id=\"2\"><span class=\"n\">2</span><a href=\"https://example.org/hilbert\">Hilbert</a>", page);
+    }
+
+    [Fact]
     public void TheIntroductionOfAChapterMakesItsHeading()
     {
         Write("index.yaml", "title: Buch\n");

@@ -12,6 +12,12 @@ public sealed record BookSettings
     /// <summary>Who wrote the book (for the e-book).</summary>
     public string? Author { get; init; }
 
+    /// <summary>
+    /// The page on the web with all the book's links by their numbers ("links:"; the export writes it as links.html): the
+    /// printed book points there, so that a link that moved can be put right there.
+    /// </summary>
+    public string? Links { get; init; }
+
     public string? Description { get; init; }
 
     /// <summary>The language of the pages ("de"); without it the player's own.</summary>
