@@ -1426,6 +1426,30 @@
   let printView = false
   // the step whose picture was asked for last
   let printStep = null
+  // the picture shown: its size (pt), scale (pt a unit) and the coordinates of its left and top edges
+  let printPicture = null
+
+  // the mathematical coordinates of a mouse position on the print picture (shown as large as fits, centred), or null
+  function printPlace (event) {
+    const p = printPicture
+    if (!p || !(p.width > 0) || !(p.pointsPerUnit > 0)) {
+      return null
+    }
+    const box = $('print-picture').getBoundingClientRect()
+    const zoom = Math.min(box.width / p.width, box.height / p.height)
+    const px = (event.clientX - box.left - (box.width - p.width * zoom) / 2) / zoom
+    const py = (event.clientY - box.top - (box.height - p.height * zoom) / 2) / zoom
+    if (px < 0 || py < 0 || px > p.width || py > p.height) {
+      return null
+    }
+    return [p.left + px / p.pointsPerUnit, p.top - py / p.pointsPerUnit]
+  }
+
+  // the place on the player's picture (below the print view) with these coordinates: there the object is looked for
+  function sceneClient ([x, y]) {
+    const box = scene.getBoundingClientRect()
+    return [box.left + (x - animation.view.xmin) * scale, box.top + (animation.view.ymax - y) * scale]
+  }
 
   function togglePrintView () {
     setPrintView(!printView)
@@ -1466,6 +1490,7 @@
     }
     const info = $('print-info')
     info.textContent = ''
+    printPicture = message
     $('print-picture').src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(message.svg)
     const mm = points => (points * 25.4 / 72).toFixed(1).replace('.', ',')
     info.textContent = `${mm(message.width)} × ${mm(message.height)} mm · ${mm(message.pointsPerUnit)} mm je Einheit`
@@ -1915,13 +1940,18 @@
 
   // with Ctrl (Cmd) held: the name of the object under the mouse, next to it
   function showOwner (event) {
-    let tag = $('owner')
     const names = (event.ctrlKey || event.metaKey) && host ? ownerAt(event.clientX, event.clientY) : null
+    showOwnerTag(names, event, scene)
+  }
+
+  // the names next to the mouse (none: hidden), the pointer as over a link
+  function showOwnerTag (names, event, over) {
+    let tag = $('owner')
     if (!names) {
       if (tag) {
         tag.hidden = true
       }
-      scene.style.cursor = ''
+      over.style.cursor = ''
       return
     }
     if (!tag) {
@@ -1933,12 +1963,48 @@
     tag.style.left = (event.clientX + 12) + 'px'
     tag.style.top = (event.clientY + 14) + 'px'
     tag.hidden = false
-    scene.style.cursor = 'pointer'
+    over.style.cursor = 'pointer'
   }
 
   scene.addEventListener('mousemove', showOwner)
+
+  // the print view: the same with the place on its picture (the objects are found in the player's picture below it, at the
+  // same coordinates: lines and points lie there alike, texts may stand a little apart)
+  $('print-picture').addEventListener('mousemove', event => {
+    const place = animation ? printPlace(event) : null
+    if (live) {
+      $('coords').textContent = place ? `x = ${formatCoordinate(roundCoordinate(place[0]))}   y = ${formatCoordinate(roundCoordinate(place[1]))}` : ''
+    }
+    const names = place && (event.ctrlKey || event.metaKey) && host ? ownerAt(...sceneClient(place)) : null
+    showOwnerTag(names, event, $('print-picture'))
+  })
+  $('print-picture').addEventListener('mouseleave', () => {
+    const tag = $('owner')
+    if (tag) {
+      tag.hidden = true
+    }
+    if (live) {
+      $('coords').textContent = ''
+    }
+  })
+  $('print-picture').addEventListener('click', event => {
+    const place = animation ? printPlace(event) : null
+    if (!place) {
+      return
+    }
+    if ((event.ctrlKey || event.metaKey) && host) {
+      const names = ownerAt(...sceneClient(place))
+      if (names) {
+        host.postMessage({ type: 'reveal', names })
+      }
+      return
+    }
+    if (event.shiftKey && live) {
+      copyText(place)
+    }
+  })
   scene.addEventListener('mouseleave', () => { const tag = $('owner'); if (tag) tag.hidden = true })
-  window.addEventListener('keyup', event => { if (event.key === 'Control' || event.key === 'Meta') { const tag = $('owner'); if (tag) tag.hidden = true; scene.style.cursor = '' } })
+  window.addEventListener('keyup', event => { if (event.key === 'Control' || event.key === 'Meta') { const tag = $('owner'); if (tag) tag.hidden = true; scene.style.cursor = ''; $('print-picture').style.cursor = '' } })
 
   // ------------------------------------------------------------------ coordinates ("geoanim serve" only)
 
@@ -1948,14 +2014,19 @@
   // the mathematical coordinates of a mouse position, rounded to hundredths
   function coordinatesAt (event) {
     const box = scene.getBoundingClientRect()
-    const round = v => Math.round(v * 100) / 100
-    return [round(animation.view.xmin + (event.clientX - box.left) / scale), round(animation.view.ymax - (event.clientY - box.top) / scale)]
+    return [roundCoordinate(animation.view.xmin + (event.clientX - box.left) / scale), roundCoordinate(animation.view.ymax - (event.clientY - box.top) / scale)]
   }
+
+  const roundCoordinate = v => Math.round(v * 100) / 100
 
   const formatCoordinate = v => v.toFixed(2).replace('-', '−')
 
   function copyCoordinates (event) {
-    const [x, y] = coordinatesAt(event)
+    copyText(coordinatesAt(event))
+  }
+
+  function copyText (place) {
+    const [x, y] = place.map(roundCoordinate)
     // the format of the script: "2.35 -1.2"
     const text = String(x) + ' ' + String(y)
     const done = () => { $('coords').textContent = 'kopiert: ' + text }

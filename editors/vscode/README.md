@@ -29,7 +29,9 @@ Datei-Symbol-Design (etwa Seti, die Voreinstellung) für die Sprache kein eigene
 - **Druckansicht** (Voreinstellung)**:** Die Vorschau zeigt das Bild des aktuellen Schritts so, wie es ins Buch kommt – derselbe Renderer wie für PDF und E-Book, mit `print:` aus der `index.yaml` des
   Buchs und `print scale`/`print width` des Skripts, auf den Inhalt zugeschnitten, so groß wie die Vorschau. Texte stehen
   darin im Verhältnis zur Zeichnung wie im Druck: Was hier nicht in eine Linie rutscht, rutscht auch im Buch nicht.
-  Darunter stehen Größe in mm und Maßstab. Das Bild folgt dem Schritt (Cursor,
+  Darunter stehen Größe in mm und Maßstab. Koordinaten unter der Maus (Umschalt+Klick kopiert sie) und Strg+Klick auf ein
+  Objekt funktionieren auch hier; gesucht wird an denselben Koordinaten im Player-Bild, Linien und Punkte treffen also
+  genau, eine Beschriftung, die im Druck anders steht, nur an ihrer Player-Stelle. Das Bild folgt dem Schritt (Cursor,
   Schaltflächen) und aktualisiert sich beim Tippen. Das Druckersymbol unten (oder `P`) schaltet zum Player und zurück; die
   Vorschau merkt sich die Wahl.
 - **Schritt folgt Cursor:** Steht der Cursor in einem Schritt, zeigt die Vorschau dessen Ende (vor dem ersten `step`:

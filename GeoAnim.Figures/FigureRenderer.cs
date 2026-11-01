@@ -7,7 +7,13 @@ using SkiaSharp;
 namespace GeoAnim.Figures;
 
 /// <summary>A figure: an SVG picture (everything as paths) and its size in points (pt).</summary>
-public sealed record FigureImage(string Svg, double Width, double Height);
+public sealed record FigureImage(string Svg, double Width, double Height)
+{
+    /// <summary>The mathematical coordinates of the picture's left edge and of its top edge (where it was cut).</summary>
+    public double Left { get; init; }
+
+    public double Top { get; init; }
+}
 
 /// <summary>
 /// Draws the picture of an animation at a moment as SVG, as the player draws it – but in a fixed size: a coordinate unit
@@ -109,7 +115,7 @@ public static partial class FigureRenderer
                 .Append("\" width=\"").Append(N(Math.Max(0, (area.XMax - area.XMin) * scale))).Append("\" height=\"").Append(N(Math.Max(0, (area.YMax - area.YMin) * scale)))
                 .Append("\"/></clipPath>");
             svg.Append("<g clip-path=\"url(#").Append(ClipId).Append(")\">").Append(decor).Append(items).Append("</g></svg>");
-            return new FigureImage(svg.ToString(), Width, Height);
+            return new FigureImage(svg.ToString(), Width, Height) { Left = view.XMin, Top = view.YMax };
         }
 
         // the name of the cut: one of its own in each picture (pictures may stand together in one page)
