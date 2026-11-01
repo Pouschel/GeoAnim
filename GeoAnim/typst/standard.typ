@@ -5,8 +5,12 @@
 //   #import "standard.typ": *
 //   #let book = book.with(page-width: 15.5cm, page-height: 23.5cm, margin: (inside: 1.8cm, outside: 2.2cm, top: 2.4cm, bottom: 2.2cm))
 //   #let statement-label(body) = text(weight: "bold", fill: rgb("#8c1f1f"), body)
+//   #let link-list = link-list.with(title: [Links ins Netz], intro: base => [Alle Seiten auch unter #link(base)[#base].])
 //
-// so that it keeps what later versions of GeoAnim add here.
+// so that it keeps what later versions of GeoAnim add here. The colours go to book (a "#let accent = …" of your own
+// would not reach the functions here):
+//
+//   #let book = book.with(colors: (accent: rgb("#8c1f1f"), fill-box: rgb("#f5f0e6")))
 //
 // Everything the pages use is defined here: the template (book), the title page, chapters, statements (axioms,
 // definitions, theorems …), figures and display formulas. Numbers come from GeoAnim (as on the web and in the e-book);
@@ -15,16 +19,25 @@
 // ------------------------------------------------------------------ settings
 
 #let text-font = ("STIX Two Text", "Libertinus Serif")   // STIX Two Text: as in the figures and formulas
-#let accent = rgb("#1f4e8c")
-#let rule-statement = rgb("#9fb3cf")
-#let rule-definition = rgb("#8fbf9a")
-#let fill-box = rgb("#f2f3f5")
+// the colours (book's "colors" changes them): numbers of chapters, sections and links; the lines of statements and of
+// definitions; the background of boxes
+#let default-colors = (
+  accent: rgb("#1f4e8c"),
+  rule-statement: rgb("#9fb3cf"),
+  rule-definition: rgb("#8fbf9a"),
+  fill-box: rgb("#f2f3f5"),
+)
+#let geo-colors = state("geo-colors", default-colors)
+
+// a colour of the book (inside "context")
+#let color-of(name) = geo-colors.get().at(name)
 
 // ------------------------------------------------------------------ the book
 
 // text-size: the font size of the text – unless index.yaml says it ("print: text: 10pt"), then that one (the figures and
 // formulas are made for it, and the preview shows them in proportion to it: best set it there)
-// page-width, page-height, margin: the format of the book's pages; font: the font of the text
+// page-width, page-height, margin: the format of the book's pages; font: the font of the text; colors: colours that
+// differ from default-colors, e.g. (accent: rgb("#8c1f1f"))
 #let book(
   title: none,
   author: none,
@@ -34,8 +47,10 @@
   page-height: 24cm,
   margin: (inside: 2cm, outside: 2.5cm, top: 2.6cm, bottom: 2.4cm),
   font: text-font,
+  colors: (:),
   body,
 ) = {
+  geo-colors.update(known => known + colors)
   set document(title: title, author: if author == none { () } else { author })
   set page(
     width: page-width,
@@ -134,7 +149,7 @@
   }
   heading(level: level, {
     if number != none {
-      text(fill: accent, number)
+      context text(fill: color-of("accent"), number)
       h(0.6em)
     }
     title
@@ -144,21 +159,27 @@
 // ------------------------------------------------------------------ links to the web
 
 // the number of a link to the web, after its text: the list of links at the end of the book has its address
-#let link-mark(number) = super(text(fill: accent, str(number)))
+#let link-mark(number) = context super(text(fill: color-of("accent"), str(number)))
 
 // the list of links at the end of the book: by the chapters of their pages, each with its number, page, text and address;
-// "base": the page on the web with all of them (index.yaml "links:"), where a link that moved is put right
-#let link-list(base: none, chapters: ()) = {
-  chapter(none, [Links])
+// "base": the page on the web with all of them (index.yaml "links:"), where a link that moved is put right; "title": the
+// heading; "intro": the paragraph below it, a function of base (only with base)
+#let link-list(
+  base: none,
+  chapters: (),
+  title: [Links],
+  intro: base => [Alle Links stehen auch zum Anklicken unter #link(base)[#base] – dort werden sie aktuell gehalten, falls
+    sich eine Adresse ändert. Die Nummern sind die im Text.],
+) = {
+  chapter(none, title)
   if base != none {
-    par[Alle Links stehen auch zum Anklicken unter #link(base)[#base] – dort werden sie aktuell gehalten, falls sich eine
-      Adresse ändert. Die Nummern sind die im Text.]
+    par(intro(base))
   }
   for c in chapters {
     heading(level: 2, outlined: false, c.title)
     for l in c.links {
       block(above: 0.7em, below: 0.7em, breakable: false, grid(columns: (2.2em, 1fr), gutter: 0pt,
-        text(fill: accent, weight: "bold", str(l.number)),
+        context text(fill: color-of("accent"), weight: "bold", str(l.number)),
         {
           l.text
           h(0.5em)
@@ -172,7 +193,7 @@
 
 // the number in front of a page's heading ("2.1")
 #let section-number(number) = {
-  text(fill: accent, number)
+  context text(fill: color-of("accent"), number)
   h(0.5em)
 }
 
@@ -196,11 +217,11 @@
     body
   }
   if kind in ("axiom", "theorem", "lemma", "corollary") {
-    block(width: 100%, above: 1.2em, below: 1.2em, inset: (left: 0.8em, y: 0.2em), stroke: (left: 1.5pt + rule-statement), content)
+    context block(width: 100%, above: 1.2em, below: 1.2em, inset: (left: 0.8em, y: 0.2em), stroke: (left: 1.5pt + color-of("rule-statement")), content)
   } else if kind == "definition" {
-    block(width: 100%, above: 1.2em, below: 1.2em, inset: (left: 0.8em, y: 0.2em), stroke: (left: 1.5pt + rule-definition), content)
+    context block(width: 100%, above: 1.2em, below: 1.2em, inset: (left: 0.8em, y: 0.2em), stroke: (left: 1.5pt + color-of("rule-definition")), content)
   } else if kind == "box" {
-    block(width: 100%, above: 1.2em, below: 1.2em, inset: 0.7em, fill: fill-box, radius: 2pt, content)
+    context block(width: 100%, above: 1.2em, below: 1.2em, inset: 0.7em, fill: color-of("fill-box"), radius: 2pt, content)
   } else {
     block(width: 100%, above: 1.1em, below: 1.1em, content)
   }
