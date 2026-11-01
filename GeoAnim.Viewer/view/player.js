@@ -1448,29 +1448,23 @@
     host.postMessage({ type: 'print', step })
   }
 
-  // the picture GeoAnim made, with its size in mm and the scale; a warning about its texts, or why there is none
+  // the picture GeoAnim made, with its size in mm and the scale and a warning about its texts; a script with an error
+  // keeps the last good picture (as the player keeps the last good animation): the error itself is the red box's, which
+  // the preview updates while typing, in both views
   function showPrint (message) {
-    if (message.step !== printStep) {
+    if (message.step !== printStep || !message.svg) {
       return
     }
     const info = $('print-info')
     info.textContent = ''
-    const picture = $('print-picture')
-    if (message.svg) {
-      picture.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(message.svg)
-      picture.hidden = false
-      const mm = points => (points * 25.4 / 72).toFixed(1).replace('.', ',')
-      info.textContent = `${mm(message.width)} × ${mm(message.height)} mm · ${mm(message.pointsPerUnit)} mm je Einheit`
-    } else {
-      picture.hidden = true
-    }
-    for (const [text, kind] of [[message.warning, 'warning'], [message.error, 'error']]) {
-      if (text) {
-        const line = document.createElement('div')
-        line.className = kind
-        line.textContent = text
-        info.appendChild(line)
-      }
+    $('print-picture').src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(message.svg)
+    const mm = points => (points * 25.4 / 72).toFixed(1).replace('.', ',')
+    info.textContent = `${mm(message.width)} × ${mm(message.height)} mm · ${mm(message.pointsPerUnit)} mm je Einheit`
+    if (message.warning) {
+      const line = document.createElement('div')
+      line.className = 'warning'
+      line.textContent = message.warning
+      info.appendChild(line)
     }
   }
 
