@@ -26,12 +26,12 @@ Datei-Symbol-Design (etwa Seti, die Voreinstellung) für die Sprache kein eigene
 - **Vorschau:** Symbol oben rechts im Editor, Strg+K V oder „GeoAnim: Vorschau öffnen“. Sie zeigt die Animation neben
   dem Editor, aktualisiert sich schon beim Tippen (nicht erst beim Speichern) und bleibt dabei am aktuellen Schritt. Sie
   folgt der jeweils aktiven `.geo`-Datei.
-- **Druckansicht:** Das Druckersymbol unten in der Vorschau (oder `P`) zeigt statt des Players das Bild des aktuellen
-  Schritts so, wie es ins Buch kommt – derselbe Renderer wie für PDF und E-Book, mit `print:` aus der `index.yaml` des
+- **Druckansicht** (Voreinstellung)**:** Die Vorschau zeigt das Bild des aktuellen Schritts so, wie es ins Buch kommt – derselbe Renderer wie für PDF und E-Book, mit `print:` aus der `index.yaml` des
   Buchs und `print scale`/`print width` des Skripts, auf den Inhalt zugeschnitten, so groß wie die Vorschau. Texte stehen
   darin im Verhältnis zur Zeichnung wie im Druck: Was hier nicht in eine Linie rutscht, rutscht auch im Buch nicht.
   Darunter stehen Größe in mm und Maßstab. Das Bild folgt dem Schritt (Cursor,
-  Schaltflächen) und aktualisiert sich beim Tippen. Erneut klicken schaltet zurück zum Player.
+  Schaltflächen) und aktualisiert sich beim Tippen. Das Druckersymbol unten (oder `P`) schaltet zum Player und zurück; die
+  Vorschau merkt sich die Wahl.
 - **Schritt folgt Cursor:** Steht der Cursor in einem Schritt, zeigt die Vorschau dessen Ende (vor dem ersten `step`:
   das Startbild). Gezählt werden die `step`-Zeilen der Datei selbst.
 - **Cursor folgt Schritt:** Gehst du in der Vorschau selbst zu einem Schritt (Schaltflächen, Tasten, Schrittliste,

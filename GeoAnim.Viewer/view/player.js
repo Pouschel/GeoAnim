@@ -1428,7 +1428,16 @@
   let printStep = null
 
   function togglePrintView () {
-    printView = !printView
+    setPrintView(!printView)
+    // the preview opens again the way it was left (VS Code keeps the state of a webview)
+    try {
+      host.setState(Object.assign({}, host.getState(), { printView }))
+    } catch (ignored) {
+    }
+  }
+
+  function setPrintView (on) {
+    printView = on
     $('print').setAttribute('aria-pressed', String(printView))
     $('print-view').hidden = !printView
     if (printView) {
@@ -2215,6 +2224,13 @@
       if (typeof acquireVsCodeApi === 'function') {
         host = acquireVsCodeApi()
         $('print').hidden = false
+        // the print view first, unless the player was chosen last time
+        let state = null
+        try {
+          state = host.getState()
+        } catch (ignored) {
+        }
+        setPrintView(!(state && state.printView === false))
         host.postMessage({ type: 'ready' })
       }
     } else {
