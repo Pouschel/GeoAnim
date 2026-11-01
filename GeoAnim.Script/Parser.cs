@@ -11,7 +11,7 @@ internal sealed partial class Parser
         "title", "description", "info", "keyword", "view", "background", "grid", "axes", "speed", "print", "var", "default", "include", "input", "output", "use",
         "draw", "steps", "copy", "set", "step", "textstep", "point", "segment", "line", "ray", "circle", "ellipse", "arc", "sector", "polygon", "angle",
         "text", "number", "length", "degrees", "area", "perimeter", "show", "hide", "all", "highlight", "unhighlight", "keep", "move", "rotate", "reflect", "along", "around", "across", "in", "by", "pause", "together", "end", "midpoint", "intersect", "parallel", "perpendicular", "center", "through",
-        "radius", "foci", "sum", "at", "from", "to", "on", "x", "y", "below", "gap", "align", "left", "right",
+        "radius", "at", "from", "to", "on", "x", "y", "below", "gap", "align", "left", "right",
         "duration", "color", "width", "fill", "opacity", "size", "labelsize", "labelpos", "labeldir", "labelgap", "label", "nolabel", "hidden", "offset", "shift",
         "arrow", "start", "both", "straight", "back", "front", "halo", "clockwise", "linear", "ease", "easein", "easeout", "easeinout",
     };

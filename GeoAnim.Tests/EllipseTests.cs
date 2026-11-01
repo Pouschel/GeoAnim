@@ -111,6 +111,9 @@ public class EllipseTests
         string svg = FigureRenderer.Render(FigureAnimation.Parse(animation.ToJson()), animation.Duration, FigureStyle.Default).Svg;
         Assert.Matches(@"<path d=""M[^""]*A[0-9.]+ [0-9.]+ -?0 1 0 [^""]*A", svg);
 
+        // "foci" and "sum" are words of the ellipse only: they can be names elsewhere
+        Assert.Equal("6", ScriptCompiler.Compile("number sum = 1 + 2 + 3\nnumber foci = sum\ntext t = \"{foci}\" at 0 0").WithFinalNumbers("{sum}"));
+
         ScriptError error = Assert.Throws<ScriptError>(() => ScriptCompiler.Compile("point F = 0 0\npoint G = 1 0\nellipse e = foci F G radius 3"));
         Assert.Contains("\"sum <number>\"", error.Message);
     }
