@@ -26,6 +26,11 @@
         <svg id="scene" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title caption"></svg>
         <div id="message">Loading…</div>
         <div id="error" hidden></div>
+        <!-- in an editor's preview: the picture of the step as in print (GeoAnim's renderer for the book) -->
+        <div id="print-view" hidden>
+          <img id="print-picture" alt="">
+          <div id="print-info"></div>
+        </div>
       </main>
       <div id="texts">
         <div id="info" hidden></div>
@@ -67,6 +72,9 @@
       </div>
       <span id="coords" title="Coordinates under the mouse (Shift+click copies them)" hidden></span>
       <span id="counter" title="Step">0 / 0</span>
+      <button id="print" type="button" title="Druckansicht: das Bild des Schritts wie im Buch (P)" aria-pressed="false" hidden>
+        <svg viewBox="0 0 24 24"><path d="M7 3h10v5H7zM5 9h14a2 2 0 0 1 2 2v6h-4v4H7v-4H3v-6a2 2 0 0 1 2-2zm4 7v3h6v-3z"/></svg>
+      </button>
       <button id="stops" type="button" title="Stop after each step (S)" aria-pressed="true" disabled>
         <svg viewBox="0 0 24 24"><path d="M4 11h9v2H4zM15 5h2v14h-2zM19 5h2v14h-2z"/></svg>
       </button>

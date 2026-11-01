@@ -1414,6 +1414,64 @@
   function setTime (t) {
     time = Math.max(rangeStart, Math.min(rangeEnd, t))
     render()
+    if (printView) {
+      requestPrint(false)
+    }
+  }
+
+  // ------------------------------------------------------------------ print view (in an editor's preview)
+
+  // on: instead of the player the picture of the step shown as GeoAnim makes it for the book (the extension asks GeoAnim
+  // for it with the script as in the editor: { type: 'print', step } → { type: 'printPicture', step, svg, … })
+  let printView = false
+  // the step whose picture was asked for last
+  let printStep = null
+
+  function togglePrintView () {
+    printView = !printView
+    $('print').setAttribute('aria-pressed', String(printView))
+    $('print-view').hidden = !printView
+    if (printView) {
+      requestPrint(true)
+    }
+  }
+
+  function requestPrint (again) {
+    if (!host || !animation) {
+      return
+    }
+    const step = currentStepIndex()
+    if (step === printStep && !again) {
+      return
+    }
+    printStep = step
+    host.postMessage({ type: 'print', step })
+  }
+
+  // the picture GeoAnim made, with its size in mm and the scale; a warning about its texts, or why there is none
+  function showPrint (message) {
+    if (message.step !== printStep) {
+      return
+    }
+    const info = $('print-info')
+    info.textContent = ''
+    const picture = $('print-picture')
+    if (message.svg) {
+      picture.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(message.svg)
+      picture.hidden = false
+      const mm = points => (points * 25.4 / 72).toFixed(1).replace('.', ',')
+      info.textContent = `${mm(message.width)} × ${mm(message.height)} mm · ${mm(message.pointsPerUnit)} mm je Einheit`
+    } else {
+      picture.hidden = true
+    }
+    for (const [text, kind] of [[message.warning, 'warning'], [message.error, 'error']]) {
+      if (text) {
+        const line = document.createElement('div')
+        line.className = kind
+        line.textContent = text
+        info.appendChild(line)
+      }
+    }
   }
 
   function pause () {
@@ -1749,6 +1807,10 @@
     if (!keepPosition && !window.GEO_EMBEDDED && !figure) {
       applyHash()
     }
+    // the script changed: its picture again
+    if (printView) {
+      requestPrint(true)
+    }
   }
 
   function showError (error) {
@@ -1801,6 +1863,7 @@
     reportStep()
   })
   $('stops').addEventListener('click', toggleStops)
+  $('print').addEventListener('click', togglePrintView)
   scene.addEventListener('click', event => {
     if (!animation) {
       return
@@ -1994,6 +2057,8 @@
       '+': () => changeSpeed(1),
       m: toggleMenu,
       M: toggleMenu,
+      p: () => host && togglePrintView(),
+      P: () => host && togglePrintView(),
       Escape: () => { openSpeedMenu(false); openMenu(false) }
     }
     if (actions[event.key]) {
@@ -2032,6 +2097,8 @@
       if (animation) {
         renderGhosts()
       }
+    } else if (message.type === 'printPicture') {
+      showPrint(message)
     } else if (message.type === 'inspect' && host) {
       host.postMessage({ type: 'inspected', id: message.id, result: animation ? describe(message.name) : null })
     }
@@ -2159,6 +2226,7 @@
       // VS Code: tell the extension that messages can come now
       if (typeof acquireVsCodeApi === 'function') {
         host = acquireVsCodeApi()
+        $('print').hidden = false
         host.postMessage({ type: 'ready' })
       }
     } else {

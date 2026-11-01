@@ -619,6 +619,10 @@ function openPreview () {
     if (message && message.type === 'reveal' && Array.isArray(message.names)) {
       revealDefinition(message.names)
     }
+    // the print view: the picture of the step as GeoAnim makes it for the book, from the script as in the editor
+    if (message && message.type === 'print' && previewDocument) {
+      showPrintPicture(previewDocument, message.step)
+    }
     if (message && message.type === 'inspected' && inspections.has(message.id)) {
       const answer = inspections.get(message.id)
       inspections.delete(message.id)
@@ -641,6 +645,20 @@ function openPreview () {
   preview.title = 'GeoAnim: ' + path.basename(editor.document.uri.fsPath)
   loadPreviewPage()
   compile(editor.document)
+}
+
+// the picture of a step of a script as in print, for the preview's print view
+async function showPrintPicture (document, step) {
+  let answer
+  try {
+    answer = await request({ type: 'print', file: document.uri.scheme === 'file' ? document.uri.fsPath : '', text: document.getText(), step })
+  } catch (error) {
+    answer = { error: String(error && error.message ? error.message : error) }
+  }
+  if (preview) {
+    preview.webview.postMessage({ type: 'printPicture', step, svg: answer.svg, width: answer.width, height: answer.height,
+      pointsPerUnit: answer.pointsPerUnit, warning: answer.warning, error: answer.error })
+  }
 }
 
 // ------------------------------------------------------------------ preview of the pages

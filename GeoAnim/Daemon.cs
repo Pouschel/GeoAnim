@@ -31,6 +31,10 @@ namespace GeoAnim.Cli;
 /// <item>{"id": 6, "type": "steps", "file": "C:\\…\\a.geo"} → {"id": 6, "steps": [{"number": 1, "mark": "gleich" or null,
 /// "name": "gleiche-punkte", "caption": "…"}, …], "error": "…" or null} – the steps of a script, for the completion of
 /// figures.</item>
+/// <item>{"id": 7, "type": "print", "file": "C:\\…\\a.geo", "text": "…", "step": 2} → {"id": 7, "svg": "…", "width": 170.1,
+/// "height": 99.2 (pt), "pointsPerUnit": 14.17, "warning": "…" or null, "error": "…" or null} – the picture of the script at
+/// the end of the step (-1: the starting picture) as in print, cut to its content, in the size of its book ("print:" in
+/// index.yaml) or of the script ("print scale").</item>
 /// <item>{"id": 5, "type": "page"} → {"id": 5, "html": "…"} – the page for the preview of a Markdown page.</item>
 /// </list>
 /// A request that fails completely gets {"id": …, "fatal": "…"}.
@@ -63,6 +67,8 @@ internal static class Daemon
             return type switch
             {
                 "compile" => Compile(id, root.GetProperty("file").GetString() ?? "", root.GetProperty("text").GetString() ?? ""),
+                "print" => Print(id, root.GetProperty("file").GetString() ?? "", root.GetProperty("text").GetString() ?? "",
+                    root.TryGetProperty("step", out JsonElement step) && step.ValueKind == JsonValueKind.Number ? step.GetInt32() : -1),
                 "player" => Answer(id, json => json.WriteString("html", HtmlExporter.ExportPlayer())),
                 "markdown" => RenderMarkdown(id, root.GetProperty("file").GetString() ?? "", root.GetProperty("text").GetString() ?? ""),
                 "page" => Answer(id, json => json.WriteString("html", HtmlExporter.ExportPagePreview())),
@@ -90,6 +96,34 @@ internal static class Daemon
         {
             return Answer(id, json => json.WriteString("fatal", e.Message));
         }
+    }
+
+    // the picture of a script at the end of a step as in print (the print view of its preview)
+    private static string Print(JsonElement id, string file, string text, int step)
+    {
+        string? svg = null, warning = null, error = null;
+        double width = 0, height = 0, pointsPerUnit = 0;
+        try
+        {
+            ScriptSource source = Path.IsPathRooted(file) ? ScriptSource.FromFile(file, text) : ScriptSource.FromText(text);
+            var animation = FigureAnimation.Parse(ScriptCompiler.Compile(source).ToJson());
+            FigureStyle style = Path.IsPathRooted(file) ? BookPictures.PrintOf(Path.GetDirectoryName(Path.GetFullPath(file))!).Style : FigureStyle.Default;
+            (FigureImage image, FigureStyle used, warning) = BookPictures.OfScript(Path.GetFileName(file), animation, style, step);
+            (svg, width, height, pointsPerUnit) = (image.Svg, image.Width, image.Height, used.PointsPerUnit);
+        }
+        catch (Exception e) when (e is ScriptError or IOException or FormatException or GeoException)
+        {
+            error = e.Message;
+        }
+        return Answer(id, json =>
+        {
+            json.WriteString("svg", svg);
+            json.WriteNumber("width", Math.Round(width, 2));
+            json.WriteNumber("height", Math.Round(height, 2));
+            json.WriteNumber("pointsPerUnit", Math.Round(pointsPerUnit, 4));
+            json.WriteString("warning", warning);
+            json.WriteString("error", error);
+        });
     }
 
     private static string Compile(JsonElement id, string file, string text)

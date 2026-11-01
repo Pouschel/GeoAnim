@@ -432,8 +432,49 @@ h1 a {
   display: block;
 }
 
-#stops[aria-pressed="true"] {
+#stops[aria-pressed="true"],
+#print[aria-pressed="true"] {
   color: #1565c0;
+}
+
+#print[hidden] {
+  display: none;
+}
+
+/* the print view: the picture of the step as GeoAnim makes it for the book, as large as the stage allows (its texts in
+   proportion to its drawing as in print), with its size and the warning about its texts below */
+#print-view {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+}
+
+#print-view[hidden] {
+  display: none;
+}
+
+#print-picture {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  object-fit: contain;
+}
+
+#print-info {
+  padding: 4px 8px;
+  color: #6b7280;
+  font: 12px 'Segoe UI', system-ui, sans-serif;
+  text-align: center;
+}
+
+#print-info .warning {
+  color: #9a6700;
+}
+
+#print-info .error {
+  color: #b71c1c;
 }
 
 #timeline-box {

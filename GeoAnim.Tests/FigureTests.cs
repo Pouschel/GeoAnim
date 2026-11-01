@@ -447,3 +447,36 @@ public sealed class RayTests
         Assert.InRange(tip, image.Width - 3, image.Width);
     }
 }
+
+public sealed class PrintViewTests : IDisposable
+{
+    private readonly string folder = Directory.CreateTempSubdirectory("geoanim-print").FullName;
+
+    public void Dispose() => Directory.Delete(folder, recursive: true);
+
+    [Fact]
+    public void TheDaemonGivesThePictureOfAStepAsInPrint()
+    {
+        File.WriteAllText(Path.Combine(folder, "index.yaml"), "title: Buch\nprint:\n  scale: 10mm\n");
+        string file = Path.Combine(folder, "a.geo");
+        string text = "view x -5 .. 5 y -5 .. 5\npoint A = 0 0\nstep Eins\npoint B = 2 0\nsegment s = A B\n";
+        System.Text.Json.JsonElement Ask(int step) => System.Text.Json.JsonDocument.Parse(Daemon.Handle(System.Text.Json.JsonSerializer.Serialize(new
+        {
+            id = 1, type = "print", file, text, step,
+        }))).RootElement;
+
+        System.Text.Json.JsonElement answer = Ask(0);
+        Assert.Equal(System.Text.Json.JsonValueKind.Null, answer.GetProperty("error").ValueKind);
+        Assert.StartsWith("<svg", answer.GetProperty("svg").GetString());
+        // the book's scale: 10 mm a unit
+        Assert.Equal(28.3465, answer.GetProperty("pointsPerUnit").GetDouble(), 3);
+        // cut to its content: the segment of 2 units and a margin
+        double width = answer.GetProperty("width").GetDouble();
+        Assert.InRange(width, 2 * 28.35, 4 * 28.35);
+        // the starting picture: only A
+        Assert.True(Ask(-1).GetProperty("width").GetDouble() < width);
+
+        text = "point A = 0 0\npoint A = 1 1\n";
+        Assert.Contains("A", Ask(0).GetProperty("error").GetString());
+    }
+}

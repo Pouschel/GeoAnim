@@ -46,19 +46,34 @@ internal static class BookPictures
     /// run into a line): the player's texts are a part of its width (size 34 of 1280 pixels), the book's have a fixed size.
     /// Whatever gave its size; only "{nowarn}" at the figure (checked in print, it fits) turns it off.
     /// </summary>
-    public static string? TextWarning(PageFigure figure, FigureAnimation animation, FigureStyle used)
+    public static string? TextWarning(PageFigure figure, FigureAnimation animation, FigureStyle used) =>
+        figure.Reference.NoWarn ? null : TextWarning(figure.Reference.File, animation, used);
+
+    // the same for a script (its name at the start)
+    private static string? TextWarning(string name, FigureAnimation animation, FigureStyle used)
     {
-        if (figure.Reference.NoWarn)
-        {
-            return null;
-        }
         double printWidth = (animation.XMax - animation.XMin) * used.PointsPerUnit;
         double ratio = printWidth > 0 ? 1280 * used.SizeFactor / printWidth : 1;
         return ratio > 1.2
-            ? $"{figure.Reference.File}: in print its texts are {ratio.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)} times as large next to the drawing "
+            ? $"{name}: in print its texts are {ratio.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)} times as large next to the drawing "
                 + $"as in the player ({(used.PointsPerUnit * 25.4 / 72).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture)} mm a unit) – check texts placed freely (\"at x y\"), "
                 + "or make the figure larger (scale, width); {nowarn} at the figure if it fits."
             : null;
+    }
+
+    /// <summary>
+    /// The picture of a script at the end of a step (-1: the starting picture) as in print, cut to its content: in the size
+    /// the script gives ("print scale", "print width"), else the book's (<paramref name="style"/>) – for the print view of
+    /// the script's preview; with the warning about its texts, if any.
+    /// </summary>
+    public static (FigureImage Image, FigureStyle Used, string? Warning) OfScript(string name, FigureAnimation animation, FigureStyle style, int step)
+    {
+        double viewWidth = animation.XMax - animation.XMin;
+        double? unit = animation.PrintScale ?? (animation.PrintWidth is double width && viewWidth > 0 ? width / viewWidth : null);
+        FigureStyle used = unit is double u ? style with { PointsPerUnit = u } : style;
+        double time = animation.EndOf(step);
+        FigureImage image = FigureRenderer.Render(animation, time, used, [time]);
+        return (image, used, TextWarning(name, animation, used));
     }
 
     /// <summary>The indices of the steps whose ends the pictures show (-1: the starting picture).</summary>
