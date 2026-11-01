@@ -32,7 +32,7 @@ namespace GeoAnim.Cli;
 /// "name": "gleiche-punkte", "caption": "…"}, …], "error": "…" or null} – the steps of a script, for the completion of
 /// figures.</item>
 /// <item>{"id": 7, "type": "print", "file": "C:\\…\\a.geo", "text": "…", "step": 2} → {"id": 7, "svg": "…", "width": 170.1,
-/// "height": 99.2 (pt), "pointsPerUnit": 14.17, "left": -2.3, "top": 4.1 (the coordinates of its left and top edges), "error": "…" or null} – the picture of the script at
+/// "height": 99.2 (pt), "pointsPerUnit": 14.17, "sizeFactor": 0.26 (pt for a size of the script), "left": -2.3, "top": 4.1 (the coordinates of its left and top edges), "error": "…" or null} – the picture of the script at
 /// the end of the step (-1: the starting picture) as in print, cut to its content, in the size of its book ("print:" in
 /// index.yaml) or of the script ("print scale").</item>
 /// <item>{"id": 5, "type": "page"} → {"id": 5, "html": "…"} – the page for the preview of a Markdown page.</item>
@@ -102,14 +102,14 @@ internal static class Daemon
     private static string Print(JsonElement id, string file, string text, int step)
     {
         string? svg = null, error = null;
-        double width = 0, height = 0, pointsPerUnit = 0, left = 0, top = 0;
+        double width = 0, height = 0, pointsPerUnit = 0, sizeFactor = 0, left = 0, top = 0;
         try
         {
             ScriptSource source = Path.IsPathRooted(file) ? ScriptSource.FromFile(file, text) : ScriptSource.FromText(text);
             var animation = FigureAnimation.Parse(ScriptCompiler.Compile(source).ToJson());
             FigureStyle style = Path.IsPathRooted(file) ? BookPictures.PrintOf(Path.GetDirectoryName(Path.GetFullPath(file))!).Style : FigureStyle.Default;
             (FigureImage image, FigureStyle used) = BookPictures.OfScript(animation, style, step);
-            (svg, width, height, pointsPerUnit, left, top) = (image.Svg, image.Width, image.Height, used.PointsPerUnit, image.Left, image.Top);
+            (svg, width, height, pointsPerUnit, sizeFactor, left, top) = (image.Svg, image.Width, image.Height, used.PointsPerUnit, used.SizeFactor, image.Left, image.Top);
         }
         catch (Exception e) when (e is ScriptError or IOException or FormatException or GeoException)
         {
@@ -121,6 +121,7 @@ internal static class Daemon
             json.WriteNumber("width", Math.Round(width, 2));
             json.WriteNumber("height", Math.Round(height, 2));
             json.WriteNumber("pointsPerUnit", Math.Round(pointsPerUnit, 6));
+            json.WriteNumber("sizeFactor", Math.Round(sizeFactor, 6));
             json.WriteNumber("left", Math.Round(left, 6));
             json.WriteNumber("top", Math.Round(top, 6));
             json.WriteString("error", error);

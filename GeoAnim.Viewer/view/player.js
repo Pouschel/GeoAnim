@@ -1017,6 +1017,19 @@
     if (!ghostLayer) {
       return
     }
+    // over the print picture: in its sizes
+    const playerUnit = unit
+    if (printView && printGhostUnit) {
+      unit = printGhostUnit
+    }
+    try {
+      drawGhosts()
+    } finally {
+      unit = playerUnit
+    }
+  }
+
+  function drawGhosts () {
     const wanted = new Set(highlighted.map(name => inspected[name]).filter(entry => entry && entry.type !== 'info'))
     for (const entry of Object.values(inspected)) {
       if (!wanted.has(entry)) {
@@ -1327,6 +1340,10 @@
     if (figure && !still) {
       reportFigureHeight(height)
     }
+    // the ghosts over the print picture follow the new scale
+    if (printView) {
+      placePrintGhosts()
+    }
   }
 
   // a figure in the book: the view cut to what is drawn at the given times (labels too; not rays and whole lines, which
@@ -1445,6 +1462,38 @@
     return [p.left + px / p.pointsPerUnit, p.top - py / p.pointsPerUnit]
   }
 
+  // the ghosts over the print picture: the player's ghost layer (a "use" of it) moved and scaled so that its coordinates
+  // fall on the picture's; cut at the picture's edges
+  function placePrintGhosts () {
+    const p = printPicture
+    const ghosts = $('print-ghosts')
+    if (!printView || !p || !animation || !(p.width > 0) || !(scale > 0)) {
+      ghosts.style.display = 'none'
+      // back in the player's sizes
+      if (animation) {
+        renderGhosts()
+      }
+      return
+    }
+    const view = $('print-view').getBoundingClientRect()
+    const box = $('print-picture').getBoundingClientRect()
+    const zoom = Math.min(box.width / p.width, box.height / p.height)
+    const left = box.left - view.left + (box.width - p.width * zoom) / 2
+    const top = box.top - view.top + (box.height - p.height * zoom) / 2
+    Object.assign(ghosts.style, { display: '', left: left + 'px', top: top + 'px', width: p.width * zoom + 'px', height: p.height * zoom + 'px' })
+    // a pixel of the player is k pixels here; its origin lies at the coordinates (xmin, ymax)
+    const k = p.pointsPerUnit * zoom / scale
+    const tx = (animation.view.xmin - p.left) * p.pointsPerUnit * zoom
+    const ty = (p.top - animation.view.ymax) * p.pointsPerUnit * zoom
+    ghosts.firstElementChild.setAttribute('transform', `matrix(${k} 0 0 ${k} ${tx} ${ty})`)
+    // their lines, rings and labels as large as in the print picture (a size of the script is sizeFactor pt there)
+    printGhostUnit = p.sizeFactor > 0 ? p.sizeFactor * zoom / k : null
+    renderGhosts()
+  }
+
+  // the size unit of the ghosts while they are shown over the print picture (in the player's pixels), else null
+  let printGhostUnit = null
+
   // the place on the player's picture (below the print view) with these coordinates: there the object is looked for
   function sceneClient ([x, y]) {
     const box = scene.getBoundingClientRect()
@@ -1464,6 +1513,7 @@
     printView = on
     $('print').setAttribute('aria-pressed', String(printView))
     $('print-view').hidden = !printView
+    placePrintGhosts()
     if (printView) {
       requestPrint(true)
     }
@@ -1491,7 +1541,9 @@
     const info = $('print-info')
     info.textContent = ''
     printPicture = message
-    $('print-picture').src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(message.svg)
+    const picture = $('print-picture')
+    picture.onload = placePrintGhosts
+    picture.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(message.svg)
     const mm = points => (points * 25.4 / 72).toFixed(1).replace('.', ',')
     info.textContent = `${mm(message.width)} × ${mm(message.height)} mm · ${mm(message.pointsPerUnit)} mm je Einheit`
   }

@@ -465,6 +465,12 @@ h1 a {
   object-fit: contain;
 }
 
+#print-ghosts {
+  position: absolute;
+  overflow: hidden;
+  pointer-events: none;
+}
+
 #print-info {
   padding: 4px 8px;
   color: #6b7280;
