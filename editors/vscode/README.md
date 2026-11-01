@@ -100,7 +100,8 @@ Datei-Symbol-Design (etwa Seti, die Voreinstellung) für die Sprache kein eigene
   sie mit). Abbildungen, an denen sich nichts ändert, bleiben beim Tippen stehen (eine laufende Animation läuft weiter);
   sie zeigen die Skripte, wie sie gespeichert sind – nach dem Speichern eines Skripts aktualisiert sich die Seite, auch
   wenn das Skript in einem anderen VS-Code-Fenster (oder einem anderen Programm) gespeichert wurde: die Erweiterung
-  beobachtet die Skripte und Seiten des Buchs, auch außerhalb des geöffneten Ordners. Fehler
+  beobachtet die Skripte und Seiten des Buchs, auch außerhalb des geöffneten Ordners. Die Vorschau bleibt dabei, wo sie
+  ist: an die Stelle des Editors springt sie nur, wenn die Seite selbst bearbeitet wird oder ihr Editor blättert. Fehler
   (eine Formel ohne schließendes `$`, ein fehlendes oder fehlerhaftes Skript, ein unbekannter Schritt, ein Fehler im Kopf)
   werden unterstrichen und stehen über der Seite. Ein Link auf eine andere Seite (`….geo.md`) öffnet diese. Die Marke
   eines Schritts (`step … #marke`) ist im Skript hervorgehoben. **Verweise:** nach `§` bietet die Vervollständigung die

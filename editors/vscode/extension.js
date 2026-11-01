@@ -325,8 +325,9 @@ async function renderMarkdown (document) {
   }
   lastResults.set(document.uri.toString(), result)
   report(document, result.errors, result.warnings || [])
+  const kept = keptPages.delete(document.uri.toString())
   if (document === pageDocument) {
-    sendPage(result)
+    sendPage(result, kept)
   }
 }
 
@@ -1023,10 +1024,15 @@ function lastContentLine (document, start, end) {
 function refreshOthers (changed) {
   for (const document of vscode.workspace.textDocuments) {
     if (kindOf(document) && document.uri.fsPath !== changed) {
+      // a page made again for another file (a figure's script): its preview stays where it is
+      keptPages.add(document.uri.toString())
       schedule(document)
     }
   }
 }
+
+// the pages made again because of other files: their preview keeps its place (only the page's own editor moves it)
+const keptPages = new Set()
 
 // watchers for the books of the open scripts and pages (the folder with index.yaml, else the file's folder): also
 // outside the workspace, and also for changes by other programs
@@ -1763,7 +1769,13 @@ function activate (context) {
     vscode.languages.registerReferenceProvider('geo', { provideReferences }),
     vscode.languages.registerDocumentHighlightProvider('geo', { provideDocumentHighlights }),
     vscode.workspace.onDidOpenTextDocument(document => { if (kindOf(document)) compile(document) }),
-    vscode.workspace.onDidChangeTextDocument(event => { if (kindOf(event.document)) schedule(event.document) }),
+    vscode.workspace.onDidChangeTextDocument(event => {
+      if (kindOf(event.document)) {
+        // written in its own editor: the preview follows it again
+        keptPages.delete(event.document.uri.toString())
+        schedule(event.document)
+      }
+    }),
     // a saved file may be included or used by others, or be a figure of a page
     vscode.workspace.onDidSaveTextDocument(saved => {
       if (isGeo(saved)) {
