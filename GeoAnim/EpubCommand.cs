@@ -720,6 +720,31 @@ internal static partial class Program
                   text-indent: 0;
                 }
 
+                .formula-rows {
+                  display: inline-table;
+                  text-align: left;
+                }
+
+                .formula-row {
+                  display: table-row;
+                }
+
+                .formula-left,
+                .formula-right {
+                  display: table-cell;
+                  padding: 0.15em 0;
+                }
+
+                .formula-left {
+                  padding-right: 0.2778em;
+                  text-align: right;
+                }
+
+                .formula-gap {
+                  display: inline-block;
+                  width: 0.2778em;
+                }
+
                 .figure {
                   margin: 1em 0 1.2em;
                   text-align: center;

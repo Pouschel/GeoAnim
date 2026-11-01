@@ -543,6 +543,164 @@ public sealed partial class MarkdownPage
     private static string FaultyFormula(string asciiMath) =>
         "<span class=\"formula-error\">$" + WebUtility.HtmlEncode(asciiMath) + "$</span>";
 
+    // the relations at which a formula may break or a chain is aligned, longest first; arrows that start like them are
+    // passed over
+    private static readonly string[] Relations = ["<=>", "=>", "<=", ">=", "!=", "~~", "~=", "-=", "=", "<", ">"];
+    private static readonly string[] NoRelations = ["|->", "->", "<-", "<<", ">>", "-<", ">-", "-:"];
+
+    // a formula in the text up to this many characters (without spaces) is not cut
+    private const int ShortFormula = 20;
+
+    /// <summary>
+    /// A formula cut before its relations outside brackets and texts ("a = b + c <= d" → "a", "= b + c", "<= d"): the places
+    /// where a line may break (one piece: none).
+    /// </summary>
+    internal static List<string> PiecesOf(string source)
+    {
+        var pieces = new List<string>();
+        int depth = 0, start = 0;
+        bool quoted = false;
+        for (int i = 0; i < source.Length; i++)
+        {
+            char c = source[i];
+            if (c == '"')
+            {
+                quoted = !quoted;
+                continue;
+            }
+            if (quoted)
+            {
+                continue;
+            }
+            if (c is '(' or '[' or '{')
+            {
+                depth++;
+                continue;
+            }
+            if (c is ')' or ']' or '}')
+            {
+                depth = Math.Max(0, depth - 1);
+                continue;
+            }
+            if (depth > 0)
+            {
+                continue;
+            }
+            string? arrow = NoRelations.FirstOrDefault(a => string.CompareOrdinal(source, i, a, 0, a.Length) == 0);
+            if (arrow != null)
+            {
+                i += arrow.Length - 1;
+                continue;
+            }
+            string? relation = Relations.FirstOrDefault(r => string.CompareOrdinal(source, i, r, 0, r.Length) == 0);
+            if (relation == null)
+            {
+                continue;
+            }
+            if (source[start..i].Trim().Length > 0)
+            {
+                pieces.Add(source[start..i].Trim());
+                start = i;
+            }
+            i += relation.Length - 1;
+        }
+        pieces.Add(source[start..].Trim());
+        return pieces.Where(p => p.Length > 0).ToList();
+    }
+
+    /// <summary>
+    /// A chain of equations on lines of their own, aligned at the relations: the first line ("a = b") and lines that start
+    /// with a relation ("= c"); a line without one continues the line before. Its rows: the left side (only the first row)
+    /// and the rest from the relation on. Null if it is no chain (one line, or no line after the first starts with a
+    /// relation).
+    /// </summary>
+    internal static List<(string? Left, string Right)>? ChainOf(string source)
+    {
+        List<string> lines = source.Split('\n').Select(l => l.Trim()).Where(l => l.Length > 0).ToList();
+        bool StartsWithRelation(string line) => Relations.Any(r => line.StartsWith(r, StringComparison.Ordinal))
+            && !NoRelations.Any(a => line.StartsWith(a, StringComparison.Ordinal));
+        if (lines.Count < 2 || !lines.Skip(1).Any(StartsWithRelation))
+        {
+            return null;
+        }
+        List<string> first = PiecesOf(lines[0]);
+        var rows = new List<(string? Left, string Right)>
+        {
+            first.Count > 1 && !StartsWithRelation(lines[0]) ? (first[0], string.Join(" ", first.Skip(1))) : (null, lines[0]),
+        };
+        foreach (string line in lines.Skip(1))
+        {
+            if (StartsWithRelation(line))
+            {
+                rows.Add((null, line));
+            }
+            else
+            {
+                rows[^1] = (rows[^1].Left, rows[^1].Right + " " + line);
+            }
+        }
+        // a first line without a relation is the left side of the rows after it
+        if (first.Count == 1 && !StartsWithRelation(lines[0]) && rows.Count > 1)
+        {
+            rows[1] = (rows[0].Right, rows[1].Right);
+            rows.RemoveAt(0);
+        }
+        return rows;
+    }
+
+    // a formula's markup: a chain as rows of left side and rest (aligned at the relation), else a formula cut at its
+    // relations (where a line may break: a thick space and a break opportunity before each relation); "after": what
+    // follows its last part (the punctuation of a "$$…$$" in a paragraph)
+    private static void WriteFormula(HtmlRenderer renderer, string source, bool display, string after, Action<FormatException> error)
+    {
+        string Svg(string part)
+        {
+            try
+            {
+                return FormulaSvg(part);
+            }
+            catch (FormatException e)
+            {
+                error(e);
+                return FaultyFormula(part);
+            }
+        }
+        if (display && ChainOf(source) is { } rows)
+        {
+            renderer.Write("<span class=\"formula-rows\">");
+            for (int i = 0; i < rows.Count; i++)
+            {
+                renderer.Write("<span class=\"formula-row\"><span class=\"formula-left\">").Write(rows[i].Left != null ? Svg(rows[i].Left!) : "")
+                    .Write("</span><span class=\"formula-right\">").Write(Svg(rows[i].Right));
+                if (i == rows.Count - 1)
+                {
+                    renderer.WriteEscape(after);
+                }
+                renderer.Write("</span></span>");
+            }
+            renderer.Write("</span>");
+            return;
+        }
+        string single = Regex.Replace(source, @"\s*\n\s*", " ");
+        // a short formula stays whole (it fits on a line anyway, and "M" at the end of one and "!= Q" on the next looks odd)
+        List<string> pieces = display || single.Count(c => !char.IsWhiteSpace(c)) <= ShortFormula ? [single] : PiecesOf(single);
+        if (pieces.Count < 2)
+        {
+            renderer.Write(Svg(single)).WriteEscape(after);
+            return;
+        }
+        renderer.Write("<span class=\"formula-split\">");
+        for (int i = 0; i < pieces.Count; i++)
+        {
+            if (i > 0)
+            {
+                renderer.Write("<span class=\"formula-gap\"></span><wbr>");
+            }
+            renderer.Write(Svg(pieces[i]));
+        }
+        renderer.Write("</span>").WriteEscape(after);
+    }
+
     private sealed class FormulaInlineRenderer(List<MarkdownProblem> errors, Func<int, (int, int)> locate) : HtmlObjectRenderer<MathInline>
     {
         protected override void Write(HtmlRenderer renderer, MathInline math)
@@ -554,26 +712,22 @@ public sealed partial class MarkdownPage
             string? number = math.GetData(typeof(FormulaNumber)) as string;
             if (display)
             {
-                renderer.Write("<span class=\"formula-display").Write(number != null ? " formula-numbered" : "").Write('"');
+                renderer.Write("<span class=\"formula-display").Write(number != null ? " formula-numbered" : "")
+                    .Write(ChainOf(math.Content.ToString()) != null ? " formula-chain" : "").Write('"');
                 if (math.TryGetAttributes()?.Id is { } id)
                 {
                     renderer.Write(" id=\"").WriteEscape(id).Write('"');
                 }
                 renderer.Write('>');
             }
-            try
-            {
-                renderer.Write(FormulaSvg(source));
-            }
-            catch (FormatException e)
+            string after = display ? math.GetData(typeof(DisplayPunctuation)) as string ?? "" : "";
+            WriteFormula(renderer, math.Content.ToString(), display, after, e =>
             {
                 (int line, int column) = locate(math.Span.Start);
                 errors.Add(new MarkdownProblem(line, column, e.Message));
-                renderer.Write(FaultyFormula(source));
-            }
+            });
             if (display)
             {
-                renderer.WriteEscape(math.GetData(typeof(DisplayPunctuation)) as string ?? "");
                 if (number != null)
                 {
                     renderer.Write("<span class=\"formula-number\">").WriteEscape(number).Write("</span>");
@@ -670,19 +824,15 @@ public sealed partial class MarkdownPage
     {
         protected override void Write(HtmlRenderer renderer, MathBlock math)
         {
-            string source = string.Join(" ", math.Lines.Lines.Take(math.Lines.Count).Select(l => l.Slice.ToString().Trim())).Trim();
+            string source = string.Join("\n", math.Lines.Lines.Take(math.Lines.Count).Select(l => l.Slice.ToString().Trim())).Trim();
             string? number = math.GetData(typeof(FormulaNumber)) as string;
-            renderer.Write("<div class=\"formula-block").Write(number != null ? " formula-numbered" : "").Write('"').WriteAttributes(math).Write('>');
-            try
-            {
-                renderer.Write(FormulaSvg(source));
-            }
-            catch (FormatException e)
+            renderer.Write("<div class=\"formula-block").Write(number != null ? " formula-numbered" : "").Write(ChainOf(source) != null ? " formula-chain" : "")
+                .Write('"').WriteAttributes(math).Write('>');
+            WriteFormula(renderer, source, true, "", e =>
             {
                 (int line, int column) = locate(math.Span.Start);
                 errors.Add(new MarkdownProblem(line, column, e.Message));
-                renderer.Write(FaultyFormula(source));
-            }
+            });
             if (number != null)
             {
                 renderer.Write("<span class=\"formula-number\">").WriteEscape(number).Write("</span>");

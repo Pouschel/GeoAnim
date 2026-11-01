@@ -120,6 +120,33 @@ svg.formula {
   display: block;
 }
 
+/* a chain of equations: its rows aligned at the relations (left sides right-aligned, the rest left-aligned) */
+.formula-rows {
+  display: inline-table;
+  text-align: left;
+}
+
+.formula-row {
+  display: table-row;
+}
+
+.formula-left,
+.formula-right {
+  display: table-cell;
+  padding: 0.15em 0;
+}
+
+.formula-left {
+  padding-right: 0.2778em;
+  text-align: right;
+}
+
+/* a formula in the text cut at its relations: the space before a relation, where the line may break */
+.formula-gap {
+  display: inline-block;
+  width: 0.2778em;
+}
+
 .formula-error {
   padding: 0 0.15em;
   border-bottom: 2px wavy #c62828;

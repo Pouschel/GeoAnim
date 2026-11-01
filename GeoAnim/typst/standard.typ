@@ -235,6 +235,19 @@
     grid(columns: (1fr, auto, 1fr), align: (left, center, right + horizon), [], body, number)
   })
 
+// a chain of equations on lines of their own: the rows (left side, rest from the relation on) aligned at the relation,
+// centred; with a mark its number on the right of the last row
+// (each row a line of its own, so that left side and rest stand on the same baseline)
+#let display-chain(number: none, ..rows) = block(width: 100%, above: 0.8em, below: 0.8em, context {
+  let rows = rows.pos()
+  let widest = calc.max(..rows.map(row => measure(row.at(0)).width))
+  let lines = rows.map(row => block(above: 0pt, below: 0pt, align(left, [#box(width: widest)[#h(1fr)#row.at(0)]#h(0.2778em)#row.at(1)])))
+  let chain = box(align(left, stack(dir: ttb, spacing: 0.55em, ..lines)))
+  if number == none { align(center, chain) } else {
+    grid(columns: (1fr, auto, 1fr), align: (left, center, right + bottom), [], chain, number)
+  }
+})
+
 // "Abb. 2.3" in a caption
 #let figure-label(body) = text(weight: "bold", body)
 

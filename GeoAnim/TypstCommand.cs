@@ -216,7 +216,7 @@ internal static partial class Program
             }
             markup.Append(Blocks(body.ChildNodes, context));
             // a line break before or after a formula on a line of its own: that line is enough
-            string result = Regex.Replace(markup.ToString(), @"#linebreak\(\)\s*(#display-formula)", "$1");
+            string result = Regex.Replace(markup.ToString(), @"#linebreak\(\)\s*(#display-formula|#display-chain)", "$1");
             result = Regex.Replace(result, @"(#display-formula\[(?:[^\[\]]|\[[^\[\]]*\])*\])\s*#linebreak\(\)", "$1");
             return Regex.Replace(result, @"\n{3,}", "\n\n").TrimEnd() + "\n";
         }
@@ -372,6 +372,10 @@ internal static partial class Program
                     return Link(element, Content(), context);
                 case "svg" when element.ClassList.Contains("formula"):
                     return Formula(element.GetAttribute("aria-label") ?? "", context);
+                case "span" when element.ClassList.Contains("formula-gap"):
+                    return "#h(0.2778em, weak: true)";
+                case "wbr":
+                    return "\u200B";
                 case "span" when element.ClassList.Contains("formula-display"):
                     return DisplayFormula(element, context) + label;
                 case "span" when element.ClassList.Contains("statement-label"):
@@ -396,7 +400,15 @@ internal static partial class Program
         {
             IElement? number = element.QuerySelector(".formula-number");
             number?.Remove();
-            return "#display-formula(" + (number != null ? "number: [" + Escape(number.TextContent) + "]" : "") + ")["
+            string numberMarkup = number != null ? "number: [" + Escape(number.TextContent) + "]" : "";
+            // a chain: its rows, each left side and rest, aligned at the relation
+            if (element.QuerySelector(".formula-rows") is { } rows)
+            {
+                var cells = rows.Children.Where(r => r.ClassList.Contains("formula-row")).Select(row =>
+                    "([" + Inlines(row.Children[0].ChildNodes, context).Trim() + "], [" + Inlines(row.Children[1].ChildNodes, context).Trim() + "])");
+                return "#display-chain(" + numberMarkup + (numberMarkup.Length > 0 ? ", " : "") + string.Join(", ", cells) + ")";
+            }
+            return "#display-formula(" + numberMarkup + ")["
                 + Inlines(element.ChildNodes, context).Trim() + "]";
         }
 

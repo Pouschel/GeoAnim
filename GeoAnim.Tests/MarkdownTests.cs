@@ -529,6 +529,30 @@ public sealed class MarkdownTests : IDisposable
     }
 
     [Fact]
+    public void FormulasBreakAtTheirRelationsAndChainsAreAligned()
+    {
+        // cut before the relations outside brackets, texts and arrows
+        Assert.Equal(["a", "= b+c", "<= (x=y)", "!= d"], MarkdownPage.PiecesOf("a = b+c <= (x=y) != d"));
+        Assert.Equal(["a -> b"], MarkdownPage.PiecesOf("a -> b"));
+        Assert.Equal(["f(x)", "= \"a=b\""], MarkdownPage.PiecesOf("f(x) = \"a=b\""));
+        // a chain: the first line's left side, the rest of each line; a line without a relation continues the one before
+        Assert.Equal([("d(P)^2", "= x"), (null, "= y + z"), (null, "<= w")], MarkdownPage.ChainOf("d(P)^2 = x\n  = y\n  + z\n  <= w"));
+        Assert.Equal([("d(A,C)", "<= a"), (null, "= 3")], MarkdownPage.ChainOf("d(A,C)\n<= a\n= 3"));
+        Assert.Null(MarkdownPage.ChainOf("a = b"));
+        Assert.Null(MarkdownPage.ChainOf("a = b\n+ c"));
+
+        MarkdownPage page = MarkdownPage.Parse("Es gilt $a = b_1 + b_2 + b_3 + b_4 + b_5 + b_6$, kurz $M != Q$.\n\n$$\nd = 1 + 1\n  = 2\n$$ {#gl-k}\n");
+        Assert.Empty(page.Errors);
+        Assert.Matches("<span class=\"formula-split\"><svg[^>]*aria-label=\"a\".*?</svg><span class=\"formula-gap\"></span><wbr><svg[^>]*aria-label=\"= b_1 \\+ b_2", page.Html);
+        // a short one stays whole
+        Assert.Contains("aria-label=\"M != Q\"", page.Html);
+        Assert.Contains("class=\"formula-block formula-numbered formula-chain\"", page.Html);
+        Assert.Matches("<span class=\"formula-row\"><span class=\"formula-left\"><svg[^>]*aria-label=\"d\".*?<span class=\"formula-right\"><svg[^>]*aria-label=\"= 1 \\+ 1\"", page.Html);
+        Assert.Matches("<span class=\"formula-row\"><span class=\"formula-left\"></span><span class=\"formula-right\"><svg[^>]*aria-label=\"= 2\"", page.Html);
+        Assert.Equal(["(1)"], page.Marks.Select(m => m.Label));
+    }
+
+    [Fact]
     public void UnknownNumberingIsAWarning()
     {
         File.WriteAllText(Path.Combine(folder, "index.yaml"), "numbering:\n  axiom: eigen\n  within: kapitel\n  bild: own\n  figure: own page\n");
