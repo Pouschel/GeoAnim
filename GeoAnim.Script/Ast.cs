@@ -81,6 +81,9 @@ internal sealed record NumberStatement(int Line, int Column, NameRef Name, strin
 /// <summary>
 /// "move label A B to 0.2 -0.3" (<paramref name="Shift"/>) or "move label A to SE gap 12" (<see cref="Direction"/>, <see cref="Gap"/>).
 /// </summary>
+/// <summary>"label S "$S_1$" labeldir NW": a new text (or null: the old one) and options for the label of an object.</summary>
+internal sealed record LabelStatement(int Line, int Column, NameRef Target, string? Text, OptionList Options) : Statement(Line, Column);
+
 internal sealed record LabelShiftStatement(int Line, int Column, IReadOnlyList<NameRef> Targets, Vec? Shift, OptionList Options)
     : Statement(Line, Column)
 {

@@ -543,6 +543,69 @@ public sealed class Construction
         RunOrQueue(actions);
     }
 
+    /// <summary>
+    /// Gives the label of an object another text (null: the same), size, direction and space from its point (points), or
+    /// shift (units): before the first step or while the object is not drawn yet as if it had been defined so, in a step
+    /// the label fades out and in again with the change (0.4 s; "move label" moves a label slowly).
+    /// </summary>
+    public void Relabel(GeoObject item, string? text, double? size = null, double? direction = null, double? gap = null, Vec? shift = null)
+    {
+        if (item is not (GeoPoint or GeoStraight or GeoAngle or GeoArc))
+        {
+            throw new GeoException($"The {item.Kind} {item.Name} has no label (points, segments, lines, rays, angles and arcs have one).");
+        }
+        if ((direction != null || gap != null) && item is not GeoPoint)
+        {
+            throw new GeoException($"labeldir and labelgap are for the label of a point; the label of the {item.Kind} {item.Name} moves by a shift.");
+        }
+        if (text != null)
+        {
+            CheckText(text);
+        }
+        void Change()
+        {
+            item.Options = item.Options with { Label = text ?? item.Options.Label, LabelSize = size ?? item.Options.LabelSize, NoLabel = false };
+            if (item is GeoPoint point)
+            {
+                point.LabelDirection = direction ?? point.LabelDirection;
+                point.LabelGap = gap ?? point.LabelGap;
+            }
+            if (shift is Vec moved)
+            {
+                item.LabelShift = moved;
+            }
+            // a label it did not have (a segment without one, "nolabel"): from now on
+            if (!item.LabelUsed && text != null)
+            {
+                item.LabelUsed = true;
+                item.LabelOpacity = 1;
+            }
+        }
+        if (currentStep == null || !item.IsDrawn)
+        {
+            Change();
+            // the starting picture is drawn already: its label anew, at the same moment
+            if (item.IsDrawn)
+            {
+                item.ShiftChanges |= shift != null;
+                item.Render(Context, Span.At(time));
+            }
+            return;
+        }
+        // in a step: out, changed, in again (a text cannot change gradually)
+        double opacity = item.LabelOpacity;
+        bool shown = item.LabelUsed && opacity > 0;
+        if (shown)
+        {
+            RunOrQueue([new LabelFadeAction(item, 0, 200, Easing.EaseInOut)]);
+        }
+        RunOrQueue([new RelabelAction(item, Change)]);
+        if (shown)
+        {
+            RunOrQueue([new LabelFadeAction(item, opacity, 200, Easing.EaseInOut)]);
+        }
+    }
+
     public void ShiftLabels(IEnumerable<GeoObject> items, Vec shift, double? duration = null, Easing? easing = null)
     {
         RequireStep("move label");

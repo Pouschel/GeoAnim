@@ -118,3 +118,46 @@ public class EllipseTests
         Assert.Contains("\"sum <number>\"", error.Message);
     }
 }
+
+public class RelabelTests
+{
+    private static System.Text.Json.JsonElement[] Labels(AnimationData animation) =>
+        System.Text.Json.JsonDocument.Parse(animation.ToJson()).RootElement.GetProperty("primitives").EnumerateArray()
+            .Where(p => p.GetProperty("type").GetString() == "text").ToArray();
+
+    [Fact]
+    public void ALabelGetsAnotherTextAndPlace()
+    {
+        AnimationData animation = ScriptCompiler.Compile("""
+            point M = 0 0
+            point P = 3 0
+            circle k = center M through P
+            point A = -4 1
+            point B = 4 1
+            line g = A B
+            point S T = intersect g k
+            label S "$S_1$" labeldir NW
+            label T "$S_2$" labelgap 8
+            segment s = A B
+            step Umbenennen
+            label S "$S'$" shift 0 0.2
+            label s "$g$"
+            """);
+        string json = animation.ToJson();
+        // before the first step: as if defined so; in the step: at once at its moment
+        Assert.Contains("\"text\":[[0,\"$S_1$\",\"s\"],[", json);
+        Assert.Contains("\"$S\\u0027$\"", json);
+        Assert.Contains("\"$S_2$\"", json);
+        // the direction of S's label (north-west)
+        Assert.Contains("\"dir\"", json);
+        // a segment without a label gets one
+        Assert.Contains("\"$g$\"", json);
+
+        Assert.Contains("labeldir and labelgap are for the label of a point",
+            Assert.Throws<ScriptError>(() => ScriptCompiler.Compile("point A = 0 0\npoint B = 1 0\nsegment s = A B\nlabel s labeldir N")).Message);
+        Assert.Contains("has no label",
+            Assert.Throws<ScriptError>(() => ScriptCompiler.Compile("point A = 0 0\ncircle k = center A radius 1\nlabel k \"k\"")).Message);
+        Assert.Contains("needs a text",
+            Assert.Throws<ScriptError>(() => ScriptCompiler.Compile("point A = 0 0\nlabel A")).Message);
+    }
+}

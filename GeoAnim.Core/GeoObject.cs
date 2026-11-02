@@ -19,7 +19,8 @@ public abstract class GeoObject
 
     public string Name { get; }
 
-    internal Options Options { get; }
+    /// <summary>Its options; "label" changes those of its label later.</summary>
+    internal Options Options { get; set; }
 
     internal IReadOnlyList<GeoObject> Parents { get; }
 

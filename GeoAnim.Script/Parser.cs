@@ -351,6 +351,21 @@ internal sealed partial class Parser
             case "move":
                 statement = ParseMove(word);
                 break;
+            case "label":
+                {
+                    // "label S "$S_1$" labeldir NW": the label of an object, a new text and/or its options
+                    NameRef target = ExpectName();
+                    string? text = Current.Kind == TokenKind.String || (Current.Kind == TokenKind.Name && texts.ContainsKey(Current.Text))
+                        ? ExpectText("the label")
+                        : null;
+                    OptionList options = ParseOptions();
+                    if (text == null && options.Values.Count == 0)
+                    {
+                        throw Error(Current, $"\"label {target.Name}\" needs a text (label {target.Name} \"$S_1$\") or options like labeldir, labelgap, labelsize, shift.");
+                    }
+                    statement = new LabelStatement(l, c, target, text, options);
+                    break;
+                }
             case "rotate":
                 statement = ParseRotate(word);
                 break;

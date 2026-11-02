@@ -401,6 +401,24 @@ public static class ScriptCompiler
                         }
                         break;
                     }
+                case LabelStatement s:
+                    {
+                        if (OnlyResult)
+                        {
+                            break;
+                        }
+                        GeoObject target = NotInput(s.Target, "relabel");
+                        Options options = ToOptions(s.Options, "label", ["labeldir", "labelgap", "labelsize", "shift"]);
+                        try
+                        {
+                            c.Relabel(target, s.Text, options.LabelSize, options.LabelDir, options.LabelGap, options.Shift);
+                        }
+                        catch (GeoException e)
+                        {
+                            throw new ScriptError(s.Target.Line, s.Target.Column, e.Message);
+                        }
+                        break;
+                    }
                 case LabelShiftStatement s:
                     {
                         if (OnlyResult)
