@@ -565,6 +565,21 @@ public sealed class MarkdownTests : IDisposable
     }
 
     [Fact]
+    public void ReferencesInCaptionsBecomeLinks()
+    {
+        File.WriteAllText(Path.Combine(folder, "punkte.geo"), "point A = 0 0\nstep Eins\n");
+        string file = Path.Combine(folder, "punkte.geo.md");
+        var other = new Dictionary<string, BookMark>
+        {
+            ["satz-b"] = new BookMark(Path.Combine(folder, "sub", "b.geo.md"), new PageMark("satz-b", "theorem", "Satz 4", "", 3, 1) { Title = "Bewegung" }),
+        };
+        MarkdownPage page = MarkdownPage.Parse("::: lemma {#lem-a}\nText.\n:::\n\n![Im Beweis zu §lem-a, nach §*satz-b, \\§lem-a kein Verweis.](#1){#abb-a}\n\n![Fehlt: §nichts.](#1)\n",
+            file, ScriptCompiler.CompileFile, other);
+        Assert.Contains("Im Beweis zu <a href=\"#lem-a\" class=\"ref\">Lemma 1</a>, nach <a href=\"sub/b.geo.md#satz-b\" class=\"ref\">Satz 4 (Bewegung)</a>, §lem-a kein Verweis.", page.Html);
+        Assert.Contains("There is no mark \"nichts\"", Assert.Single(page.Errors).Message);
+    }
+
+    [Fact]
     public void UnknownNumberingIsAWarning()
     {
         File.WriteAllText(Path.Combine(folder, "index.yaml"), "numbering:\n  axiom: eigen\n  within: kapitel\n  bild: own\n  figure: own page\n");

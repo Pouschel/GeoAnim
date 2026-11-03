@@ -391,6 +391,40 @@ public sealed partial class MarkdownPage
             }
             ReplaceBy(literal, pieces);
         }
+        // the captions of figures (Markdown of their own, rendered with the figure): a reference becomes a link there
+        foreach (GeoFigureBlock figure in document.Descendants<GeoFigureBlock>())
+        {
+            for (int i = 0; i < figure.Items.Count; i++)
+            {
+                FigureItem item = figure.Items[i];
+                if (item.Reference is not { } reference || !reference.Caption.Contains('§'))
+                {
+                    continue;
+                }
+                string caption = ReferencePattern().Replace(reference.Caption, match =>
+                {
+                    if (match.Groups[1].Length > 0)
+                    {
+                        return match.Groups[2].Value + match.Groups[3].Value;
+                    }
+                    string name = match.Groups[3].Value;
+                    bool withTitle = match.Groups[2].Value.EndsWith('*');
+                    (string Label, string? Title, string Href)? target =
+                        own.TryGetValue(name, out PageMark? mark) ? (mark.Label, mark.Title, "#" + name)
+                        : bookMarks != null && bookMarks.TryGetValue(name, out BookMark? other)
+                            ? (other.Mark.Label, other.Mark.Title, (page == null ? other.File : Path.GetRelativePath(Path.GetDirectoryName(page)!, other.File)).Replace('\\', '/') + "#" + name)
+                            : null;
+                    if (target is not { } found)
+                    {
+                        errors.Add(new MarkdownProblem(reference.Line, reference.Column, $"There is no mark \"{name}\" (write it at a figure, a statement or a heading: {{#{name}}})."));
+                        return "??";
+                    }
+                    string label = Regex.Replace(found.Label, @"[\[\]\\*_]", @"\$0") + (withTitle && found.Title != null ? " (" + found.Title + ")" : "");
+                    return "[" + label + "](" + found.Href.Replace(" ", "%20").Replace("(", "%28").Replace(")", "%29") + "){.ref}";
+                });
+                figure.Items[i] = item with { Reference = reference with { Caption = caption } };
+            }
+        }
     }
 
     // a reference to a mark: what it shows ("Axiom 2"), where it leads; Label null: an unknown mark
