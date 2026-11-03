@@ -49,7 +49,7 @@ Ein unbekannter Schlüssel ist eine Warnung, ein Fehler im YAML ein Fehler (mit 
 | Fußnoten | `Text[^1]` · `[^1]: Anmerkung` | |
 | Attribute | `{#marke .klasse}` hinter einem Element | |
 | Formel im Text | `$bar(AB)$` | AsciiMath wie in Skripten; kein Leerzeichen direkt nach dem ersten und vor dem letzten `$`. Eine lange Formel darf vor ihren Relationszeichen (`=` `<` `<=` `>=` `!=` `~~` `=>` …, nicht in Klammern) umbrechen – sie bleibt eine Formel, nichts von Hand zerlegen; kurze Formeln (bis 20 Zeichen ohne Leerzeichen) bleiben ganz |
-| abgesetzte Formel | `$$…$$` im Absatz · `$$` … `$$` auf eigenen Zeilen | zentriert auf einer Zeile für sich; ein Satzzeichen direkt dahinter (`$$…$$.`) steht mit auf der Formelzeile |
+| abgesetzte Formel | `$$…$$` im Absatz · `$$` … `$$` auf eigenen Zeilen | zentriert auf einer Zeile für sich; ein Satzzeichen direkt dahinter (`$$…$$.`, beim Block `$$.` als Schlusszeile) steht mit auf der (letzten) Formelzeile |
 | Gleichungskette | `$$` auf eigener Zeile, dann eine Zeile `a = b`, weitere Zeilen, die mit `=` (oder `<`, `<=`, `~~` …) beginnen, dann `$$` | die Zeilen untereinander, ausgerichtet am Relationszeichen: links die linke Seite (nur in der ersten Zeile), rechts der Rest. Eine Zeile ohne Relation am Anfang setzt die vorige fort; steht in der ersten Zeile nur die linke Seite, beginnt die Kette in der zweiten. Mit Marke die Nummer an der letzten Zeile |
 | nummerierte Formel | `$$a^2+b^2=c^2$$ {#gl-pythagoras}.` · beim Block `$$ {#gl-name}` als Schlusszeile (oder als erste Zeile) | eine abgesetzte Formel mit Marke bekommt eine Nummer rechts auf ihrer Zeile – (2.3), siehe [Nummerierung](#nummerierung); `§gl-pythagoras` zeigt „(2.3)“. Formeln im Text (`$…$`) haben keine Nummer |
 | Dollarzeichen | `\$` | |

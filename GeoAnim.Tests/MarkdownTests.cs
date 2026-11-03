@@ -553,6 +553,18 @@ public sealed class MarkdownTests : IDisposable
     }
 
     [Fact]
+    public void PunctuationAfterTheClosingDollarsGoesIntoTheFormula()
+    {
+        MarkdownPage page = MarkdownPage.Parse("Es gilt\n\n$$\na = b\n  = c\n$$.\n\nWeiter im **Text**.\n\n$$\nx = 1\n$$, {#gl-x}\n\nNach §gl-x.\n");
+        Assert.Empty(page.Errors);
+        // the text after it is text again
+        Assert.Contains("<strong>Text</strong>", page.Html);
+        Assert.Contains("aria-label=\"= c.\"", page.Html);
+        Assert.Contains("aria-label=\"x = 1,\"", page.Html);
+        Assert.Equal(["(1)"], page.Marks.Select(m => m.Label));
+    }
+
+    [Fact]
     public void UnknownNumberingIsAWarning()
     {
         File.WriteAllText(Path.Combine(folder, "index.yaml"), "numbering:\n  axiom: eigen\n  within: kapitel\n  bild: own\n  figure: own page\n");

@@ -741,7 +741,8 @@ public sealed partial class MarkdownPage
     private sealed class FormulaNumber;
 
     // "$$" on a line of its own … "$$ {#gl-name}" (the mark at the end): the mark moved to the opening line, as Markdig
-    // reads it there; the lines stay where they are
+    // reads it there; "$$." (a full stop, comma … after the closing "$$", which Markdig would not take for its end): the
+    // punctuation moved to the formula's last line; the lines stay where they are
     private static string MoveFormulaMarks(string text)
     {
         if (!text.Contains("$$", StringComparison.Ordinal))
@@ -760,6 +761,27 @@ public sealed partial class MarkdownPage
                     open = i;
                 }
                 continue;
+            }
+            Match punctuated = Regex.Match(line, @"^(\s{0,3}\$\$)\s*([.,;:!?])\s*(\{[^{}]*\})?\s*$");
+            if (punctuated.Success)
+            {
+                // the punctuation at the end of the last line with content before it
+                for (int k = i - 1; k > open; k--)
+                {
+                    if (lines[k].Trim().Length > 0)
+                    {
+                        string lastEnd = lines[k].EndsWith('\r') ? "\r" : "";
+                        lines[k] = lines[k].TrimEnd('\r').TrimEnd() + punctuated.Groups[2].Value + lastEnd;
+                        break;
+                    }
+                }
+                lines[i] = punctuated.Groups[1].Value + (punctuated.Groups[3].Success ? " " + punctuated.Groups[3].Value : "") + (lines[i].EndsWith('\r') ? "\r" : "");
+                line = lines[i].TrimEnd('\r');
+                if (!punctuated.Groups[3].Success)
+                {
+                    open = -1;
+                    continue;
+                }
             }
             Match closing = Regex.Match(line, @"^(\s{0,3}\$\$)\s*(\{[^{}]*\})\s*$");
             if (closing.Success)
