@@ -482,14 +482,14 @@ public sealed class MarkdownTests : IDisposable
 
         // a new chapter starts again, the axioms go on
         MarkdownPage third = PageOfBook("20_Zwei/10_C.geo.md");
-        Assert.Equal(["Axiom 3", "Hilfssatz 2.1", "(2.1)"], third.Marks.Select(m => m.Label));
+        Assert.Equal(["Axiom 3", "Lemma 2.1", "(2.1)"], third.Marks.Select(m => m.Label));
         Assert.Contains(">Satz 1.2</a>, <a class=\"ref\" href=\"../10_Eins/20_B.geo.md#ax-b\">Axiom 2</a> und", third.Html);
         Assert.Contains(">Abb. 1.2</a>", third.Html);
 
         // other rules: through the book, examples with the others, no numbers on headings
         File.WriteAllText(Path.Combine(folder, "index.yaml"), "title: Buch\nnumbering:\n  within: book\n  example: shared\n  headings: no\n");
         MarkdownPage again = PageOfBook("20_Zwei/10_C.geo.md");
-        Assert.Equal(["Axiom 3", "Hilfssatz 5", "(1)"], again.Marks.Select(m => m.Label));
+        Assert.Equal(["Axiom 3", "Lemma 5", "(1)"], again.Marks.Select(m => m.Label));
         Assert.DoesNotContain("section-number", again.Html);
         Assert.Contains(">Satz 3</a>", again.Html);
         Assert.Null(again.SectionNumber);

@@ -120,7 +120,7 @@ Datei-Symbol-Design (etwa Seti, die Voreinstellung) für die Sprache kein eigene
   eine andere Seite schon hat, ist gelb unterstrichen. Seiten haben ihre eigene Vorschau neben der
   der Skripte: Beide können gleichzeitig offen sein (etwa in zwei Fenstern), und jede folgt dem aktiven Editor ihrer Art.
   **Aussagen** (Strg+. oder die Glühbirne): Sind Zeilen markiert, schließt „In Definition einschließen“, „In Axiom …“,
-  „In Satz …“, „In Hilfssatz …“, „In Folgerung …“, „In Beweis …“, „In Beispiel …“, „In Bemerkung …“ oder „In Kasten …“
+  „In Satz …“, „In Lemma …“, „In Folgerung …“, „In Beweis …“, „In Beispiel …“, „In Bemerkung …“ oder „In Kasten …“
   sie in `::: art` … `:::` ein – mit einer Leerzeile davor und danach, wo der Text weitergeht; der Cursor steht dann
   hinter der Art, für Marke und Titel (`{#name} Titel`). Enthalten die Zeilen schon einen Container, bekommt der neue
   außen einen Doppelpunkt mehr (`:::: box`). Steht der Cursor in einem Container, löst „Axiom-Block auflösen“ (usw.)

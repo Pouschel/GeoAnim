@@ -52,7 +52,7 @@ public sealed partial class MarkdownPage
         ["axiom"] = ("Axiom", true),
         ["definition"] = ("Definition", true),
         ["theorem"] = ("Satz", true),
-        ["lemma"] = ("Hilfssatz", true),
+        ["lemma"] = ("Lemma", true),
         ["corollary"] = ("Folgerung", true),
         ["proof"] = ("Beweis", false),
         ["example"] = ("Beispiel", true),

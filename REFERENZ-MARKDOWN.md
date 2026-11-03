@@ -147,7 +147,7 @@ Durch zwei verschiedene Punkte verläuft **genau eine Gerade**.
 | `axiom` | Axiom | ja | Kasten, kursiv |
 | `definition` · `def` | Definition | ja | Kasten (grün) |
 | `theorem` | Satz | ja | Kasten, kursiv |
-| `lemma` | Hilfssatz | ja | Kasten, kursiv |
+| `lemma` | Lemma | ja | Kasten, kursiv |
 | `corollary` | Folgerung | ja | Kasten, kursiv |
 | `proof` | Beweis | nein | ohne Kasten, endet mit ∎ |
 | `example` | Beispiel | ja | ohne Kasten |
@@ -164,7 +164,7 @@ Durch zwei verschiedene Punkte verläuft **genau eine Gerade**.
   Marke; `>` bleibt für Zitate.
 - **Zählung:** Axiome haben einen eigenen Zähler, der durch das ganze Buch läuft: Axiom 1, 2, 3 … – sie bilden die
   überschaubare Liste der Grundannahmen. Beispiele haben einen eigenen Zähler im Kapitel (Beispiel 2.1, 2.2 …), alle
-  anderen nummerierten Arten teilen sich einen (Definition 2.1, Satz 2.2, Hilfssatz 2.3 …). Siehe
+  anderen nummerierten Arten teilen sich einen (Definition 2.1, Satz 2.2, Lemma 2.3 …). Siehe
   [Nummerierung](#nummerierung).
 - **Verschachteln:** Ein Container in einem anderen braucht außen mehr Doppelpunkte, damit das innere `:::` nicht den
   äußeren schließt: `:::: box` … `::: theorem` … `:::` … `::::`.
@@ -235,7 +235,7 @@ deren Nummer (Satz 2.1.3), im ganzen Buch nichts (Axiom 5). Voreinstellung:
 | Abbildung | eigener, im Kapitel | Abb. 2.1, 2.2 … |
 | Beispiel | eigener, im Kapitel | Beispiel 2.1, 2.2 … |
 | Formel (nur mit Marke) | eigener, im Kapitel | (2.1), (2.2) … |
-| Definition, Satz, Hilfssatz, Folgerung | gemeinsamer, im Kapitel | Definition 2.1, Satz 2.2, Folgerung 2.3 … |
+| Definition, Satz, Lemma, Folgerung | gemeinsamer, im Kapitel | Definition 2.1, Satz 2.2, Folgerung 2.3 … |
 
 Beweise, Bemerkungen und Kästen haben keine Nummer. Gezählt wird in Buchreihenfolge über alle Seiten (ohne Dateien und
 Ordner mit `_`). Eine einzelne Seite außerhalb eines Buchs zählt für sich, ohne Kapitelnummer.

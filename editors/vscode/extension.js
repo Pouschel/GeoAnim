@@ -1625,7 +1625,7 @@ const STATEMENT_KINDS = [
   ['definition', 'Definition'],
   ['axiom', 'Axiom'],
   ['theorem', 'Satz'],
-  ['lemma', 'Hilfssatz'],
+  ['lemma', 'Lemma'],
   ['corollary', 'Folgerung'],
   ['proof', 'Beweis'],
   ['example', 'Beispiel'],
