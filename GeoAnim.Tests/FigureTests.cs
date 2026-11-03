@@ -302,6 +302,9 @@ public sealed class TypstTests : IDisposable
         Assert.Contains("#chapter(\"1\", [Kapitel])", main);
         Assert.Contains("#include \"pages/p01-Erste.typ\"", main);
         Assert.True(File.Exists(Path.Combine(output, "style.typ")));
+        // the text's font in its four styles, for "typst compile --font-path fonts"
+        Assert.Equal(["STIXTwoText-Bold.ttf", "STIXTwoText-BoldItalic.ttf", "STIXTwoText-Italic.ttf", "STIXTwoText-Regular.ttf"],
+            Directory.GetFiles(Path.Combine(output, "fonts"), "*.ttf").Select(Path.GetFileName).Order(StringComparer.Ordinal));
         string first = File.ReadAllText(Path.Combine(output, "pages", "p01-Erste.typ"));
         Assert.Contains("#heading(level: 2)[#section-number[1.1] Erste Seite]", first);
         // text escaped, formulas and figures as pictures

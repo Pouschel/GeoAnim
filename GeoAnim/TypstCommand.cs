@@ -72,6 +72,9 @@ internal static partial class Program
         {
             var start = new ProcessStartInfo("typst") { WorkingDirectory = project, UseShellExecute = false, RedirectStandardError = true };
             start.ArgumentList.Add("compile");
+            // the fonts of the project (STIX Two Text in all four styles), whatever is installed
+            start.ArgumentList.Add("--font-path");
+            start.ArgumentList.Add("fonts");
             start.ArgumentList.Add("book.typ");
             start.ArgumentList.Add(pdf);
             using Process process = Process.Start(start)!;
@@ -90,7 +93,7 @@ internal static partial class Program
         catch (System.ComponentModel.Win32Exception)
         {
             Console.Error.WriteLine("Typst is not installed (or not on the PATH): https://typst.app – e.g. \"winget install Typst.Typst\". "
-                + $"The project is ready in {project}: typst compile book.typ");
+                + $"The project is ready in {project}: typst compile --font-path fonts book.typ");
             return 1;
         }
     }
@@ -563,6 +566,16 @@ internal static partial class Program
                 File.WriteAllBytes(Path.Combine(output, name), content);
             }
             // the look: GeoAnim's standard, always anew; the book's own style.typ (which imports it), else one that only does
+            // the text's font in all four styles (regular, italic, bold, bold italic), static: Typst takes the bold of a
+            // variable font (as Google Fonts gives STIX Two Text) for the regular one
+            string fonts = Path.Combine(output, "fonts");
+            Directory.CreateDirectory(fonts);
+            foreach (string name in Assembly.GetExecutingAssembly().GetManifestResourceNames().Where(n => n.StartsWith("typst/fonts/", StringComparison.Ordinal)))
+            {
+                using Stream font = Assembly.GetExecutingAssembly().GetManifestResourceStream(name)!;
+                using FileStream file = File.Create(Path.Combine(fonts, name["typst/fonts/".Length..]));
+                font.CopyTo(file);
+            }
             using (Stream stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("typst/standard.typ")!)
             using (var reader = new StreamReader(stream))
             {

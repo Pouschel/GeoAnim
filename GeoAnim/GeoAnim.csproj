@@ -28,6 +28,8 @@
   <!-- the standard look of the printed book (geoanim typst) -->
   <ItemGroup>
     <EmbeddedResource Include="typst\standard.typ" LogicalName="typst/standard.typ" />
+    <!-- STIX Two Text as static fonts (OFL), for the PDF: a variable font installed instead has no bold for Typst -->
+    <EmbeddedResource Include="typst\fonts\*" LogicalName="typst/fonts/%(Filename)%(Extension)" />
   </ItemGroup>
 
   <!-- All scripts in Samples (with subfolders) show in Visual Studio under this project; new files appear by themselves. -->
