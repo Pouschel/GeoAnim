@@ -88,7 +88,7 @@ public sealed partial class ScriptSource
             {
                 throw Error(file, i + 1, column, "\"include\" needs a file name, like \"include styles.geo\".");
             }
-            string path = Path.GetFullPath(Path.Combine(directory, name));
+            string path = PathOf(directory, name) ?? throw Error(file, i + 1, nameColumn, NoBook(name));
             if (chain.Contains(path, StringComparer.OrdinalIgnoreCase))
             {
                 throw Error(file, i + 1, nameColumn,
@@ -109,6 +109,31 @@ public sealed partial class ScriptSource
             Add(File.ReadAllText(path), path, Path.GetDirectoryName(path)!, [.. chain, path]);
         }
     }
+
+    /// <summary>
+    /// The full path of a file named in a script in <paramref name="directory"/>: relative to it, or with "~/" relative to
+    /// the book's folder (the one with index.yaml, here or above), so that files can move between folders; null for "~/"
+    /// outside a book.
+    /// </summary>
+    internal static string? PathOf(string directory, string name)
+    {
+        if (!(name.StartsWith("~/", StringComparison.Ordinal) || name.StartsWith("~\\", StringComparison.Ordinal)))
+        {
+            return Path.GetFullPath(Path.Combine(directory, name));
+        }
+        for (DirectoryInfo? folder = new(directory); folder != null; folder = folder.Parent)
+        {
+            if (File.Exists(Path.Combine(folder.FullName, "index.yaml")))
+            {
+                return Path.GetFullPath(Path.Combine(folder.FullName, name[2..]));
+            }
+        }
+        return null;
+    }
+
+    /// <summary>Why "~/…" cannot be found.</summary>
+    internal static string NoBook(string name) =>
+        $"{name}: \"~/\" is the folder of the book (the one with index.yaml), but there is none here or above.";
 
     // a file for messages: relative to the main script's folder
     private string Display(string path) => Path.GetRelativePath(baseDirectory, path).Replace('\\', '/');

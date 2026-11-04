@@ -214,8 +214,8 @@ Aktionen stehen in einem Schritt und laufen nacheinander. Die Optionen *Ablauf* 
 
 | Befehl | Schreibweisen | Optionen | Hinweise |
 |---|---|---|---|
-| `include` | `include pfad` · `include "pfad mit Leerzeichen"` | – | setzt eine Datei an dieser Stelle ein (relativ zur einbindenden Datei) |
-| `use` | `art name… = use datei A B … [draw \| steps]` | die der Ergebnisse | benutzt eine Datei wie eine Funktion: Objekte des Aufrufers für ihre Eingaben, Ergebnisse unter den Namen links |
+| `include` | `include pfad` · `include "pfad mit Leerzeichen"` | – | setzt eine Datei an dieser Stelle ein (relativ zur einbindenden Datei; mit `~/` relativ zum Ordner des Buchs, dem mit der index.yaml: `include ~/_def.geo`) |
+| `use` | `art name… = use datei A B … [draw \| steps]` | die der Ergebnisse | benutzt eine Datei wie eine Funktion: Objekte des Aufrufers für ihre Eingaben, Ergebnisse unter den Namen links (Pfad wie bei `include`, auch `~/datei.geo`) |
 | | `name… = use datei A B …` | die passenden | ohne Art: alle Ausgaben der Reihe nach; `_` überspringt eine |
 | | `use datei A B … [draw \| steps]` | – | ohne Ergebnis: zeigt nur die Animation der Datei |
 | `input` | `input point A = x y` (ebenso jede andere Art und Definition) | wie die Art | Eingabe, wenn die Datei benutzt wird; allein gilt die Definition |

@@ -286,4 +286,30 @@ public sealed class UseTests : IDisposable
         File.WriteAllText(Path.Combine(folder, "none.geo"), "point A = 0 0");
         Assert.Contains("has no \"output\" line", Error("point R = use none.geo").Message);
     }
+
+    [Fact]
+    public void PathsWithATildeStartAtTheBooksFolder()
+    {
+        File.WriteAllText(Path.Combine(folder, "index.yaml"), "title: Buch\n");
+        File.WriteAllText(Path.Combine(folder, "_def.geo"), "var rot color red\n");
+        Directory.CreateDirectory(Path.Combine(folder, "10_Kapitel", "20_Unter"));
+        string file = Path.Combine(folder, "10_Kapitel", "20_Unter", "a.geo");
+        // an include and a use from two folders down, without "../../"
+        File.WriteAllText(file, "include ~/_def.geo\npoint A = -3 0 rot\npoint B = 3 0\npoint C = use ~/equilateral.geo A B\n");
+        AnimationData animation = ScriptCompiler.CompileFile(file);
+        Assert.Contains("#d32f2f", animation.ToJson());
+
+        // outside a book "~/" has no meaning
+        string outside = Directory.CreateTempSubdirectory("geoanim-nobook").FullName;
+        try
+        {
+            File.WriteAllText(Path.Combine(outside, "b.geo"), "include ~/_def.geo\n");
+            ScriptError error = Assert.Throws<ScriptError>(() => ScriptCompiler.CompileFile(Path.Combine(outside, "b.geo")));
+            Assert.Contains("the folder of the book", error.Message);
+        }
+        finally
+        {
+            Directory.Delete(outside, recursive: true);
+        }
+    }
 }

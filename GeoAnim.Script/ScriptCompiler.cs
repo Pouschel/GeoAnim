@@ -813,8 +813,8 @@ public static class ScriptCompiler
         /// </summary>
         private void Use(DefineStatement s, UseDefinition d)
         {
-            string path = Path.GetFullPath(Path.Combine(source.DirectoryOf(s.Line), d.Path));
             ScriptError AtPath(string message) => new(d.PathLine, d.PathColumn, message);
+            string path = ScriptSource.PathOf(source.DirectoryOf(s.Line), d.Path) ?? throw AtPath(ScriptSource.NoBook(d.Path));
             if (!File.Exists(path))
             {
                 throw AtPath($"File not found: {d.Path} ({path}).");
