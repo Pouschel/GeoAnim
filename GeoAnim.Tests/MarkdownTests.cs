@@ -8,6 +8,9 @@ namespace GeoAnim.Tests;
 
 public sealed class MarkdownTests : IDisposable
 {
+    // the HTML without the ids of references ("r-name-2", for the list of where a mark is used)
+    private static string NoIds(string html) => Regex.Replace(html, @" id=""r-[^""]*""", "");
+
     private readonly string folder = Directory.CreateTempSubdirectory("geoanim-markdown-").FullName;
 
     public void Dispose() => Directory.Delete(folder, recursive: true);
@@ -371,10 +374,10 @@ public sealed class MarkdownTests : IDisposable
         Assert.Equal(["abschnitt-gerade", "abb-gerade", "ax-gerade"], page.Marks.Select(m => m.Name));
         // a heading below the page's: its text (they have no numbers)
         Assert.Equal("„Die Gerade“", page.Marks[0].Label);
-        Assert.Contains("<a class=\"ref\" href=\"#abb-gerade\">Abb. 1</a>", page.Html);
-        Assert.Contains("<a class=\"ref\" href=\"#ax-gerade\">Axiom 1</a>", page.Html);
-        Assert.Contains("<a class=\"ref\" href=\"sub/strecken.geo.md#def-strecke\">Definition 4</a>", page.Html);
-        Assert.Contains("<a class=\"ref\" href=\"#abschnitt-gerade\">„Die Gerade“</a>", page.Html);
+        Assert.Contains("<a class=\"ref\" href=\"#abb-gerade\">Abb. 1</a>", NoIds(page.Html));
+        Assert.Contains("<a class=\"ref\" href=\"#ax-gerade\">Axiom 1</a>", NoIds(page.Html));
+        Assert.Contains("<a class=\"ref\" href=\"sub/strecken.geo.md#def-strecke\">Definition 4</a>", NoIds(page.Html));
+        Assert.Contains("<a class=\"ref\" href=\"#abschnitt-gerade\">„Die Gerade“</a>", NoIds(page.Html));
         Assert.Contains("Kein Verweis: §abb und § 5.", page.Html);
         Assert.Contains("<span class=\"ref-missing\" title=\"nichts\">??</span>", page.Html);
         Assert.Contains("<figure class=\"geo-figure\" id=\"abb-gerade\"", page.Html);
@@ -460,6 +463,44 @@ public sealed class MarkdownTests : IDisposable
     }
 
     [Fact]
+    public void StatementsShowWhereTheyAreUsed()
+    {
+        File.WriteAllText(Path.Combine(folder, "index.yaml"), "title: Buch\n");
+        Directory.CreateDirectory(Path.Combine(folder, "10_Eins"));
+        File.WriteAllText(Path.Combine(folder, "10_Eins", "10_A.geo.md"),
+            "# Erste\n\n::: lemma {#lem-a}\nx\n:::\n\n::: def {#def-a}\nx\n:::\n\n::: theorem {#satz-a}\nNach §def-a.\n:::\n\n::: proof\nMit §lem-a und nochmals §lem-a.\n:::\n\nIm Text §lem-a.\n\n::: lemma {#lem-unbenutzt}\nx\n:::\n");
+        File.WriteAllText(Path.Combine(folder, "10_Eins", "20_B.geo.md"),
+            "# Zweite\n\n::: theorem {#satz-b}\nx\n:::\n\n::: remark\nSiehe §*satz-a.\n:::\n\n::: proof §satz-a\nWegen §lem-a.\n:::\n\n![Nach §lem-a.](x.geo)\n\nZuletzt §lem-a.\n");
+        string file = Path.Combine(folder, "10_Eins", "10_A.geo.md");
+        string text = File.ReadAllText(file);
+        Daemon.BookOfPage book = Daemon.ReadBook(file, text);
+
+        // a proof belongs to the statement before it (or the one named); in a remark: the page's section
+        Assert.Equal(["Beweis von Satz 1.3", "Beweis von Satz 1.3", "Abschnitt 1.1", "Beweis von Satz 1.3", "Abb. 1.1", "Abschnitt 1.2"], book.UsedIn["lem-a"].Select(u => u.Label));
+        Assert.Equal(["Satz 1.3"], book.UsedIn["def-a"].Select(u => u.Label));
+        Assert.Equal(["Abschnitt 1.2"], book.UsedIn["satz-a"].Select(u => u.Label));
+        // numbered in the order of the text, a caption where its figure is
+        Assert.Equal(["r-lem-a-1", "r-lem-a-2", "r-lem-a-3", "r-lem-a-1", "r-lem-a-2", "r-lem-a-3"], book.UsedIn["lem-a"].Select(u => u.Anchor));
+
+        MarkdownPage page = MarkdownPage.Parse(text, file, null, book.Marks.ToDictionary(m => m.Mark.Name), book.Numbering, book.KeywordLinks, book.UsedIn);
+        // under the statement: one link for each place (to its first reference), the same proof once
+        Assert.Contains("<p class=\"used-in\">Verwendet in: <a href=\"#r-lem-a-1\">Beweis von Satz 1.3</a> (2×) · <a href=\"#r-lem-a-3\">Abschnitt 1.1</a>"
+            + " · <a href=\"20_B.geo.md#r-lem-a-1\">Beweis von Satz 1.3</a> · <a href=\"20_B.geo.md#r-lem-a-2\">Abb. 1.1</a> · <a href=\"20_B.geo.md#r-lem-a-3\">Abschnitt 1.2</a></p>", page.Html);
+        Assert.Contains("<p class=\"used-in\">Nicht verwendet.</p>", page.Html);
+        Assert.Contains("<a class=\"ref\" id=\"r-lem-a-3\" href=\"#lem-a\">Lemma 1.1</a>", page.Html);
+        // without them (print, e-book): nothing
+        Assert.DoesNotContain("used-in", MarkdownPage.Parse(text, file, null, book.Marks.ToDictionary(m => m.Mark.Name), book.Numbering, book.KeywordLinks).Html);
+
+        // "::: proof §satz-a": "Beweis von Satz 1.3."
+        string second = Path.Combine(folder, "10_Eins", "20_B.geo.md");
+        Daemon.BookOfPage other = Daemon.ReadBook(second, File.ReadAllText(second));
+        MarkdownPage page2 = MarkdownPage.Parse(File.ReadAllText(second), second, null, other.Marks.ToDictionary(m => m.Mark.Name), other.Numbering, other.KeywordLinks);
+        Assert.Contains("<span class=\"statement-label\">Beweis von <a class=\"ref\" href=\"10_A.geo.md#satz-a\">Satz 1.3</a>.</span>", page2.Html);
+        Assert.DoesNotContain(page2.Errors, e => e.Message.Contains("mark"));
+        Assert.Contains(MarkdownPage.Parse("::: proof §nichts\nx\n:::\n").Errors, e => e.Message.Contains("no mark \"nichts\""));
+    }
+
+    [Fact]
     public void FiguresAndStatementsAreNumberedInTheirChapter()
     {
         File.WriteAllText(Path.Combine(folder, "index.yaml"), "title: Buch\n");
@@ -484,7 +525,7 @@ public sealed class MarkdownTests : IDisposable
         // a new chapter starts again, the axioms go on
         MarkdownPage third = PageOfBook("20_Zwei/10_C.geo.md");
         Assert.Equal(["Axiom 3", "Lemma 2.1", "(2.1)"], third.Marks.Select(m => m.Label));
-        Assert.Contains(">Satz 1.2</a>, <a class=\"ref\" href=\"../10_Eins/20_B.geo.md#ax-b\">Axiom 2</a> und", third.Html);
+        Assert.Contains(">Satz 1.2</a>, <a class=\"ref\" href=\"../10_Eins/20_B.geo.md#ax-b\">Axiom 2</a> und", NoIds(third.Html));
         Assert.Contains(">Abb. 1.2</a>", third.Html);
 
         // other rules: through the book, examples with the others, no numbers on headings
@@ -525,7 +566,7 @@ public sealed class MarkdownTests : IDisposable
         Assert.Contains(">Kapitel 2 (Geraden und ihre Ordnung)</a>", second.Html);
         Assert.Contains(">Axiom 1 (Axiom von Pasch)</a>", second.Html);
         // without a title: the label alone
-        Assert.Contains(">Definition 2.1</a> und <a class=\"ref\" href=\"#satz-b\">Satz 2.2</a>.", second.Html);
+        Assert.Contains(">Definition 2.1</a> und <a class=\"ref\" href=\"#satz-b\">Satz 2.2</a>.", NoIds(second.Html));
         Assert.Empty(second.Errors);
     }
 
@@ -597,7 +638,7 @@ public sealed class MarkdownTests : IDisposable
         };
         MarkdownPage page = MarkdownPage.Parse("::: lemma {#lem-a}\nText.\n:::\n\n![Im Beweis zu §lem-a, nach §*satz-b, \\§lem-a kein Verweis.](#1){#abb-a}\n\n![Fehlt: §nichts.](#1)\n",
             file, ScriptCompiler.CompileFile, other);
-        Assert.Contains("Im Beweis zu <a href=\"#lem-a\" class=\"ref\">Lemma 1</a>, nach <a href=\"sub/b.geo.md#satz-b\" class=\"ref\">Satz 4 (Bewegung)</a>, §lem-a kein Verweis.", page.Html);
+        Assert.Contains("Im Beweis zu <a href=\"#lem-a\" class=\"ref\">Lemma 1</a>, nach <a href=\"sub/b.geo.md#satz-b\" class=\"ref\">Satz 4 (Bewegung)</a>, §lem-a kein Verweis.", NoIds(page.Html));
         Assert.Contains("There is no mark \"nichts\"", Assert.Single(page.Errors).Message);
     }
 
@@ -635,7 +676,7 @@ public sealed class MarkdownTests : IDisposable
         Assert.Matches("<span class=\"formula-display formula-numbered\" id=\"gl-pythagoras\"><svg[^\n]*</svg>.<span class=\"formula-number\">\\(1\\)</span></span>", page.Html);
         Assert.Contains("<span class=\"formula-display\"><svg", page.Html);
         Assert.Matches("<div class=\"formula-block formula-numbered\" id=\"gl-positiv\"[^>]*><svg[^\n]*<span class=\"formula-number\">\\(3\\)</span></div>", page.Html);
-        Assert.Contains("<a class=\"ref\" href=\"#gl-pythagoras\">(1)</a> und <a class=\"ref\" href=\"#gl-positiv\">(3)</a>", page.Html);
+        Assert.Contains("<a class=\"ref\" href=\"#gl-pythagoras\">(1)</a> und <a class=\"ref\" href=\"#gl-positiv\">(3)</a>", NoIds(page.Html));
         // the lines stay where they are (the mark moved to the opening line)
         Assert.Equal(7, page.Marks[2].Line);
     }

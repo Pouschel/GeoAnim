@@ -100,7 +100,7 @@ internal static partial class Program
                 {
                     bookMarks.TryAdd(mark.Mark.Name, mark);
                 }
-                MarkdownPage page = MarkdownPage.Parse(text, entry.FullPath, Daemon.LoadScript, bookMarks, of.Numbering, of.KeywordLinks);
+                MarkdownPage page = MarkdownPage.Parse(text, entry.FullPath, Daemon.LoadScript, bookMarks, of.Numbering, of.KeywordLinks, of.UsedIn);
                 foreach (MarkdownProblem problem in page.Errors)
                 {
                     progress.Error($"{entry.Source}:{problem.Line}:{problem.Column}: {problem.Message}");

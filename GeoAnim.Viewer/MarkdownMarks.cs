@@ -28,9 +28,33 @@ public sealed record PageMark(string Name, string Kind, string Label, string Tex
     public string? Title { get; init; }
 }
 
+/// <summary>
+/// A reference "§name" on a page: where it stands, the id of its link ("r-name-2": the second reference to "name" on the
+/// page) and what it stands in, for the list of where a mark is used. <see cref="Context"/>: the statement or figure
+/// (numbered; its label as on a page alone, <see cref="MarkdownPage.Renumbered"/> gives the book's), <see cref="Section"/>:
+/// the page's heading; in a proof <see cref="Proof"/>, with the mark of the statement it proves in <see cref="ProofOf"/>
+/// ("::: proof §satz-x") or, without one, the statement before it in <see cref="Context"/>.
+/// </summary>
+public sealed record PageReference(string Name, int Line, int Column, string Anchor)
+{
+    public PageMark? Context { get; init; }
+
+    public PageMark? Section { get; init; }
+
+    public bool Proof { get; init; }
+
+    public string? ProofOf { get; init; }
+}
+
+/// <summary>A place where a mark is used: what it is ("Beweis von Satz 3.4", "Abschnitt 2.1"), on which page (full path), the id there and the line.</summary>
+public sealed record MarkUse(string Label, string File, string Anchor, int Line, int Column);
+
 /// <summary>The marks of a page and how many of each counter it has (for the numbers of the pages after it).</summary>
 public sealed record MarksOfPage(IReadOnlyList<PageMark> Marks, IReadOnlyDictionary<string, int> Counts)
 {
+    /// <summary>The references of the page ("§name"), in their order.</summary>
+    public IReadOnlyList<PageReference> References { get; init; } = [];
+
     /// <summary>The keywords of the page.</summary>
     public IReadOnlyList<PageKeywordDefinition> Keywords { get; init; } = [];
 
@@ -89,8 +113,67 @@ public sealed partial class MarkdownPage
             ? (numbering.Section.Contains('.') ? SectionName : ChapterName) + " " + numbering.Section
             : "„" + HtmlExporter.PlainText(text) + "“";
 
-    // a statement as read: its kind, title (Markdown) and what references show
-    private sealed record Statement(string Kind, string? Title, string Label);
+    // a statement as read: its kind, title (Markdown) and what references show; a proof "::: proof §satz-x": the mark of
+    // the statement it proves, and when found its label and link
+    private sealed record Statement(string Kind, string? Title, string Label)
+    {
+        public string? ProofOf { get; init; }
+
+        public string? ProofLabel { get; init; }
+
+        public string? ProofHref { get; init; }
+    }
+
+    // what a reference in a block stands in: the statement or figure (numbered, with or without a mark), in a proof the
+    // statement before it (or the one named, ProofOf)
+    private sealed record ReferenceContext(PageMark? Mark, bool Proof, string? ProofOf);
+
+    // the kinds that are proved (a proof without "§name" belongs to the last of them before it)
+    private static readonly HashSet<string> Provable = ["theorem", "lemma", "corollary"];
+
+    /// <summary>
+    /// What a place a mark is used at shows in the list under it: "Beweis von Satz 3.4" (in a proof), "Satz 3.4" (in a
+    /// statement), "Abb. 2.1" (in a caption), "Abschnitt 2.1" (in the text: the page's heading), else the page's title.
+    /// <paramref name="markOf"/>: a mark of the book by its name, with its numbers.
+    /// </summary>
+    public static string UseLabel(PageReference reference, PageNumbering numbering, Func<string, PageMark?> markOf, string pageTitle)
+    {
+        string? section = reference.Section is { } heading ? Renumbered(heading, numbering).Label : null;
+        if (reference.Proof)
+        {
+            string? proved = reference.ProofOf != null ? markOf(reference.ProofOf)?.Label
+                : reference.Context is { } statement ? Renumbered(statement, numbering).Label : null;
+            return proved != null ? "Beweis von " + proved : "Beweis in " + (section ?? pageTitle);
+        }
+        return reference.Context is { } context ? Renumbered(context, numbering).Label : section ?? pageTitle;
+    }
+
+    /// <summary>
+    /// Where the marks of a book are used: for every mark's name the places that refer to it, in book order. The pages (in
+    /// book order) with their full paths, marks as read (<see cref="ReadMarks"/>), numbers and titles; <paramref name="marks"/>:
+    /// the marks of the book by name, with their numbers (for "Beweis von Satz 3.2" of a proof "::: proof §satz-x").
+    /// </summary>
+    public static Dictionary<string, IReadOnlyList<MarkUse>> BookUses(IEnumerable<(string File, MarksOfPage Page, PageNumbering Numbering, string Title)> pages,
+        IReadOnlyDictionary<string, PageMark> marks)
+    {
+        var uses = new Dictionary<string, List<MarkUse>>(StringComparer.Ordinal);
+        foreach ((string file, MarksOfPage read, PageNumbering numbering, string title) in pages)
+        {
+            foreach (PageReference reference in read.References)
+            {
+                string label = UseLabel(reference, numbering, name => marks.GetValueOrDefault(name), title);
+                if (!uses.TryGetValue(reference.Name, out List<MarkUse>? list))
+                {
+                    uses[reference.Name] = list = [];
+                }
+                list.Add(new MarkUse(label, file, reference.Anchor, reference.Line, reference.Column));
+            }
+        }
+        return uses.ToDictionary(u => u.Key, u => (IReadOnlyList<MarkUse>)u.Value, StringComparer.Ordinal);
+    }
+
+    /// <summary>The id of the link of the <paramref name="count"/>-th reference to a mark on a page ("r-name-2").</summary>
+    public static string ReferenceAnchor(string name, int count) => "r-" + name + "-" + count.ToString(CultureInfo.InvariantCulture);
 
     // ------------------------------------------------------------------ numbers and marks
 
@@ -98,9 +181,12 @@ public sealed partial class MarkdownPage
     // the book), puts the section's number in front of the page's heading and collects the marks; how many of each counter
     // the page has
     private static List<PageMark> Number(string text, MarkdownDocument document, Func<int, (int, int)> locate,
-        List<MarkdownProblem> errors, PageNumbering numbering, out Dictionary<string, int> counts)
+        List<MarkdownProblem> errors, PageNumbering numbering, out Dictionary<string, int> counts, out PageMark? section)
     {
         var marks = new List<PageMark>();
+        section = null;
+        // the last statement that a proof after it proves
+        PageMark? provable = null;
         var counted = new Dictionary<string, int>(StringComparer.Ordinal);
         BookNumbering book = numbering.Book;
         string[] lines = text.Split('\n');
@@ -134,6 +220,11 @@ public sealed partial class MarkdownPage
                                 heading.Inline.AppendChild(number);
                             }
                         }
+                        if (first)
+                        {
+                            section = new PageMark(heading.TryGetAttributes()?.Id ?? "", "section", HeadingLabel(numbering, headingText), headingText,
+                                heading.Line + 1, heading.Column + 1) { Counter = HeadingCounter, Title = headingText };
+                        }
                         if (heading.TryGetAttributes()?.Id is { } id)
                         {
                             marks.Add((first
@@ -162,6 +253,8 @@ public sealed partial class MarkdownPage
                             }
                             id = own;
                         }
+                        figure.SetData(typeof(ReferenceContext), new ReferenceContext(
+                            Mark(id ?? "", "figure", figure.Label, "", figure) with { Counter = book.CounterOf("figure"), Index = index }, false, null));
                         if (id != null)
                         {
                             figure.GetAttributes().Id = id;
@@ -182,6 +275,21 @@ public sealed partial class MarkdownPage
                         string label = numbered ? name + " " + number : name;
                         statement = statement with { Label = label };
                         container.SetData(typeof(Statement), statement);
+                        // what a reference in it stands in: a numbered statement itself; a proof the statement it proves
+                        if (numbered)
+                        {
+                            PageMark own = Mark(container.TryGetAttributes()?.Id ?? "", statement.Kind, label, statement.Title ?? "", container)
+                                with { Counter = book.CounterOf(statement.Kind), Index = index, Title = statement.Title };
+                            container.SetData(typeof(ReferenceContext), new ReferenceContext(own, false, null));
+                            if (Provable.Contains(statement.Kind))
+                            {
+                                provable = own;
+                            }
+                        }
+                        else if (statement.Kind == "proof")
+                        {
+                            container.SetData(typeof(ReferenceContext), new ReferenceContext(statement.ProofOf == null ? provable : null, true, statement.ProofOf));
+                        }
                         if (container.TryGetAttributes()?.Id is { } id)
                         {
                             if (statement.Kind == "box")
@@ -265,6 +373,11 @@ public sealed partial class MarkdownPage
             container.GetAttributes().Id = id;
         }
         string title = Attributes().Replace(rest, "").Trim();
+        // "::: proof §satz-x": the proof of that statement ("Beweis von Satz 3.2.")
+        if (kind == "proof" && Regex.Match(title, @"^§([\p{L}\p{N}_](?:[\p{L}\p{N}_-]*[\p{L}\p{N}_])?)$") is { Success: true } proved)
+        {
+            return new Statement(kind, null, "") { ProofOf = proved.Groups[1].Value };
+        }
         return new Statement(kind, title.Length > 0 ? title : null, "");
     }
 
@@ -319,10 +432,54 @@ public sealed partial class MarkdownPage
     [GeneratedRegex(@"(\\?)(§§?\*?)([\p{L}\p{N}_](?:[\p{L}\p{N}_-]*[\p{L}\p{N}_])?)")]
     private static partial Regex ReferencePattern();
 
-    private static void ResolveReferences(MarkdownDocument document, Func<int, (int, int)> locate, List<PageMark> marks,
-        string? page, IReadOnlyDictionary<string, BookMark>? bookMarks, List<MarkdownProblem> errors)
+    // the references of the page become links (with an id each: "r-name-2"); returns them with what they stand in
+    private static List<PageReference> ResolveReferences(MarkdownDocument document, Func<int, (int, int)> locate, List<PageMark> marks,
+        PageMark? section, string? page, IReadOnlyDictionary<string, BookMark>? bookMarks, List<MarkdownProblem> errors)
     {
         var own = marks.GroupBy(m => m.Name).ToDictionary(g => g.Key, g => g.First());
+        var found = new List<PageReference>();
+        // a reference at a place (a caption's: the figure's, with its place in the caption): its id, and what it stands in
+        Dictionary<(int, int, int), string>? anchors = null;
+        string Found(string name, int line, int column, int ordinal, Block? block)
+        {
+            string anchor = anchors![(line, column, ordinal)];
+            ReferenceContext? context = null;
+            for (Block? at = block; at != null && context == null; at = at.Parent)
+            {
+                context = at.GetData(typeof(ReferenceContext)) as ReferenceContext;
+            }
+            found.Add(new PageReference(name, line, column, anchor)
+            {
+                Context = context?.Mark,
+                Section = section,
+                Proof = context?.Proof ?? false,
+                ProofOf = context?.ProofOf,
+            });
+            return anchor;
+        }
+        // the link of a mark: on this page or another one
+        string HrefOf(BookMark other, string name) =>
+            (page == null ? other.File : Path.GetRelativePath(Path.GetDirectoryName(page)!, other.File)).Replace('\\', '/') + "#" + name;
+        // "::: proof §satz-x": the statement it proves
+        foreach (CustomContainer container in document.Descendants<CustomContainer>())
+        {
+            if (container.GetData(typeof(Statement)) is not Statement { ProofOf: { } proved } statement)
+            {
+                continue;
+            }
+            if (own.TryGetValue(proved, out PageMark? ownMark))
+            {
+                container.SetData(typeof(Statement), statement with { ProofLabel = ownMark.Label, ProofHref = "#" + proved });
+            }
+            else if (bookMarks != null && bookMarks.TryGetValue(proved, out BookMark? other))
+            {
+                container.SetData(typeof(Statement), statement with { ProofLabel = other.Mark.Label, ProofHref = HrefOf(other, proved) });
+            }
+            else
+            {
+                errors.Add(new MarkdownProblem(container.Line + 1, container.Column + 1, $"There is no mark \"{proved}\" (write it at the statement this proves: {{#{proved}}})."));
+            }
+        }
         // "§*name": Markdig leaves the "*" (no emphasis) as a text of its own; one text again
         foreach (LiteralInline literal in document.Descendants<LiteralInline>().ToList())
         {
@@ -339,6 +496,36 @@ public sealed partial class MarkdownPage
                 literal.Content = new Markdig.Helpers.StringSlice(joined);
                 literal.Span = new SourceSpan(literal.Span.Start, literal.Span.Start + joined.Length - 1);
                 next.Remove();
+            }
+        }
+        // the ids: the references to a mark numbered in the order of the text (as the editor finds them again)
+        var sites = new List<(int Line, int Column, int Ordinal, string Name)>();
+        foreach (LiteralInline literal in document.Descendants<LiteralInline>())
+        {
+            foreach (Match match in ReferencePattern().Matches(literal.Content.ToString()).Where(m => m.Groups[1].Length == 0))
+            {
+                (int line, int column) = locate(literal.Span.Start + match.Index);
+                sites.Add((line, column, 0, match.Groups[3].Value));
+            }
+        }
+        foreach (FigureItem item in document.Descendants<GeoFigureBlock>().SelectMany(f => f.Items))
+        {
+            if (item.Reference is { } captioned)
+            {
+                int ordinal = 0;
+                foreach (Match match in ReferencePattern().Matches(captioned.Caption).Where(m => m.Groups[1].Length == 0))
+                {
+                    sites.Add((captioned.Line, captioned.Column, ++ordinal, match.Groups[3].Value));
+                }
+            }
+        }
+        anchors = [];
+        foreach (IGrouping<string, (int Line, int Column, int Ordinal, string Name)> mark in sites.OrderBy(t => t.Line).ThenBy(t => t.Column).ThenBy(t => t.Ordinal).GroupBy(t => t.Name))
+        {
+            int count = 0;
+            foreach ((int line, int column, int ordinal, _) in mark)
+            {
+                anchors[(line, column, ordinal)] = ReferenceAnchor(mark.Key, ++count);
             }
         }
         foreach (LiteralInline literal in document.Descendants<LiteralInline>().ToList())
@@ -364,7 +551,11 @@ public sealed partial class MarkdownPage
                     continue;
                 }
                 string name = match.Groups[3].Value;
-                var reference = new MarkReferenceInline(name, match.Groups[2].Value.StartsWith("§§", StringComparison.Ordinal));
+                (int referenceLine, int referenceColumn) = locate(literal.Span.Start + match.Index);
+                var reference = new MarkReferenceInline(name, match.Groups[2].Value.StartsWith("§§", StringComparison.Ordinal))
+                {
+                    Anchor = Found(name, referenceLine, referenceColumn, 0, literal.Parent?.ParentBlock),
+                };
                 bool withTitle = match.Groups[2].Value.EndsWith('*');
                 if (own.TryGetValue(name, out PageMark? mark))
                 {
@@ -376,12 +567,11 @@ public sealed partial class MarkdownPage
                 {
                     reference.Label = other.Mark.Label;
                     reference.Title = withTitle ? other.Mark.Title : null;
-                    reference.Href = (page == null ? other.File : Path.GetRelativePath(Path.GetDirectoryName(page)!, other.File)).Replace('\\', '/') + "#" + name;
+                    reference.Href = HrefOf(other, name);
                 }
                 else
                 {
-                    (int line, int column) = locate(literal.Span.Start + match.Index);
-                    errors.Add(new MarkdownProblem(line, column, $"There is no mark \"{name}\" (write it at a figure, a statement or a heading: {{#{name}}})."));
+                    errors.Add(new MarkdownProblem(referenceLine, referenceColumn, $"There is no mark \"{name}\" (write it at a figure, a statement or a heading: {{#{name}}})."));
                 }
                 pieces.Add(reference);
             }
@@ -401,6 +591,7 @@ public sealed partial class MarkdownPage
                 {
                     continue;
                 }
+                int ordinal = 0;
                 string caption = ReferencePattern().Replace(reference.Caption, match =>
                 {
                     if (match.Groups[1].Length > 0)
@@ -408,11 +599,12 @@ public sealed partial class MarkdownPage
                         return match.Groups[2].Value + match.Groups[3].Value;
                     }
                     string name = match.Groups[3].Value;
+                    string anchor = Found(name, reference.Line, reference.Column, ++ordinal, figure);
                     bool withTitle = match.Groups[2].Value.EndsWith('*');
                     (string Label, string? Title, string Href)? target =
                         own.TryGetValue(name, out PageMark? mark) ? (mark.Label, mark.Title, "#" + name)
                         : bookMarks != null && bookMarks.TryGetValue(name, out BookMark? other)
-                            ? (other.Mark.Label, other.Mark.Title, (page == null ? other.File : Path.GetRelativePath(Path.GetDirectoryName(page)!, other.File)).Replace('\\', '/') + "#" + name)
+                            ? (other.Mark.Label, other.Mark.Title, HrefOf(other, name))
                             : null;
                     if (target is not { } found)
                     {
@@ -420,11 +612,13 @@ public sealed partial class MarkdownPage
                         return "??";
                     }
                     string label = Regex.Replace(found.Label, @"[\[\]\\*_]", @"\$0") + (withTitle && found.Title != null ? " (" + found.Title + ")" : "");
-                    return "[" + label + "](" + found.Href.Replace(" ", "%20").Replace("(", "%28").Replace(")", "%29") + "){.ref}";
+                    return "[" + label + "](" + found.Href.Replace(" ", "%20").Replace("(", "%28").Replace(")", "%29") + "){.ref #" + anchor + "}";
                 });
                 figure.Items[i] = item with { Reference = reference with { Caption = caption } };
             }
         }
+        // in the order of the text (the captions' where their figures are)
+        return found.OrderBy(r => r.Line).ThenBy(r => r.Column).ToList();
     }
 
     // a reference to a mark: what it shows ("Axiom 2"), where it leads; Label null: an unknown mark
@@ -440,6 +634,9 @@ public sealed partial class MarkdownPage
         public string? Title { get; set; }
 
         public string? Href { get; set; }
+
+        // the id of its link, for the list of where a mark is used
+        public string? Anchor { get; set; }
     }
 
     private sealed class MarkReferenceRenderer : HtmlObjectRenderer<MarkReferenceInline>
@@ -451,7 +648,12 @@ public sealed partial class MarkdownPage
                 renderer.Write("<span class=\"ref-missing\" title=\"").WriteEscape(reference.Name).Write("\">??</span>");
                 return;
             }
-            renderer.Write("<a class=\"ref\" href=\"").WriteEscapeUrl(reference.Href).Write("\">").WriteEscape(reference.Label);
+            renderer.Write("<a class=\"ref\"");
+            if (reference.Anchor != null)
+            {
+                renderer.Write(" id=\"").WriteEscape(reference.Anchor).Write('"');
+            }
+            renderer.Write(" href=\"").WriteEscapeUrl(reference.Href).Write("\">").WriteEscape(reference.Label);
             if (reference.Title != null)
             {
                 renderer.Write(" (").Write(InlineHtml(reference.Title)).Write(")");
@@ -464,8 +666,30 @@ public sealed partial class MarkdownPage
 
     // "<div class="statement statement-axiom">" with the label at the start of its first paragraph ("Axiom 2
     // (Geradenaxiom)."); a proof ends with ∎
-    private sealed class StatementRenderer : HtmlObjectRenderer<CustomContainer>
+    // usedIn: where the marks are used (in a book's preview and the book as one HTML file), shown under the statements
+    // with a mark; page: the page's full path (for the links)
+    private sealed class StatementRenderer(IReadOnlyDictionary<string, IReadOnlyList<MarkUse>>? usedIn, string? page) : HtmlObjectRenderer<CustomContainer>
     {
+        // "Verwendet in: Beweis von Satz 3.4 · Abschnitt 5.2" (one link for each, to its first reference), or "Nicht verwendet."
+        private string UsesOf(string name)
+        {
+            IReadOnlyList<MarkUse> uses = usedIn!.TryGetValue(name, out IReadOnlyList<MarkUse>? found) ? found : [];
+            if (uses.Count == 0)
+            {
+                return "<p class=\"used-in\">Nicht verwendet.</p>";
+            }
+            var links = uses.GroupBy(u => (u.File, u.Label)).Select(group =>
+            {
+                MarkUse first = group.First();
+                string href = page != null && string.Equals(first.File, page, StringComparison.OrdinalIgnoreCase)
+                    ? "#" + first.Anchor
+                    : (page == null ? first.File : Path.GetRelativePath(Path.GetDirectoryName(page)!, first.File)).Replace('\\', '/') + "#" + first.Anchor;
+                return "<a href=\"" + WebUtility.HtmlEncode(href.Replace(" ", "%20")) + "\">" + WebUtility.HtmlEncode(first.Label) + "</a>"
+                    + (group.Count() > 1 ? " (" + group.Count().ToString(CultureInfo.InvariantCulture) + "×)" : "");
+            });
+            return "<p class=\"used-in\">Verwendet in: " + string.Join(" · ", links) + "</p>";
+        }
+
         // our classes instead of Markdig's (which is the kind as written)
         private static void SetClasses(CustomContainer container, params string[] classes)
         {
@@ -491,8 +715,14 @@ public sealed partial class MarkdownPage
             // "Axiom 2 (Geradenaxiom).", "Beweis."; a box: its title ("Merke.") or nothing
             string label = statement.Label.Length == 0
                 ? (statement.Title != null ? "<span class=\"statement-label\">" + InlineHtml(statement.Title) + ".</span> " : "")
-                : "<span class=\"statement-label\">" + WebUtility.HtmlEncode(statement.Label)
-                    + (statement.Title != null ? " (" + InlineHtml(statement.Title) + ")" : "") + ".</span> ";
+                : statement.ProofOf != null
+                    // "Beweis von Satz 3.2."
+                    ? "<span class=\"statement-label\">" + WebUtility.HtmlEncode(statement.Label) + " von "
+                        + (statement.ProofLabel != null
+                            ? "<a class=\"ref\" href=\"" + WebUtility.HtmlEncode(statement.ProofHref!.Replace(" ", "%20")) + "\">" + WebUtility.HtmlEncode(statement.ProofLabel) + "</a>"
+                            : "<span class=\"ref-missing\" title=\"" + WebUtility.HtmlEncode(statement.ProofOf) + "\">??</span>") + ".</span> "
+                    : "<span class=\"statement-label\">" + WebUtility.HtmlEncode(statement.Label)
+                        + (statement.Title != null ? " (" + InlineHtml(statement.Title) + ")" : "") + ".</span> ";
             string end = statement.Kind == "proof" ? " <span class=\"qed\">∎</span>" : "";
             SetClasses(container, "statement", "statement-" + statement.Kind);
             renderer.Write("<div").WriteAttributes(container).WriteLine('>');
@@ -533,6 +763,11 @@ public sealed partial class MarkdownPage
             if (!labelled && label.Length + end.Length > 0)
             {
                 renderer.Write("<p>").Write(label.TrimEnd()).Write(end).WriteLine("</p>");
+            }
+            // where it is used (not for a proof or a box: nothing refers to them)
+            if (usedIn != null && container.TryGetAttributes()?.Id is { } id && statement.Kind is not ("proof" or "box"))
+            {
+                renderer.WriteLine(UsesOf(id));
             }
             renderer.WriteLine("</div>");
         }

@@ -121,9 +121,12 @@ public sealed partial class MarkdownPage
     /// placeholders. <paramref name="bookMarks"/> are the marks of the book's other pages, for references to them;
     /// <paramref name="numbering"/> the numbers of the page in the book (its section, the counts of the pages before it).
     /// </summary>
+    /// <paramref name="usedIn"/>: where the marks of the book are used (<see cref="BookUses"/>); given, a statement with a
+    /// mark shows them under it (for the author: in the preview and the book as one HTML file).
     public static MarkdownPage Parse(string text, string? file = null, Func<string, AnimationData>? loadScript = null,
-        IReadOnlyDictionary<string, BookMark>? bookMarks = null, PageNumbering? numbering = null, IReadOnlyDictionary<string, KeywordLink>? keywordLinks = null) =>
-        Build(text, file, loadScript, bookMarks, numbering ?? PageNumbering.None, keywordLinks, render: true);
+        IReadOnlyDictionary<string, BookMark>? bookMarks = null, PageNumbering? numbering = null, IReadOnlyDictionary<string, KeywordLink>? keywordLinks = null,
+        IReadOnlyDictionary<string, IReadOnlyList<MarkUse>>? usedIn = null) =>
+        Build(text, file, loadScript, bookMarks, numbering ?? PageNumbering.None, keywordLinks, usedIn, render: true);
 
     /// <summary>
     /// The marks of a page (for the references of the other pages) and how many of each counter it has, without making its
@@ -131,9 +134,12 @@ public sealed partial class MarkdownPage
     /// </summary>
     public static MarksOfPage ReadMarks(string text, BookNumbering? book = null)
     {
-        MarkdownPage page = Build(text, null, null, null, (PageNumbering.None with { Book = book ?? BookNumbering.Default }), null, render: false);
-        return new MarksOfPage(page.Marks, page.Counts) { Keywords = page.KeywordDefinitions, Title = page.Title };
+        MarkdownPage page = Build(text, null, null, null, (PageNumbering.None with { Book = book ?? BookNumbering.Default }), null, null, render: false);
+        return new MarksOfPage(page.Marks, page.Counts) { Keywords = page.KeywordDefinitions, Title = page.Title, References = page.References };
     }
+
+    /// <summary>The references of the page ("§name"), in their order.</summary>
+    public IReadOnlyList<PageReference> References { get; private set; } = [];
 
     /// <summary>How many of each counter the page has (for the numbers of the pages after it).</summary>
     public IReadOnlyDictionary<string, int> Counts { get; private set; } = new Dictionary<string, int>();
@@ -142,7 +148,8 @@ public sealed partial class MarkdownPage
     public string? SectionNumber { get; private set; }
 
     private static MarkdownPage Build(string text, string? file, Func<string, AnimationData>? loadScript,
-        IReadOnlyDictionary<string, BookMark>? bookMarks, PageNumbering numbering, IReadOnlyDictionary<string, KeywordLink>? keywordLinks, bool render)
+        IReadOnlyDictionary<string, BookMark>? bookMarks, PageNumbering numbering, IReadOnlyDictionary<string, KeywordLink>? keywordLinks,
+        IReadOnlyDictionary<string, IReadOnlyList<MarkUse>>? usedIn, bool render)
     {
         var errors = new List<MarkdownProblem>();
         var warnings = new List<MarkdownProblem>();
@@ -232,14 +239,17 @@ public sealed partial class MarkdownPage
         KeepPunctuation(document);
 
         // numbers and marks of figures, statements and sections; then the references to them
-        List<PageMark> marks = Number(text, document, locate, errors, numbering, out Dictionary<string, int> counts);
+        List<PageMark> marks = Number(text, document, locate, errors, numbering, out Dictionary<string, int> counts, out PageMark? section);
+        string? page = file == null ? null : Path.GetFullPath(file);
+        List<PageReference> pageReferences = ResolveReferences(document, locate, marks, section, page, bookMarks, errors);
         if (!render)
         {
-            return new MarkdownPage("") { Marks = marks, Counts = counts, KeywordDefinitions = keywordDefinitions, FrontTitle = title, Heading = heading };
+            return new MarkdownPage("")
+            {
+                Marks = marks, Counts = counts, KeywordDefinitions = keywordDefinitions, FrontTitle = title, Heading = heading, References = pageReferences,
+            };
         }
-        string? page = file == null ? null : Path.GetFullPath(file);
         CheckMarks(marks, page, bookMarks, errors);
-        ResolveReferences(document, locate, marks, page, bookMarks, errors);
         LinkKeywords(document, keywordLinks ?? new Dictionary<string, KeywordLink>());
 
         // a "$" that does not start a formula (no closing one, or a space after it): as in scripts a mistake
@@ -274,7 +284,7 @@ public sealed partial class MarkdownPage
         renderer.ObjectRenderers.Replace<HtmlMathInlineRenderer>(new FormulaInlineRenderer(errors, locate));
         renderer.ObjectRenderers.Replace<HtmlMathBlockRenderer>(new FormulaBlockRenderer(errors, locate));
         renderer.ObjectRenderers.Insert(0, new GeoFigureRenderer());
-        renderer.ObjectRenderers.Replace<Markdig.Extensions.CustomContainers.HtmlCustomContainerRenderer>(new StatementRenderer());
+        renderer.ObjectRenderers.Replace<Markdig.Extensions.CustomContainers.HtmlCustomContainerRenderer>(new StatementRenderer(usedIn, page));
         renderer.ObjectRenderers.Insert(0, new MarkReferenceRenderer());
         renderer.Render(document);
         writer.Flush();
@@ -289,6 +299,7 @@ public sealed partial class MarkdownPage
             PageFigures = pageFigures,
             Marks = marks,
             Counts = counts,
+            References = pageReferences,
             SectionNumber = numbering.Book.Headings ? numbering.Section : null,
             KeywordDefinitions = keywordDefinitions,
             Errors = errors.OrderBy(e => e.Line).ThenBy(e => e.Column).ToList(),

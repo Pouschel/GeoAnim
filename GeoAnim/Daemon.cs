@@ -23,7 +23,8 @@ namespace GeoAnim.Cli;
 /// <item>{"id": 4, "type": "markdown", "file": "C:\\…\\a.geo.md", "text": "…"} → {"id": 4, "html": "…", "title": "…" or null,
 /// "figures": {"key": {"animation": {…}, "from": 2 or null, "to": 3 or null, "still": false, "crop": true}, …}, "marks":
 /// [{"name": "ax-gerade", "kind": "axiom", "label": "Axiom 2", "text": "…", "file": "C:\\…", "line": 4}, …] (of all pages of
-/// the book: completion and "go to definition" for "§name"), "keywords": [{"term": "Strahl", "anchor": "kw-strahl" or
+/// the book: completion and "go to definition" for "§name"), "uses": [{"name": "lem-a", "label": "Beweis von Satz 3.4", "file":
+/// "C:\\…", "line": 12, "column": 9}, …] (every reference in the book: where a mark is used), "keywords": [{"term": "Strahl", "anchor": "kw-strahl" or
 /// null, "file": "C:\\…", "line": 3, "column": 17, "forms": ["Strahl", "Strahlen"]}, …] (of all pages of the book: where a keyword link leads), "errors":
 /// […], "warnings": […] (as for "compile"; a keyword of two pages is a warning)} – a page
 /// of a book in Markdown, its figures from the scripts beside the file (as saved; compiled scripts are kept while their
@@ -233,7 +234,7 @@ internal static class Daemon
         {
             bookMarks.TryAdd(other.Mark.Name, other);
         }
-        MarkdownPage page = MarkdownPage.Parse(text, path, LoadScript, bookMarks, book.Numbering, book.KeywordLinks);
+        MarkdownPage page = MarkdownPage.Parse(text, path, LoadScript, bookMarks, book.Numbering, book.KeywordLinks, path == null ? null : book.UsedIn);
         (FigureStyle Style, double TextSize) print = path == null ? (FigureStyle.Default, 11) : BookPictures.PrintOf(Path.GetDirectoryName(path)!);
         return Answer(id, json =>
         {
@@ -303,6 +304,22 @@ internal static class Daemon
                 json.WriteEndObject();
             }
             json.WriteEndArray();
+            // where the marks are used: for the editor's "used in" above a mark and its references
+            json.WriteStartArray("uses");
+            foreach ((string name, IReadOnlyList<MarkUse> uses) in book.UsedIn)
+            {
+                foreach (MarkUse use in uses)
+                {
+                    json.WriteStartObject();
+                    json.WriteString("name", name);
+                    json.WriteString("label", use.Label);
+                    json.WriteString("file", use.File);
+                    json.WriteNumber("line", use.Line);
+                    json.WriteNumber("column", use.Column);
+                    json.WriteEndObject();
+                }
+            }
+            json.WriteEndArray();
             // the keywords of the book's pages: where a link to one leads in the editor
             json.WriteStartArray("keywords");
             foreach ((string keywordFile, PageKeywordDefinition keyword) in book.Definitions)
@@ -359,6 +376,9 @@ internal static class Daemon
     {
         // the keywords of the book's pages (not of its scripts), for the editor to find the place of one
         public List<(string File, PageKeywordDefinition Keyword)> Definitions { get; } = [];
+
+        // where the marks of the book are used (the page itself as in the editor)
+        public IReadOnlyDictionary<string, IReadOnlyList<MarkUse>> UsedIn { get; init; } = new Dictionary<string, IReadOnlyList<MarkUse>>();
     }
 
     // the marks and keywords of a page "*.geo.md", as saved; read again when it has changed
@@ -427,6 +447,9 @@ internal static class Daemon
         var keywords = new Dictionary<string, (string File, KeywordLink Link)>(StringComparer.Ordinal);
         var ownForms = new Dictionary<string, PageKeywordDefinition>(StringComparer.Ordinal);
         var definitions = new List<(string File, PageKeywordDefinition Keyword)>();
+        // the pages with their numbers, and all marks with them: for where the marks are used
+        var readPages = new List<(string File, MarksOfPage Page, PageNumbering Numbering, string Title)>();
+        var allMarks = new Dictionary<string, PageMark>(StringComparer.Ordinal);
         foreach (string relative in files)
         {
             string file = Path.GetFullPath(Path.Combine(root, relative));
@@ -452,6 +475,11 @@ internal static class Daemon
                 continue;
             }
             PageNumbering pageNumbering = NumberingOf(relative);
+            readPages.Add((file, read, pageNumbering, read.Title ?? Program.DisplayName(Path.GetFileName(file)[..^".geo.md".Length])));
+            foreach (PageMark mark in read.Marks)
+            {
+                allMarks.TryAdd(mark.Name, MarkdownPage.Renumbered(mark, pageNumbering));
+            }
             if (isOwn)
             {
                 ownNumbering = pageNumbering;
@@ -478,7 +506,7 @@ internal static class Daemon
         // the own page's keywords are not linked on it
         var links = keywords.Where(k => !string.Equals(k.Value.File, page, StringComparison.OrdinalIgnoreCase))
             .ToDictionary(k => k.Key, k => k.Value.Link, StringComparer.Ordinal);
-        var book = new BookOfPage(marks, ownNumbering, links, warnings);
+        var book = new BookOfPage(marks, ownNumbering, links, warnings) { UsedIn = MarkdownPage.BookUses(readPages, allMarks) };
         book.Definitions.AddRange(definitions);
         return book;
 

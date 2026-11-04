@@ -325,6 +325,7 @@ async function renderMarkdown (document) {
   }
   lastResults.set(document.uri.toString(), result)
   report(document, result.errors, result.warnings || [])
+  pageLensesChanged.fire()
   const kept = keptPages.delete(document.uri.toString())
   if (document === pageDocument) {
     sendPage(result, kept)
@@ -759,7 +760,7 @@ async function openLink (href, from) {
       const editor = await openBeside(page, from)
       // a reference to a mark on that page ("strecken.geo.md#def-strecke"): the cursor goes to the mark
       const mark = /#([\p{L}\p{N}_-]+)$/u.exec(href)
-      if (mark && !revealMark(editor, mark[1])) {
+      if (mark && !revealReference(editor, mark[1]) && !revealMark(editor, mark[1])) {
         revealKeyword(editor, from, mark[1])
       }
     } else {
@@ -1205,6 +1206,81 @@ function revealMark (editor, name) {
       editor.selection = new vscode.Selection(position, position)
       editor.revealRange(new vscode.Range(position, position), vscode.TextEditorRevealType.InCenterIfOutsideViewport)
       return true
+    }
+  }
+  return false
+}
+
+// ------------------------------------------------------------------ where marks are used
+
+// the places in the book that refer to a mark, from the last answer for the page: [{ name, label, file, line, column }]
+const usesOf = (document, name) => ((lastResults.get(document.uri.toString()) || {}).uses || []).filter(u => u.name === name)
+
+const useLocation = use => new vscode.Location(vscode.Uri.file(use.file), new vscode.Position(Math.max(0, use.line - 1), Math.max(0, use.column - 1)))
+
+const pageLensesChanged = new vscode.EventEmitter()
+
+// above a statement with a mark ("::: lemma {#lem-a}"): where it is used ("verwendet in: Beweis von Satz 3.4 · Abschnitt
+// 2.1"); a click lists the places
+function providePageCodeLenses (document) {
+  const lenses = []
+  const statement = /^\s*:{3,}\s*(?:axiom|definition|def|theorem|lemma|corollary|example)\b.*\{[^}]*#([\p{L}\p{N}_-]+)/iu
+  for (let i = 0; i < document.lineCount; i++) {
+    const match = statement.exec(document.lineAt(i).text)
+    if (!match) {
+      continue
+    }
+    const uses = usesOf(document, match[1])
+    const position = new vscode.Position(i, 0)
+    const range = new vscode.Range(position, position)
+    if (uses.length === 0) {
+      lenses.push(new vscode.CodeLens(range, { title: 'nicht verwendet', command: '' }))
+      continue
+    }
+    const labels = [...new Set(uses.map(u => u.label))]
+    const title = 'verwendet in: ' + (labels.length > 6 ? labels.slice(0, 6).join(' · ') + ` · … (${labels.length})` : labels.join(' · '))
+    lenses.push(new vscode.CodeLens(range, { title, command: 'editor.action.showReferences', arguments: [document.uri, position, uses.map(useLocation)] }))
+  }
+  return lenses
+}
+
+// Shift+F12 on "§name" or "{#name}": the places in the book that refer to the mark (and the mark itself)
+function providePageReferences (document, position, context) {
+  let name = markReferenceAt(document, position)?.name
+  if (!name) {
+    const range = document.getWordRangeAtPosition(position, /\{[^}]*#[\p{L}\p{N}_-]+[^}]*\}/u)
+    const mark = range ? /#([\p{L}\p{N}_-]+)/u.exec(document.getText(range)) : null
+    name = mark ? mark[1] : null
+  }
+  if (!name) {
+    return null
+  }
+  const locations = usesOf(document, name).map(useLocation)
+  const mark = marksOf(document).find(m => m.name === name)
+  if (mark && context.includeDeclaration) {
+    locations.unshift(markLocation(document, mark))
+  }
+  return locations
+}
+
+// the cursor on the n-th reference to a mark ("r-lem-a-2": the second "§lem-a" of the page; a link in the list of where
+// a mark is used)
+function revealReference (editor, anchor) {
+  const parts = /^r-(.+)-(\d+)$/u.exec(anchor)
+  if (!parts) {
+    return false
+  }
+  // a name has only letters, digits, "_" and "-": nothing to escape
+  const pattern = new RegExp('(?<!\\\\)§§?\\*?' + parts[1] + '(?![\\p{L}\\p{N}_]|-[\\p{L}\\p{N}_])', 'gu')
+  let count = 0
+  for (let i = 0; i < editor.document.lineCount; i++) {
+    for (const match of editor.document.lineAt(i).text.matchAll(pattern)) {
+      if (++count === Number(parts[2])) {
+        const position = new vscode.Position(i, match.index)
+        editor.selection = new vscode.Selection(position, position)
+        editor.revealRange(new vscode.Range(position, position), vscode.TextEditorRevealType.InCenterIfOutsideViewport)
+        return true
+      }
     }
   }
   return false
@@ -1760,6 +1836,9 @@ function activate (context) {
     vscode.languages.registerCompletionItemProvider('geomd', { provideCompletionItems: providePageCompletions }, '§', '#', '.'),
     vscode.languages.registerHoverProvider('geomd', { provideHover: providePageHover }),
     vscode.languages.registerDefinitionProvider('geomd', { provideDefinition: providePageDefinition }),
+    vscode.languages.registerCodeLensProvider('geomd', { provideCodeLenses: providePageCodeLenses, onDidChangeCodeLenses: pageLensesChanged.event }),
+    vscode.languages.registerReferenceProvider('geomd', { provideReferences: providePageReferences }),
+    pageLensesChanged,
     vscode.languages.registerColorProvider('geo', { provideDocumentColors, provideColorPresentations }),
     vscode.languages.registerCodeActionsProvider('geo', { provideCodeActions }, { providedCodeActionKinds: [vscode.CodeActionKind.RefactorRewrite] }),
     vscode.languages.registerCodeActionsProvider('geomd', { provideCodeActions: providePageCodeActions }, { providedCodeActionKinds: [vscode.CodeActionKind.RefactorRewrite] }),

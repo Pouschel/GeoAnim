@@ -302,6 +302,20 @@ svg.formula {
   font-style: italic;
 }
 
+/* where a statement is used (only for the author: the preview and the book as one HTML file) */
+.statement > p.used-in {
+  margin: 0.5em 0 0;
+  padding-top: 0.3em;
+  border-top: 1px dashed #c3c8d0;
+  font-size: 0.8em;
+  font-style: normal;
+  color: #6b7280;
+}
+
+.used-in a {
+  color: inherit;
+}
+
 /* a plain box: highlighted, without a name */
 .statement-box {
   border-left-color: #c3c8d0;
