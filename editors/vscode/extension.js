@@ -1239,7 +1239,9 @@ function providePageCodeLenses (document) {
     }
     const labels = [...new Set(uses.map(u => u.label))]
     const title = 'verwendet in: ' + (labels.length > 6 ? labels.slice(0, 6).join(' · ') + ` · … (${labels.length})` : labels.join(' · '))
-    lenses.push(new vscode.CodeLens(range, { title, command: 'editor.action.showReferences', arguments: [document.uri, position, uses.map(useLocation)] }))
+    // the tooltip: each place with its title ("Beweis von Satz 3.4 (Winkelsumme)")
+    const tooltip = [...new Set(uses.map(u => u.title ? `${u.label} (${u.title})` : u.label))].join('\n')
+    lenses.push(new vscode.CodeLens(range, { title, tooltip, command: 'editor.action.showReferences', arguments: [document.uri, position, uses.map(useLocation)] }))
   }
   return lenses
 }

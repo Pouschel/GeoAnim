@@ -23,7 +23,7 @@ namespace GeoAnim.Cli;
 /// <item>{"id": 4, "type": "markdown", "file": "C:\\…\\a.geo.md", "text": "…"} → {"id": 4, "html": "…", "title": "…" or null,
 /// "figures": {"key": {"animation": {…}, "from": 2 or null, "to": 3 or null, "still": false, "crop": true}, …}, "marks":
 /// [{"name": "ax-gerade", "kind": "axiom", "label": "Axiom 2", "text": "…", "file": "C:\\…", "line": 4}, …] (of all pages of
-/// the book: completion and "go to definition" for "§name"), "uses": [{"name": "lem-a", "label": "Beweis von Satz 3.4", "file":
+/// the book: completion and "go to definition" for "§name"), "uses": [{"name": "lem-a", "label": "Beweis von Satz 3.4", "title": "…" or null, "file":
 /// "C:\\…", "line": 12, "column": 9}, …] (every reference in the book: where a mark is used), "keywords": [{"term": "Strahl", "anchor": "kw-strahl" or
 /// null, "file": "C:\\…", "line": 3, "column": 17, "forms": ["Strahl", "Strahlen"]}, …] (of all pages of the book: where a keyword link leads), "errors":
 /// […], "warnings": […] (as for "compile"; a keyword of two pages is a warning)} – a page
@@ -313,6 +313,7 @@ internal static class Daemon
                     json.WriteStartObject();
                     json.WriteString("name", name);
                     json.WriteString("label", use.Label);
+                    json.WriteString("title", use.Title != null ? HtmlExporter.PlainText(use.Title) : null);
                     json.WriteString("file", use.File);
                     json.WriteNumber("line", use.Line);
                     json.WriteNumber("column", use.Column);

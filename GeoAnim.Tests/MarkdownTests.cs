@@ -8,8 +8,8 @@ namespace GeoAnim.Tests;
 
 public sealed class MarkdownTests : IDisposable
 {
-    // the HTML without the ids of references ("r-name-2", for the list of where a mark is used)
-    private static string NoIds(string html) => Regex.Replace(html, @" id=""r-[^""]*""", "");
+    // the HTML without the ids of references ("r-name-2", for the list of where a mark is used) and their tooltips
+    private static string NoIds(string html) => Regex.Replace(Regex.Replace(html, @" id=""r-[^""]*""", ""), @"(<a [^>]*?) title=""[^""]*""", "$1");
 
     private readonly string folder = Directory.CreateTempSubdirectory("geoanim-markdown-").FullName;
 
@@ -421,7 +421,7 @@ public sealed class MarkdownTests : IDisposable
         }))).RootElement;
 
         Assert.Empty(answer.GetProperty("errors").EnumerateArray());
-        Assert.Contains("href=\"a.geo.md#ax-a\">Axiom 1</a>", answer.GetProperty("html").GetString());
+        Assert.Contains("href=\"a.geo.md#ax-a\">Axiom 1</a>", NoIds(answer.GetProperty("html").GetString()!));
         Assert.Equal(["abb-b", "ax-a"], answer.GetProperty("marks").EnumerateArray().Select(m => m.GetProperty("name").GetString()));
         // the figure as in print too: its picture in pt and the font size of the text
         JsonElement figure = answer.GetProperty("figures").EnumerateObject().Single().Value;
@@ -468,7 +468,7 @@ public sealed class MarkdownTests : IDisposable
         File.WriteAllText(Path.Combine(folder, "index.yaml"), "title: Buch\n");
         Directory.CreateDirectory(Path.Combine(folder, "10_Eins"));
         File.WriteAllText(Path.Combine(folder, "10_Eins", "10_A.geo.md"),
-            "# Erste\n\n::: lemma {#lem-a}\nx\n:::\n\n::: def {#def-a}\nx\n:::\n\n::: theorem {#satz-a}\nNach §def-a.\n:::\n\n::: proof\nMit §lem-a und nochmals §lem-a.\n:::\n\nIm Text §lem-a.\n\n::: lemma {#lem-unbenutzt}\nx\n:::\n");
+            "# Erste\n\n::: lemma {#lem-a}\nx\n:::\n\n::: def {#def-a}\nx\n:::\n\n::: theorem {#satz-a} Haupt\nNach §def-a.\n:::\n\n::: proof\nMit §lem-a und nochmals §lem-a.\n:::\n\nIm Text §lem-a.\n\n::: lemma {#lem-unbenutzt}\nx\n:::\n");
         File.WriteAllText(Path.Combine(folder, "10_Eins", "20_B.geo.md"),
             "# Zweite\n\n::: theorem {#satz-b}\nx\n:::\n\n::: remark\nSiehe §*satz-a.\n:::\n\n::: proof §satz-a\nWegen §lem-a.\n:::\n\n![Nach §lem-a.](x.geo)\n\nZuletzt §lem-a.\n");
         string file = Path.Combine(folder, "10_Eins", "10_A.geo.md");
@@ -484,10 +484,13 @@ public sealed class MarkdownTests : IDisposable
 
         MarkdownPage page = MarkdownPage.Parse(text, file, null, book.Marks.ToDictionary(m => m.Mark.Name), book.Numbering, book.KeywordLinks, book.UsedIn);
         // under the statement: one link for each place (to its first reference), the same proof once
-        Assert.Contains("<p class=\"used-in\">Verwendet in: <a href=\"#r-lem-a-1\">Beweis von Satz 1.3</a> (2×) · <a href=\"#r-lem-a-3\">Abschnitt 1.1</a>"
-            + " · <a href=\"20_B.geo.md#r-lem-a-1\">Beweis von Satz 1.3</a> · <a href=\"20_B.geo.md#r-lem-a-2\">Abb. 1.1</a> · <a href=\"20_B.geo.md#r-lem-a-3\">Abschnitt 1.2</a></p>", page.Html);
+        // with the titles of what they are
+        Assert.Contains("<p class=\"used-in\">Verwendet in: <a href=\"#r-lem-a-1\">Beweis von Satz 1.3 (Haupt)</a> (2×) · <a href=\"#r-lem-a-3\">Abschnitt 1.1 (Erste)</a>"
+            + " · <a href=\"20_B.geo.md#r-lem-a-1\">Beweis von Satz 1.3 (Haupt)</a> · <a href=\"20_B.geo.md#r-lem-a-2\">Abb. 1.1</a> · <a href=\"20_B.geo.md#r-lem-a-3\">Abschnitt 1.2 (Zweite)</a></p>", page.Html);
         Assert.Contains("<p class=\"used-in\">Nicht verwendet.</p>", page.Html);
-        Assert.Contains("<a class=\"ref\" id=\"r-lem-a-3\" href=\"#lem-a\">Lemma 1.1</a>", page.Html);
+        // a reference's tooltip: the mark's title, else its text
+        Assert.Contains("<a class=\"ref\" id=\"r-lem-a-3\" href=\"#lem-a\" title=\"x\">Lemma 1.1</a>", page.Html);
+        Assert.Contains("href=\"#satz-a\" title=\"Haupt\">", MarkdownPage.Parse(text + "\nSiehe §satz-a.\n", file, null, book.Marks.ToDictionary(m => m.Mark.Name), book.Numbering).Html);
         // without them (print, e-book): nothing
         Assert.DoesNotContain("used-in", MarkdownPage.Parse(text, file, null, book.Marks.ToDictionary(m => m.Mark.Name), book.Numbering, book.KeywordLinks).Html);
 
@@ -495,7 +498,9 @@ public sealed class MarkdownTests : IDisposable
         string second = Path.Combine(folder, "10_Eins", "20_B.geo.md");
         Daemon.BookOfPage other = Daemon.ReadBook(second, File.ReadAllText(second));
         MarkdownPage page2 = MarkdownPage.Parse(File.ReadAllText(second), second, null, other.Marks.ToDictionary(m => m.Mark.Name), other.Numbering, other.KeywordLinks);
-        Assert.Contains("<span class=\"statement-label\">Beweis von <a class=\"ref\" href=\"10_A.geo.md#satz-a\">Satz 1.3</a>.</span>", page2.Html);
+        Assert.Contains("<span class=\"statement-label\">Beweis von <a class=\"ref\" href=\"10_A.geo.md#satz-a\" title=\"Haupt\">Satz 1.3</a>.</span>", page2.Html);
+        // in a caption too
+        Assert.Contains("title=\"x\">Lemma 1.1</a>", page2.Html);
         Assert.DoesNotContain(page2.Errors, e => e.Message.Contains("mark"));
         Assert.Contains(MarkdownPage.Parse("::: proof §nichts\nx\n:::\n").Errors, e => e.Message.Contains("no mark \"nichts\""));
     }

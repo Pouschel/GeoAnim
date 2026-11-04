@@ -203,9 +203,11 @@ die Gerade in Abb. 3 eindeutig.“ (im Web und im E-Book ein Link).
   vorkommen. Die anderen Seiten zählen, wie sie gespeichert sind.
 - Ein Verweis auf eine andere Seite zeigt die Nummer, die die Marke dort hat – bei Axiomen die Nummer im ganzen Buch, bei den übrigen Arten vorerst die Nummer auf jener Seite.
 - Eine unbekannte Marke ist ein Fehler; die Seite zeigt an der Stelle „??“.
+- Fährt man mit der Maus über einen Verweis, zeigt der Tooltip den Titel der Marke (ohne Titel ihren Text: den Anfang
+  der Aussage, die Bildunterschrift).
 - **Wo eine Aussage verwendet wird:** In der Vorschau und im Buch als eine HTML-Datei (`geoanim html`) steht unter jeder
-  Aussage mit Marke klein „Verwendet in: Beweis von Satz 3.4 · Satz 4.1 · Abschnitt 5.2“ – jede Stelle ein Link zu ihrem
-  ersten Verweis –, oder „Nicht verwendet.“ Die Stelle ist der Beweis (mit der Aussage, die er beweist), die
+  Aussage mit Marke klein „Verwendet in: Beweis von Satz 3.4 (Winkelsumme) · Abschnitt 5.2 (Dreiecke)“ – jede Stelle mit
+  ihrem Titel und als Link zu ihrem ersten Verweis –, oder „Nicht verwendet.“ Die Stelle ist der Beweis (mit der Aussage, die er beweist), die
   nummerierte Aussage, die Abbildung oder sonst der Abschnitt der Seite, in dem der Verweis steht; mehrere Verweise aus
   derselben Stelle zählen einmal („(2×)“). Im gedruckten Buch und im E-Book steht das nicht.
 - **In VS Code:** nach `§` bietet die Vervollständigung alle Marken des Buchs an (mit Art, Nummer und Text), in

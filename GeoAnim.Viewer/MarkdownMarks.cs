@@ -47,7 +47,11 @@ public sealed record PageReference(string Name, int Line, int Column, string Anc
 }
 
 /// <summary>A place where a mark is used: what it is ("Beweis von Satz 3.4", "Abschnitt 2.1"), on which page (full path), the id there and the line.</summary>
-public sealed record MarkUse(string Label, string File, string Anchor, int Line, int Column);
+public sealed record MarkUse(string Label, string File, string Anchor, int Line, int Column)
+{
+    /// <summary>The title of what it is (Markdown): the statement's (in a proof: the proved one's), the section's; or null.</summary>
+    public string? Title { get; init; }
+}
 
 /// <summary>The marks of a page and how many of each counter it has (for the numbers of the pages after it).</summary>
 public sealed record MarksOfPage(IReadOnlyList<PageMark> Marks, IReadOnlyDictionary<string, int> Counts)
@@ -119,6 +123,8 @@ public sealed partial class MarkdownPage
     {
         public string? ProofOf { get; init; }
 
+        public string? ProofTooltip { get; init; }
+
         public string? ProofLabel { get; init; }
 
         public string? ProofHref { get; init; }
@@ -136,17 +142,23 @@ public sealed partial class MarkdownPage
     /// statement), "Abb. 2.1" (in a caption), "Abschnitt 2.1" (in the text: the page's heading), else the page's title.
     /// <paramref name="markOf"/>: a mark of the book by its name, with its numbers.
     /// </summary>
-    public static string UseLabel(PageReference reference, PageNumbering numbering, Func<string, PageMark?> markOf, string pageTitle)
+    /// With it the title of what it is (Markdown: the statement's, the proved one's, the section's), if it has one.
+    public static (string Label, string? Title) UseOf(PageReference reference, PageNumbering numbering, Func<string, PageMark?> markOf, string pageTitle)
     {
-        string? section = reference.Section is { } heading ? Renumbered(heading, numbering).Label : null;
+        PageMark? section = reference.Section is { } heading ? Renumbered(heading, numbering) : null;
         if (reference.Proof)
         {
-            string? proved = reference.ProofOf != null ? markOf(reference.ProofOf)?.Label
-                : reference.Context is { } statement ? Renumbered(statement, numbering).Label : null;
-            return proved != null ? "Beweis von " + proved : "Beweis in " + (section ?? pageTitle);
+            PageMark? proved = reference.ProofOf != null ? markOf(reference.ProofOf)
+                : reference.Context is { } statement ? Renumbered(statement, numbering) : null;
+            return proved != null ? ("Beweis von " + proved.Label, proved.Title) : ("Beweis in " + (section?.Label ?? pageTitle), section?.Title);
         }
-        return reference.Context is { } context ? Renumbered(context, numbering).Label : section ?? pageTitle;
+        PageMark? context = reference.Context is { } own ? Renumbered(own, numbering) : section;
+        return context != null ? (context.Label, context.Title) : (pageTitle, null);
     }
+
+    // what the tooltip of a link to a mark shows: its title, else its text (the start of a statement, a caption), plain
+    private static string TooltipOf(PageMark mark) =>
+        HtmlExporter.PlainText(Attributes().Replace(mark.Title ?? mark.Text, "")).Replace("$", "").Trim();
 
     /// <summary>
     /// Where the marks of a book are used: for every mark's name the places that refer to it, in book order. The pages (in
@@ -161,12 +173,12 @@ public sealed partial class MarkdownPage
         {
             foreach (PageReference reference in read.References)
             {
-                string label = UseLabel(reference, numbering, name => marks.GetValueOrDefault(name), title);
+                (string label, string? useTitle) = UseOf(reference, numbering, name => marks.GetValueOrDefault(name), title);
                 if (!uses.TryGetValue(reference.Name, out List<MarkUse>? list))
                 {
                     uses[reference.Name] = list = [];
                 }
-                list.Add(new MarkUse(label, file, reference.Anchor, reference.Line, reference.Column));
+                list.Add(new MarkUse(label, file, reference.Anchor, reference.Line, reference.Column) { Title = useTitle });
             }
         }
         return uses.ToDictionary(u => u.Key, u => (IReadOnlyList<MarkUse>)u.Value, StringComparer.Ordinal);
@@ -469,11 +481,11 @@ public sealed partial class MarkdownPage
             }
             if (own.TryGetValue(proved, out PageMark? ownMark))
             {
-                container.SetData(typeof(Statement), statement with { ProofLabel = ownMark.Label, ProofHref = "#" + proved });
+                container.SetData(typeof(Statement), statement with { ProofLabel = ownMark.Label, ProofHref = "#" + proved, ProofTooltip = TooltipOf(ownMark) });
             }
             else if (bookMarks != null && bookMarks.TryGetValue(proved, out BookMark? other))
             {
-                container.SetData(typeof(Statement), statement with { ProofLabel = other.Mark.Label, ProofHref = HrefOf(other, proved) });
+                container.SetData(typeof(Statement), statement with { ProofLabel = other.Mark.Label, ProofHref = HrefOf(other, proved), ProofTooltip = TooltipOf(other.Mark) });
             }
             else
             {
@@ -562,12 +574,14 @@ public sealed partial class MarkdownPage
                     reference.Label = mark.Label;
                     reference.Title = withTitle ? mark.Title : null;
                     reference.Href = "#" + name;
+                    reference.Tooltip = TooltipOf(mark);
                 }
                 else if (bookMarks != null && bookMarks.TryGetValue(name, out BookMark? other))
                 {
                     reference.Label = other.Mark.Label;
                     reference.Title = withTitle ? other.Mark.Title : null;
                     reference.Href = HrefOf(other, name);
+                    reference.Tooltip = TooltipOf(other.Mark);
                 }
                 else
                 {
@@ -601,10 +615,10 @@ public sealed partial class MarkdownPage
                     string name = match.Groups[3].Value;
                     string anchor = Found(name, reference.Line, reference.Column, ++ordinal, figure);
                     bool withTitle = match.Groups[2].Value.EndsWith('*');
-                    (string Label, string? Title, string Href)? target =
-                        own.TryGetValue(name, out PageMark? mark) ? (mark.Label, mark.Title, "#" + name)
+                    (string Label, string? Title, string Href, string Tooltip)? target =
+                        own.TryGetValue(name, out PageMark? mark) ? (mark.Label, mark.Title, "#" + name, TooltipOf(mark))
                         : bookMarks != null && bookMarks.TryGetValue(name, out BookMark? other)
-                            ? (other.Mark.Label, other.Mark.Title, HrefOf(other, name))
+                            ? (other.Mark.Label, other.Mark.Title, HrefOf(other, name), TooltipOf(other.Mark))
                             : null;
                     if (target is not { } found)
                     {
@@ -612,7 +626,7 @@ public sealed partial class MarkdownPage
                         return "??";
                     }
                     string label = Regex.Replace(found.Label, @"[\[\]\\*_]", @"\$0") + (withTitle && found.Title != null ? " (" + found.Title + ")" : "");
-                    return "[" + label + "](" + found.Href.Replace(" ", "%20").Replace("(", "%28").Replace(")", "%29") + "){.ref #" + anchor + "}";
+                    return "[" + label + "](" + found.Href.Replace(" ", "%20").Replace("(", "%28").Replace(")", "%29") + (found.Tooltip.Length > 0 ? " \"" + found.Tooltip.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"" : "") + "){.ref #" + anchor + "}";
                 });
                 figure.Items[i] = item with { Reference = reference with { Caption = caption } };
             }
@@ -637,6 +651,9 @@ public sealed partial class MarkdownPage
 
         // the id of its link, for the list of where a mark is used
         public string? Anchor { get; set; }
+
+        // what its link shows when the mouse is on it: the mark's title or text
+        public string? Tooltip { get; set; }
     }
 
     private sealed class MarkReferenceRenderer : HtmlObjectRenderer<MarkReferenceInline>
@@ -653,7 +670,12 @@ public sealed partial class MarkdownPage
             {
                 renderer.Write(" id=\"").WriteEscape(reference.Anchor).Write('"');
             }
-            renderer.Write(" href=\"").WriteEscapeUrl(reference.Href).Write("\">").WriteEscape(reference.Label);
+            renderer.Write(" href=\"").WriteEscapeUrl(reference.Href).Write('"');
+            if (!string.IsNullOrEmpty(reference.Tooltip))
+            {
+                renderer.Write(" title=\"").WriteEscape(reference.Tooltip).Write('"');
+            }
+            renderer.Write('>').WriteEscape(reference.Label);
             if (reference.Title != null)
             {
                 renderer.Write(" (").Write(InlineHtml(reference.Title)).Write(")");
@@ -684,7 +706,8 @@ public sealed partial class MarkdownPage
                 string href = page != null && string.Equals(first.File, page, StringComparison.OrdinalIgnoreCase)
                     ? "#" + first.Anchor
                     : (page == null ? first.File : Path.GetRelativePath(Path.GetDirectoryName(page)!, first.File)).Replace('\\', '/') + "#" + first.Anchor;
-                return "<a href=\"" + WebUtility.HtmlEncode(href.Replace(" ", "%20")) + "\">" + WebUtility.HtmlEncode(first.Label) + "</a>"
+                return "<a href=\"" + WebUtility.HtmlEncode(href.Replace(" ", "%20")) + "\">" + WebUtility.HtmlEncode(first.Label)
+                    + (first.Title != null ? " (" + InlineHtml(first.Title) + ")" : "") + "</a>"
                     + (group.Count() > 1 ? " (" + group.Count().ToString(CultureInfo.InvariantCulture) + "×)" : "");
             });
             return "<p class=\"used-in\">Verwendet in: " + string.Join(" · ", links) + "</p>";
@@ -719,7 +742,9 @@ public sealed partial class MarkdownPage
                     // "Beweis von Satz 3.2."
                     ? "<span class=\"statement-label\">" + WebUtility.HtmlEncode(statement.Label) + " von "
                         + (statement.ProofLabel != null
-                            ? "<a class=\"ref\" href=\"" + WebUtility.HtmlEncode(statement.ProofHref!.Replace(" ", "%20")) + "\">" + WebUtility.HtmlEncode(statement.ProofLabel) + "</a>"
+                            ? "<a class=\"ref\" href=\"" + WebUtility.HtmlEncode(statement.ProofHref!.Replace(" ", "%20")) + "\""
+                                + (string.IsNullOrEmpty(statement.ProofTooltip) ? "" : " title=\"" + WebUtility.HtmlEncode(statement.ProofTooltip) + "\"")
+                                + ">" + WebUtility.HtmlEncode(statement.ProofLabel) + "</a>"
                             : "<span class=\"ref-missing\" title=\"" + WebUtility.HtmlEncode(statement.ProofOf) + "\">??</span>") + ".</span> "
                     : "<span class=\"statement-label\">" + WebUtility.HtmlEncode(statement.Label)
                         + (statement.Title != null ? " (" + InlineHtml(statement.Title) + ")" : "") + ".</span> ";
