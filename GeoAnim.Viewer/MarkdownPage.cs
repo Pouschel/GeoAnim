@@ -229,6 +229,7 @@ public sealed partial class MarkdownPage
         }
 
         MovePunctuation(document);
+        KeepPunctuation(document);
 
         // numbers and marks of figures, statements and sections; then the references to them
         List<PageMark> marks = Number(text, document, locate, errors, numbering, out Dictionary<string, int> counts);
@@ -649,10 +650,21 @@ public sealed partial class MarkdownPage
     }
 
     // a formula's markup: a chain as rows of left side and rest (aligned at the relation), else a formula cut at its
-    // relations (where a line may break: a thick space and a break opportunity before each relation); "after": what
-    // follows its last part (the punctuation of a "$$…$$" in a paragraph)
-    private static void WriteFormula(HtmlRenderer renderer, string source, bool display, string after, Action<FormatException> error)
+    // relations (where a line may break: a thick space and a break opportunity before each relation); "before" and
+    // "after": the punctuation before its first part and after its last (in the line: on one line with it)
+    private static void WriteFormula(HtmlRenderer renderer, string source, bool display, string before, string after, Action<FormatException> error)
     {
+        // a part with the punctuation next to it, unbroken
+        void Kept(string start, string svg, string end)
+        {
+            // on a line of its own anyway: no span
+            if (display || start.Length == 0 && end.Length == 0)
+            {
+                renderer.Write(svg).WriteEscape(end);
+                return;
+            }
+            renderer.Write(NoBreak).WriteEscape(start).Write(svg).WriteEscape(end).Write("</span>");
+        }
         string Svg(string part)
         {
             try
@@ -686,7 +698,7 @@ public sealed partial class MarkdownPage
         List<string> pieces = display || single.Count(c => !char.IsWhiteSpace(c)) <= ShortFormula ? [single] : PiecesOf(single);
         if (pieces.Count < 2)
         {
-            renderer.Write(Svg(single)).WriteEscape(after);
+            Kept(before, Svg(single), after);
             return;
         }
         renderer.Write("<span class=\"formula-split\">");
@@ -696,10 +708,13 @@ public sealed partial class MarkdownPage
             {
                 renderer.Write("<span class=\"formula-gap\"></span><wbr>");
             }
-            renderer.Write(Svg(pieces[i]));
+            Kept(i == 0 ? before : "", Svg(pieces[i]), i == pieces.Count - 1 ? after : "");
         }
-        renderer.Write("</span>").WriteEscape(after);
+        renderer.Write("</span>");
     }
+
+    // formula and punctuation on one line (the style in the element: it holds in every viewer, also without page.css)
+    private const string NoBreak = "<span class=\"formula-nobr\" style=\"white-space:nowrap\">";
 
     private sealed class FormulaInlineRenderer(List<MarkdownProblem> errors, Func<int, (int, int)> locate) : HtmlObjectRenderer<MathInline>
     {
@@ -720,8 +735,10 @@ public sealed partial class MarkdownPage
                 }
                 renderer.Write('>');
             }
-            string after = display ? math.GetData(typeof(DisplayPunctuation)) as string ?? "" : "";
-            WriteFormula(renderer, math.Content.ToString(), display, after, e =>
+            var kept = math.GetData(typeof(InlinePunctuation)) as InlinePunctuation;
+            string before = kept?.Before ?? "";
+            string after = display ? math.GetData(typeof(DisplayPunctuation)) as string ?? "" : kept?.After ?? "";
+            WriteFormula(renderer, math.Content.ToString(), display, before, after, e =>
             {
                 (int line, int column) = locate(math.Span.Start);
                 errors.Add(new MarkdownProblem(line, column, e.Message));
@@ -841,6 +858,53 @@ public sealed partial class MarkdownPage
         }
     }
 
+    // the punctuation right before and after a formula in the line ("($x$)," "„$a$“"), kept with it
+    private sealed class InlinePunctuation(string before, string after)
+    {
+        public string Before { get; } = before;
+
+        public string After { get; } = after;
+    }
+
+    // what may stand at the end of a line before a formula, and at the start of one after it, if not kept with it
+    private const string OpeningPunctuation = "([{„‚»‹";
+    private const string ClosingPunctuation = ".,;:!?)]}“‘«›…-";
+
+    /// <summary>
+    /// Takes the punctuation right before and after a formula in the line from the text around it: the formula is a picture,
+    /// and a browser would break between it and a comma after it (or an opening bracket before it); written together they
+    /// stay on one line.
+    /// </summary>
+    private static void KeepPunctuation(MarkdownDocument document)
+    {
+        foreach (MathInline math in document.Descendants<MathInline>())
+        {
+            if (math.DelimiterCount != 1)
+            {
+                continue;
+            }
+            string before = "", after = "";
+            if (math.PreviousSibling is LiteralInline previous)
+            {
+                string text = previous.Content.ToString();
+                int count = text.Length - text.TrimEnd(OpeningPunctuation.ToCharArray()).Length;
+                before = text[^count..];
+                previous.Content.End -= count;
+            }
+            if (math.NextSibling is LiteralInline next)
+            {
+                string text = next.Content.ToString();
+                int count = text.Length - text.TrimStart(ClosingPunctuation.ToCharArray()).Length;
+                after = text[..count];
+                next.Content.Start += count;
+            }
+            if (before.Length > 0 || after.Length > 0)
+            {
+                math.SetData(typeof(InlinePunctuation), new InlinePunctuation(before, after));
+            }
+        }
+    }
+
     // $$…$$ on lines of their own: a formula centred on a line of its own
     private sealed class FormulaBlockRenderer(List<MarkdownProblem> errors, Func<int, (int, int)> locate) : HtmlObjectRenderer<MathBlock>
     {
@@ -850,7 +914,7 @@ public sealed partial class MarkdownPage
             string? number = math.GetData(typeof(FormulaNumber)) as string;
             renderer.Write("<div class=\"formula-block").Write(number != null ? " formula-numbered" : "").Write(ChainOf(source) != null ? " formula-chain" : "")
                 .Write('"').WriteAttributes(math).Write('>');
-            WriteFormula(renderer, source, true, "", e =>
+            WriteFormula(renderer, source, true, "", "", e =>
             {
                 (int line, int column) = locate(math.Span.Start);
                 errors.Add(new MarkdownProblem(line, column, e.Message));
@@ -1018,19 +1082,22 @@ public sealed partial class MarkdownPage
     }
 
     // the formulas Markdig leaves in a caption (<span class="math">\(…\)</span>) as SVG
+    // (with the punctuation next to them on one line)
     private static string RenderFormulasIn(string html) => MathSpan().Replace(html, m =>
     {
-        string source = WebUtility.HtmlDecode(m.Groups[1].Value).Trim();
+        string source = WebUtility.HtmlDecode(m.Groups[2].Value).Trim();
+        string svg;
         try
         {
-            return FormulaSvg(source);
+            svg = FormulaSvg(source);
         }
         catch (FormatException)
         {
-            return FaultyFormula(source);
+            svg = FaultyFormula(source);
         }
+        return m.Groups[1].Length + m.Groups[3].Length == 0 ? svg : NoBreak + m.Groups[1].Value + svg + m.Groups[3].Value + "</span>";
     });
 
-    [GeneratedRegex(@"<span class=""math"">\\\((.*?)\\\)</span>")]
+    [GeneratedRegex(@"([(\[{„‚»‹]*)<span class=""math"">\\\((.*?)\\\)</span>([.,;:!?)\]}“‘«›…-]*)")]
     private static partial Regex MathSpan();
 }

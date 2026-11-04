@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using System.Text.Json;
 using GeoAnim.Cli;
 using GeoAnim.Script;
@@ -543,7 +544,7 @@ public sealed class MarkdownTests : IDisposable
 
         MarkdownPage page = MarkdownPage.Parse("Es gilt $a = b_1 + b_2 + b_3 + b_4 + b_5 + b_6$, kurz $M != Q$.\n\n$$\nd = 1 + 1\n  = 2\n$$ {#gl-k}\n");
         Assert.Empty(page.Errors);
-        Assert.Matches("<span class=\"formula-split\"><svg[^>]*aria-label=\"a\".*?</svg><span class=\"formula-gap\"></span><wbr><svg[^>]*aria-label=\"= b_1 \\+ b_2", page.Html);
+        Assert.Matches("<span class=\"formula-split\"><svg[^>]*aria-label=\"a\".*?</svg><span class=\"formula-gap\"></span><wbr><span class=\"formula-nobr\"[^>]*><svg[^>]*aria-label=\"= b_1 \\+ b_2", page.Html);
         // a short one stays whole
         Assert.Contains("aria-label=\"M != Q\"", page.Html);
         Assert.Contains("class=\"formula-block formula-numbered formula-chain\"", page.Html);
@@ -562,6 +563,23 @@ public sealed class MarkdownTests : IDisposable
         Assert.Contains("aria-label=\"= c.\"", page.Html);
         Assert.Contains("aria-label=\"x = 1,\"", page.Html);
         Assert.Equal(["(1)"], page.Marks.Select(m => m.Label));
+    }
+
+    [Fact]
+    public void PunctuationNextToAFormulaInTheLineStaysOnItsLine()
+    {
+        const string NoBreak = "<span class=\"formula-nobr\" style=\"white-space:nowrap\">";
+        MarkdownPage page = MarkdownPage.Parse("Die Punkte ($A$, $B$) und „$C$“. Die $x$-Achse, $y$ ohne. Lang: $a = b_1 + b_2 + b_3 + b_4 + b_5 + b_6$.\n");
+        Assert.Empty(page.Errors);
+        Assert.Matches(Regex.Escape(NoBreak) + @"\(<svg[^>]*aria-label=""A"".*?</svg>,</span> " + Regex.Escape(NoBreak) + @"<svg[^>]*aria-label=""B"".*?</svg>\)</span> und", page.Html);
+        Assert.Matches(Regex.Escape(NoBreak) + @"„<svg[^>]*aria-label=""C"".*?</svg>“\.</span> Die", page.Html);
+        Assert.Matches(Regex.Escape(NoBreak) + @"<svg[^>]*aria-label=""x"".*?</svg>-</span>Achse", page.Html);
+        // nothing next to it: no span
+        Assert.Matches(@"Achse, <svg[^>]*aria-label=""y""", page.Html);
+        // a formula cut at its relations: only the last part with the full stop (it may still break before "=")
+        Assert.Matches(@"<wbr>" + Regex.Escape(NoBreak) + @"<svg[^>]*aria-label=""= b_1[^""]*"".*?</svg>\.</span></span>", page.Html);
+        // in a caption too
+        Assert.Matches(Regex.Escape(NoBreak) + @"<svg[^>]*aria-label=""P"".*?</svg>,</span> fest", MarkdownPage.InlineHtml("Punkt $P$, fest"));
     }
 
     [Fact]
