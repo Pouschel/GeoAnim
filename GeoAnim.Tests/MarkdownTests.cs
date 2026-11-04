@@ -535,6 +535,8 @@ public sealed class MarkdownTests : IDisposable
         // cut before the relations outside brackets, texts and arrows
         Assert.Equal(["a", "= b+c", "<= (x=y)", "!= d"], MarkdownPage.PiecesOf("a = b+c <= (x=y) != d"));
         Assert.Equal(["a -> b"], MarkdownPage.PiecesOf("a -> b"));
+        // a definition: cut before ":=" (not between ":" and "=")
+        Assert.Equal(["tau", ":= sigma_h", "=: rho"], MarkdownPage.PiecesOf("tau := sigma_h =: rho"));
         Assert.Equal(["f(x)", "= \"a=b\""], MarkdownPage.PiecesOf("f(x) = \"a=b\""));
         // a chain: the first line's left side, the rest of each line; a line without a relation continues the one before
         Assert.Equal([("d(P)^2", "= x"), (null, "= y + z"), (null, "<= w")], MarkdownPage.ChainOf("d(P)^2 = x\n  = y\n  + z\n  <= w"));
@@ -547,6 +549,8 @@ public sealed class MarkdownTests : IDisposable
         Assert.Matches("<span class=\"formula-split\"><svg[^>]*aria-label=\"a\".*?</svg><span class=\"formula-gap\"></span><wbr><span class=\"formula-nobr\"[^>]*><svg[^>]*aria-label=\"= b_1 \\+ b_2", page.Html);
         // a short one stays whole
         Assert.Contains("aria-label=\"M != Q\"", page.Html);
+        // short as it is shown, though long in letters
+        Assert.Contains("aria-label=\"tau:=sigma_(h) circ sigma_(g)\"", MarkdownPage.Parse("Sei $tau:=sigma_(h) circ sigma_(g)$.\n").Html);
         Assert.Contains("class=\"formula-block formula-numbered formula-chain\"", page.Html);
         Assert.Matches("<span class=\"formula-row\"><span class=\"formula-left\"><svg[^>]*aria-label=\"d\".*?<span class=\"formula-right\"><svg[^>]*aria-label=\"= 1 \\+ 1\"", page.Html);
         Assert.Matches("<span class=\"formula-row\"><span class=\"formula-left\"></span><span class=\"formula-right\"><svg[^>]*aria-label=\"= 2\"", page.Html);

@@ -545,12 +545,25 @@ public sealed partial class MarkdownPage
         "<span class=\"formula-error\">$" + WebUtility.HtmlEncode(asciiMath) + "$</span>";
 
     // the relations at which a formula may break or a chain is aligned, longest first; arrows that start like them are
-    // passed over
-    private static readonly string[] Relations = ["<=>", "=>", "<=", ">=", "!=", "~~", "~=", "-=", "=", "<", ">"];
+    // passed over; ":=" and "=:" (definitions) as one
+    private static readonly string[] Relations = ["<=>", ":=", "=:", "=>", "<=", ">=", "!=", "~~", "~=", "-=", "=", "<", ">"];
     private static readonly string[] NoRelations = ["|->", "->", "<-", "<<", ">>", "-<", ">-", "-:"];
 
-    // a formula in the text up to this many characters (without spaces) is not cut
-    private const int ShortFormula = 20;
+    // a formula in the text up to this wide (in em, as it is shown: "sigma" is one letter) is not cut
+    private const double ShortFormula = 10;
+
+    // whether a formula is short enough to stay whole (a faulty one: yes, it is shown as its source with the error)
+    private static bool IsShort(string asciiMath)
+    {
+        try
+        {
+            return MathRenderer.Render(asciiMath).Width <= ShortFormula * 1000;
+        }
+        catch (FormatException)
+        {
+            return true;
+        }
+    }
 
     /// <summary>
     /// A formula cut before its relations outside brackets and texts ("a = b + c <= d" → "a", "= b + c", "<= d"): the places
@@ -695,7 +708,7 @@ public sealed partial class MarkdownPage
         }
         string single = Regex.Replace(source, @"\s*\n\s*", " ");
         // a short formula stays whole (it fits on a line anyway, and "M" at the end of one and "!= Q" on the next looks odd)
-        List<string> pieces = display || single.Count(c => !char.IsWhiteSpace(c)) <= ShortFormula ? [single] : PiecesOf(single);
+        List<string> pieces = display || IsShort(single) ? [single] : PiecesOf(single);
         if (pieces.Count < 2)
         {
             Kept(before, Svg(single), after);
