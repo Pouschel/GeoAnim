@@ -261,7 +261,7 @@ public sealed class EpubTests : IDisposable
         Assert.Contains("<svg", html);
         Assert.DoesNotContain("data-figure", html);
         // the contents with the chapter
-        Assert.Contains("<li class=\"contents-chapter\"><a href=\"#p1\">1 Kapitel</a>", html);
+        Assert.Contains("<li class=\"contents-chapter\"><details><summary><a href=\"#p1\">1 Kapitel</a></summary>", html);
         Assert.Contains("<p class=\"book-author\">Thomas</p>", html);
     }
 
@@ -381,7 +381,7 @@ public sealed class TypstTests : IDisposable
         }
         Assert.Equal(0, Program.HtmlBook([folder, "-o", Path.Combine(folder, "buch.html")]));
         string html = File.ReadAllText(Path.Combine(folder, "buch.html"));
-        Assert.Contains("<li class=\"contents-chapter\"><a href=\"#p1\">1 Geraden und Ebenen</a><ol>\n<li><a href=\"#p2\">1.1 Erste Seite</a></li>", html);
+        Assert.Contains("<li class=\"contents-chapter\"><details><summary><a href=\"#p1\">1 Geraden und Ebenen</a></summary><ol>\n<li><a href=\"#p2\">1.1 Erste Seite</a></li>", html);
     }
 }
 

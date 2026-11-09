@@ -272,7 +272,7 @@ internal static partial class Program
             {
                 html.Append("<section class=\"book-page\" id=\"").Append(page.Id).Append("\">\n").Append(page.Body).Append("\n</section>\n");
             }
-            html.Append("</main>\n</body>\n</html>\n");
+            html.Append("</main>\n<script>\n").Append(Script).Append("</script>\n</body>\n</html>\n");
             return html.ToString();
         }
 
@@ -292,7 +292,7 @@ internal static partial class Program
                 }
                 for (int i = open.Length; i > same; i--)
                 {
-                    html.Append("</ol></li>\n");
+                    html.Append("</ol></details></li>\n");
                 }
                 bool introduction = IsIntroduction(page.Source);
                 for (int i = same; i < folders.Length; i++)
@@ -301,7 +301,8 @@ internal static partial class Program
                     string path = string.Join("/", folders[..(i + 1)]);
                     string label = (numbers.TryGetValue(path, out string? number) ? number + " " : "")
                         + (introduction && i == folders.Length - 1 ? page.Title : DisplayName(folders[i]));
-                    html.Append("<li class=\"contents-chapter\"><a href=\"#").Append(page.Id).Append("\">").Append(X(label)).Append("</a><ol>\n");
+                    // closed at first: a click on the triangle opens it, reading in it too
+                    html.Append("<li class=\"contents-chapter\"><details><summary><a href=\"#").Append(page.Id).Append("\">").Append(X(label)).Append("</a></summary><ol>\n");
                 }
                 open = folders;
                 if (!introduction)
@@ -311,10 +312,44 @@ internal static partial class Program
             }
             for (int i = open.Length; i > 0; i--)
             {
-                html.Append("</ol></li>\n");
+                html.Append("</ol></details></li>\n");
             }
             return html.Append("</ol>\n").ToString();
         }
+
+        // the contents follow the reading: the chapters around the page in view open (the others stay as they are), its
+        // entry is marked and scrolled into the contents' view
+        private const string Script = """
+            (() => {
+              const links = [...document.querySelectorAll('#contents a[href^="#p"]')]
+              const entries = links.map(a => [a, document.getElementById(a.getAttribute('href').slice(1))]).filter(e => e[1])
+              let current = null
+              function follow () {
+                let found = null
+                for (const [a, page] of entries) {
+                  if (page.getBoundingClientRect().top <= 80) found = a
+                }
+                if (found === current) return
+                if (current) current.classList.remove('current')
+                current = found
+                if (!current) return
+                current.classList.add('current')
+                for (let d = current.closest('details'); d; d = d.parentElement.closest('details')) d.open = true
+                // a chapter's own entry in its summary: its chapter is the details it opens
+                const details = current.parentElement.tagName === 'SUMMARY' ? current.parentElement.parentElement : null
+                if (details) details.open = true
+                current.scrollIntoView({ block: 'nearest' })
+              }
+              let waiting = false
+              document.addEventListener('scroll', () => {
+                if (!waiting) {
+                  waiting = true
+                  requestAnimationFrame(() => { waiting = false; follow() })
+                }
+              }, { passive: true })
+              follow()
+            })()
+            """;
 
         // what the preview's look lacks: the contents at the side (above the text on narrow screens), the title page, a
         // line between the pages
@@ -366,7 +401,17 @@ internal static partial class Program
               font-weight: 700;
             }
 
-            .contents-chapter > a {
+            .contents-chapter > details > summary {
+              cursor: pointer;
+              font-weight: 600;
+            }
+
+            .contents-chapter > details > summary::marker {
+              color: #8a909a;
+            }
+
+            #contents a.current {
+              color: #1565c0;
               font-weight: 600;
             }
 

@@ -51,7 +51,8 @@ internal static partial class Program
               named after it (or as given, relative to that folder).
           geoanim html <dir> [-o <book.html>]
               Writes the whole book in dir as one HTML file to read through and search in the browser (not for a web
-              server): the pages one after another, figures as stills in their size in print, the contents at the side.
+              server): the pages one after another, figures as stills in their size in print, the contents at the side
+              (chapters fold out).
               Default: dir.html next to the folder.
           geoanim daemon
               Compiles for an editor (the VS Code extension): JSON requests on standard input, answers on standard output.
