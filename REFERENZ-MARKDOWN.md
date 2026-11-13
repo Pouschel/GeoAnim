@@ -56,6 +56,18 @@ Ein unbekannter Schlüssel ist eine Warnung, ein Fehler im YAML ein Fehler (mit 
 | Sprungmarke | `[nach oben](#oben)` | ein Link mit `#…` bleibt ein Link auf eine Stelle der Seite |
 | andere Seite | `[Strecken](20_Strecken.geo.md)` | öffnet in der Vorschau diese Seite |
 
+Eine Gleichungskette ist **ein** Block – die `$$` stehen allein auf ihren Zeilen, dazwischen eine Zeile je Glied:
+
+```geomd
+$$
+|AC|^2 = (u_x+v_x)^2+(u_y+v_y)^2
+= u_x^2+u_y^2+v_x^2+v_y^2+2(u_x v_x+u_y v_y)
+= |AB|^2+|BC|^2+2(u_x v_x+u_y v_y).
+$$
+```
+
+Drei Absätze `$$…$$` untereinander sind drei einzelne Formeln, keine Kette.
+
 Ein `$`, das keine Formel beginnt (kein schließendes, oder ein Leerzeichen dahinter), ist ein Fehler – wie in Skripten.
 
 ## Abbildungen

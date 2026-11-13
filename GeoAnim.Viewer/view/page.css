@@ -215,6 +215,8 @@ svg.formula {
 
 .geo-print-picture img {
   display: block;
+  /* as wide as its cell (the cell has the size in proportion to the text; the image's own width is only a hint) */
+  width: 100%;
   max-width: 100%;
   height: auto;
 }
