@@ -509,6 +509,17 @@ public sealed class TextDirectionTests
 public sealed class InvisibleTests
 {
     [Fact]
+    public void AnOlderTypstGetsAWarning()
+    {
+        (Version? old, string? warning) = Program.CheckTypst("typst 0.13.1 (8ace67d9)");
+        Assert.Equal(new Version(0, 13, 1), old);
+        Assert.Contains("older than " + Program.TestedTypst, warning);
+        Assert.Null(Program.CheckTypst($"typst {Program.TestedTypst} (abc)").Warning);
+        Assert.Null(Program.CheckTypst("typst 1.0.0").Warning);
+        Assert.Equal((null, null), Program.CheckTypst("something else"));
+    }
+
+    [Fact]
     public void AnInvisibleObjectCountsForTheCutButIsNotDrawn()
     {
         const string Script = "view x -10 .. 10 y -10 .. 10\npoint A = 0 0\npoint B = 2 0\nsegment s = A B\n";

@@ -65,11 +65,47 @@ internal static partial class Program
         return pdf && result == 0 ? CompilePdf(output, pdfFile) : result;
     }
 
-    // "typst compile book.typ book.pdf" in the project's folder
+    /// <summary>The Typst that GeoAnim's look of the book is tested with; an older one may set it differently.</summary>
+    internal static readonly Version TestedTypst = new(0, 15, 0);
+
+    /// <summary>
+    /// The version in what "typst --version" says ("typst 0.13.1 (8ace67d9)"), and a warning if it is older than
+    /// <see cref="TestedTypst"/> (null if not, or if there is no version in it).
+    /// </summary>
+    internal static (Version? Version, string? Warning) CheckTypst(string versionOutput)
+    {
+        Match match = Regex.Match(versionOutput, @"(\d+)\.(\d+)(?:\.(\d+))?");
+        if (!match.Success)
+        {
+            return (null, null);
+        }
+        var version = new Version(int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture), int.Parse(match.Groups[2].Value, CultureInfo.InvariantCulture),
+            match.Groups[3].Success ? int.Parse(match.Groups[3].Value, CultureInfo.InvariantCulture) : 0);
+        return (version, version < TestedTypst
+            ? $"Typst {version} is older than {TestedTypst}, the version GeoAnim is tested with: the PDF may look different (formulas, chains). "
+                + "Update it, e.g. \"winget upgrade Typst.Typst\" (where it is: \"where typst\")."
+            : null);
+    }
+
+    // "typst compile book.typ book.pdf" in the project's folder; first which Typst it is (a warning if it is older than
+    // the one GeoAnim is tested with)
     private static int CompilePdf(string project, string pdf)
     {
         try
         {
+            var ask = new ProcessStartInfo("typst") { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true };
+            ask.ArgumentList.Add("--version");
+            using (Process versionProcess = Process.Start(ask)!)
+            {
+                string said = versionProcess.StandardOutput.ReadToEnd();
+                versionProcess.WaitForExit();
+                (Version? version, string? warning) = CheckTypst(said);
+                Console.WriteLine(version != null ? $"Typst {version}" : "Typst: " + said.Trim());
+                if (warning != null)
+                {
+                    Console.Error.WriteLine("Warning: " + warning);
+                }
+            }
             var start = new ProcessStartInfo("typst") { WorkingDirectory = project, UseShellExecute = false, RedirectStandardError = true };
             start.ArgumentList.Add("compile");
             // the fonts of the project (STIX Two Text in all four styles), whatever is installed
