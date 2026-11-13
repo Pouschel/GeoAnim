@@ -241,7 +241,9 @@
 #let display-chain(number: none, ..rows) = block(width: 100%, above: 0.8em, below: 0.8em, context {
   let rows = rows.pos()
   let widest = calc.max(..rows.map(row => measure(row.at(0)).width))
-  let lines = rows.map(row => block(above: 0pt, below: 0pt, align(left, [#box(width: widest)[#h(1fr)#row.at(0)]#h(0.2778em)#row.at(1)])))
+  // the left side pushed right by a space, not in a box of its own: a box sits on its bottom in older Typst (0.13), not
+  // on the formula's baseline
+  let lines = rows.map(row => block(above: 0pt, below: 0pt, align(left, [#h(widest - measure(row.at(0)).width)#row.at(0)#h(0.2778em)#row.at(1)])))
   let chain = box(align(left, stack(dir: ttb, spacing: 0.55em, ..lines)))
   if number == none { align(center, chain) } else {
     grid(columns: (1fr, auto, 1fr), align: (left, center, right + bottom), [], chain, number)
