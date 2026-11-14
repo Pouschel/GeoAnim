@@ -299,6 +299,20 @@ public sealed class CliTests : IDisposable
     }
 
     [Fact]
+    public void AMissingIncludeIsAnErrorNotACrash()
+    {
+        // a figure's script includes a file that was moved away: the page shows the error, the daemon goes on
+        Write("bild.geo", "include ../weg.geo\npoint A = 0 0");
+        string page = Write("seite.geo.md", "# Seite\n\n![Bild](bild.geo)\n");
+        JsonElement Ask(object request) => JsonDocument.Parse(Daemon.Handle(JsonSerializer.Serialize(request))).RootElement;
+
+        JsonElement answer = Ask(new { id = 1, type = "markdown", file = page, text = File.ReadAllText(page) });
+        Assert.False(answer.TryGetProperty("fatal", out _));
+        Assert.Contains(answer.GetProperty("errors").EnumerateArray(), e => e.GetProperty("message").GetString()!.Contains("bild.geo: line 1: File not found: ../weg.geo"));
+        Assert.Contains("File not found", Ask(new { id = 2, type = "steps", file = Path.Combine(folder, "bild.geo") }).GetProperty("error").GetString());
+    }
+
+    [Fact]
     public void DaemonCompilesUnsavedTextAsIfItWereTheFile()
     {
         string styles = Write("styles.geo", "default point size 6");

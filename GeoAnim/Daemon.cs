@@ -97,6 +97,11 @@ internal static class Daemon
         {
             return Answer(id, json => json.WriteString("fatal", e.Message));
         }
+        // anything else: an answer too, the daemon goes on (the editor would have to start it again)
+        catch (Exception e)
+        {
+            return Answer(id, json => json.WriteString("fatal", e.GetType().Name + ": " + e.Message));
+        }
     }
 
     // the picture of a script at the end of a step as in print (the print view of its preview)
@@ -638,15 +643,18 @@ internal static class Daemon
         {
             return known.Animation;
         }
-        ScriptSource source = ScriptSource.FromFile(path);
+        ScriptSource? source = null;
         AnimationData animation;
         try
         {
+            // reading it can fail too: an include of a file that is not there (any more)
+            source = ScriptSource.FromFile(path);
             animation = ScriptCompiler.Compile(source);
         }
         catch (ScriptError e)
         {
-            string where = source.FullPathOf(e) is { } other && !string.Equals(other, path, StringComparison.OrdinalIgnoreCase)
+            string? other = source != null ? source.FullPathOf(e) : e.File == null ? null : Path.GetFullPath(Path.Combine(Path.GetDirectoryName(path)!, e.File));
+            string where = other != null && !string.Equals(other, path, StringComparison.OrdinalIgnoreCase)
                 ? Path.GetFileName(other) + ", line " : "line ";
             throw new FormatException($"{Path.GetFileName(path)}: {where}{e.Line}: {e.Message}");
         }
