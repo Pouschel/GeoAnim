@@ -317,19 +317,14 @@ Grundlage für das Buch im Web, als E-Book und im Druck. Bisher gibt es die Vors
 Buch und Web); der Export folgt.
 
 ```markdown
----
-title: Punkte und ihre Lage
-keywords: [Punkt/e/en]
----
-
 # Punkte und ihre Lage
 
 ![](#2)
 
-Ein **Punkt** beschreibt eine genaue Lage. Man schreibt $M != Q$, wenn …
+Ein **Punkt**{kw=Punkt/e/en} beschreibt eine genaue Lage. Man schreibt $M != Q$, wenn …
 ```
 
-Der Kopf gibt Titel, Beschreibung und Stichwörter; Formeln stehen wie in Skripten zwischen `$…$`. Ein Bild auf ein Skript
+Die erste `#`-Überschrift ist der Titel der Seite (Inhaltsverzeichnis, Übersicht), Stichwörter stehen im Text; Formeln stehen wie in Skripten zwischen `$…$`. Ein Bild auf ein Skript
 wird zur Abbildung: `![](datei.geo)` die ganze Animation, `#2` ein Standbild am Ende von Schritt 2, `#3..4` die Schritte 3
 bis 4 (im Web als Player, im Buch als Bildfolge), Schritte auch über Marken (`step Gleiche Punkte #gleich`) oder ihren
 Namen; `![](#2)` meint das gleichnamige Skript der Seite. Im Buch werden Abbildungen auf ihren Inhalt zugeschnitten.

@@ -30,7 +30,9 @@ Skriptsprache der `.geo`-Dateien steht in der [Referenz](REFERENZ.md), der Über
 
 ## Kopf
 
-Ein YAML-Block zwischen zwei `---`-Zeilen ganz am Anfang der Datei; alle Einträge sind freiwillig.
+Ein YAML-Block zwischen zwei `---`-Zeilen ganz am Anfang der Datei; alle Einträge sind freiwillig. **Besser ohne:** Der
+Titel ist dann überall die erste `#`-Überschrift (ändert man sie, stimmt alles), Stichwörter stehen im Text an ihrer
+Stelle (`{kw}`). Der Kopf wird noch gelesen, ist aber nur für alte Seiten da.
 
 | Schlüssel | Schreibweise | Bedeutung |
 |---|---|---|
@@ -343,17 +345,11 @@ ein Skript des Buchs schon hat.
 `10_Punkte.geo.md` neben `10_Punkte.geo`:
 
 ```markdown
----
-title: Punkte und ihre Lage
-description: Was ein Punkt ist, wie wir ihn bezeichnen und wann zwei Punktnamen dieselbe Lage beschreiben.
-keywords: [Punkt/e/en]
----
-
 # Punkte und ihre Lage
 
 ![](#2)
 
-Ein **Punkt** beschreibt eine genaue Lage. Er hat keine Ausdehnung.
+Ein **Punkt**{kw=Punkt/e/en} beschreibt eine genaue Lage. Er hat keine Ausdehnung.
 
 ## Gleiche und verschiedene Punkte
 
