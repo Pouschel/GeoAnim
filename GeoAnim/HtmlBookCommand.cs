@@ -268,9 +268,29 @@ internal static partial class Program
                 html.Append("<p class=\"book-description\">").Append(X(settings.Description)).Append("</p>\n");
             }
             html.Append("</header>\n");
+            Dictionary<string, string> numbers = settings.Numbering.Headings ? Daemon.BookNumbers(book.Select(p => p.Source)) : [];
+            string[] open = [];
             foreach (BookPage page in book)
             {
-                html.Append("<section class=\"book-page\" id=\"").Append(page.Id).Append("\">\n").Append(page.Body).Append("\n</section>\n");
+                html.Append("<section class=\"book-page\" id=\"").Append(page.Id).Append("\">\n");
+                // the chapters (folders) that start here, as in print: a chapter without an introduction gets a heading
+                // of its own (with one, the introduction's heading is the chapter's)
+                string[] folders = page.Source.Split('/')[..^1];
+                int same = 0;
+                while (same < Math.Min(open.Length, folders.Length) && open[same] == folders[same])
+                {
+                    same++;
+                }
+                int last = IsIntroduction(page.Source) ? folders.Length - 1 : folders.Length;
+                for (int i = same; i < last; i++)
+                {
+                    string path = string.Join("/", folders[..(i + 1)]);
+                    html.Append("<h1 class=\"book-chapter\">")
+                        .Append(numbers.TryGetValue(path, out string? number) ? "<span class=\"section-number\">" + X(number) + "</span> " : "")
+                        .Append(X(DisplayName(folders[i]))).Append("</h1>\n");
+                }
+                open = folders;
+                html.Append(page.Body).Append("\n</section>\n");
             }
             html.Append("</main>\n<script>\n").Append(Script).Append("</script>\n</body>\n</html>\n");
             return html.ToString();

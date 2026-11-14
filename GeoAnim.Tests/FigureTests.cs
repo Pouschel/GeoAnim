@@ -250,6 +250,9 @@ public sealed class EpubTests : IDisposable
         // the pages one after another, their ids unique in the file
         Assert.Contains("<section class=\"book-page\" id=\"p1\">", html);
         Assert.Contains("<section class=\"book-page\" id=\"p2\">", html);
+        // a chapter without an introduction: its heading, as in print, once
+        Assert.Contains("<section class=\"book-page\" id=\"p1\">\n<h1 class=\"book-chapter\"><span class=\"section-number\">1</span> Kapitel</h1>", html);
+        Assert.Single(System.Text.RegularExpressions.Regex.Matches(html, "book-chapter"));
         Assert.Contains("id=\"p1-ax\"", html);
         // references and keywords lead to their place in the file
         Assert.Contains("href=\"#p1-ax\"", html);
