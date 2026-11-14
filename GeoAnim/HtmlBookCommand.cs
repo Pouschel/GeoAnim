@@ -57,8 +57,11 @@ internal static partial class Program
         private int pictures;
 
         // a page of the book: its source (relative to the book), its id in the file ("p3"), title, number ("2.1"), body
+        // Source: its place in the book's structure (a page beside its folder: in it, see BookPlaces); Relative: where it is
         private sealed record BookPage(string Source, string FullPath, string Id)
         {
+            public string Relative { get; init; } = Source;
+
             public string Title { get; set; } = "";
 
             public string? Number { get; set; }
@@ -68,16 +71,22 @@ internal static partial class Program
 
         public int Write(string output)
         {
-            List<string> sources = Directory.EnumerateFiles(root, "*.geo.md", SearchOption.AllDirectories)
+            var structure = new List<(string Page, string Message)>();
+            // the pages in book order; Source: the place in the structure (a page beside its folder: in it)
+            List<(string Page, string Place)> sources = InBookOrder(Directory.EnumerateFiles(root, "*.geo.md", SearchOption.AllDirectories)
                 .Select(file => Path.GetRelativePath(root, file).Replace('\\', '/'))
-                .Where(relative => !relative.Split('/').Any(part => part.StartsWith('_')))
-                .ToList();
-            sources.Sort(BookOrder.Instance);
+                .Where(relative => !relative.Split('/').Any(part => part.StartsWith('_'))), structure);
             var progress = new Progress(sources.Count);
             settings = BookFile.Read(root, progress.Warning, out string? bookError);
             if (bookError != null)
             {
                 progress.Error(bookError);
+            }
+            int errors = 0;
+            foreach ((string page, string message) in structure)
+            {
+                progress.Error($"{page}: {message}");
+                errors++;
             }
             style = new FigureStyle(settings.FigureUnit ?? FigureStyle.Default.PointsPerUnit, settings.FigureSize ?? FigureStyle.Default.SizeFactor);
             textSize = settings.TextSize ?? 11;
@@ -87,12 +96,11 @@ internal static partial class Program
                 progress.Finish("No book");
                 return 1;
             }
-            List<BookPage> book = sources.Select((source, i) => new BookPage(source, Path.GetFullPath(Path.Combine(root, source)),
-                "p" + (i + 1).ToString(CultureInfo.InvariantCulture))).ToList();
-            int errors = 0;
+            List<BookPage> book = sources.Select((source, i) => new BookPage(source.Place, Path.GetFullPath(Path.Combine(root, source.Page)),
+                "p" + (i + 1).ToString(CultureInfo.InvariantCulture)) { Relative = source.Page }).ToList();
             foreach (BookPage entry in book)
             {
-                progress.Step(entry.Source);
+                progress.Step(entry.Relative);
                 string text = File.ReadAllText(entry.FullPath);
                 Daemon.BookOfPage of = Daemon.ReadBook(entry.FullPath, text);
                 var bookMarks = new Dictionary<string, BookMark>(StringComparer.Ordinal);
@@ -103,14 +111,14 @@ internal static partial class Program
                 MarkdownPage page = MarkdownPage.Parse(text, entry.FullPath, Daemon.LoadScript, bookMarks, of.Numbering, of.KeywordLinks, of.UsedIn);
                 foreach (MarkdownProblem problem in page.Errors)
                 {
-                    progress.Error($"{entry.Source}:{problem.Line}:{problem.Column}: {problem.Message}");
+                    progress.Error($"{entry.Relative}:{problem.Line}:{problem.Column}: {problem.Message}");
                     errors++;
                 }
                 foreach (MarkdownProblem problem in page.Warnings.Concat(of.Warnings))
                 {
-                    progress.Warning($"{entry.Source}:{problem.Line}:{problem.Column}: {problem.Message}");
+                    progress.Warning($"{entry.Relative}:{problem.Line}:{problem.Column}: {problem.Message}");
                 }
-                entry.Title = HtmlExporter.PlainText(page.Title ?? DisplayName(Path.GetFileName(entry.Source)[..^".geo.md".Length]));
+                entry.Title = HtmlExporter.PlainText(page.Title ?? DisplayName(Path.GetFileName(entry.Relative)[..^".geo.md".Length]));
                 entry.Number = page.SectionNumber;
                 entry.Body = Convert(page, entry, book);
             }

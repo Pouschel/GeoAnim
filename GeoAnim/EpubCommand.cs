@@ -70,8 +70,11 @@ internal static partial class Program
         private double textSize = 11;
 
         // a page of the e-book: its source (relative to the book), file in the e-book, title
+        // Source: its place in the book's structure (a page beside its folder: in it, see BookPlaces); Relative: where it is
         private sealed record EpubPage(string Source, string FullPath, string File, string Title)
         {
+            public string Relative { get; init; } = Source;
+
             // "2.1" (with numbered headings)
             public string? Number { get; set; }
 
@@ -102,8 +105,8 @@ internal static partial class Program
                     progress.Warning($"{script}: a script without a page (seite.geo.md) is not in the e-book.");
                 }
             }
-            List<string> sources = pages.Where(p => p.EndsWith(".geo.md", StringComparison.OrdinalIgnoreCase)).ToList();
-            sources.Sort(BookOrder.Instance);
+            var structure = new List<(string Page, string Message)>();
+            List<(string Page, string Place)> sources = InBookOrder(pages.Where(p => p.EndsWith(".geo.md", StringComparison.OrdinalIgnoreCase)), structure);
             if (sources.Count == 0)
             {
                 progress.Error($"{root} has no pages (*.geo.md).");
@@ -113,15 +116,20 @@ internal static partial class Program
             var book = new List<EpubPage>();
             for (int i = 0; i < sources.Count; i++)
             {
-                string file = Path.GetFileName(PageName(sources[i][..^".md".Length]));
-                book.Add(new EpubPage(sources[i], Path.GetFullPath(Path.Combine(root, sources[i])),
-                    $"p{(i + 1).ToString("00", CultureInfo.InvariantCulture)}-{Path.ChangeExtension(file, ".xhtml")}", ""));
+                string file = Path.GetFileName(PageName(sources[i].Page[..^".md".Length]));
+                book.Add(new EpubPage(sources[i].Place, Path.GetFullPath(Path.Combine(root, sources[i].Page)),
+                    $"p{(i + 1).ToString("00", CultureInfo.InvariantCulture)}-{Path.ChangeExtension(file, ".xhtml")}", "") { Relative = sources[i].Page });
             }
             int errors = 0;
+            foreach ((string page, string message) in structure)
+            {
+                progress.Error($"{page}: {message}");
+                errors++;
+            }
             for (int i = 0; i < book.Count; i++)
             {
                 EpubPage entry = book[i];
-                progress.Step(entry.Source);
+                progress.Step(entry.Relative);
                 string text = File.ReadAllText(entry.FullPath);
                 Daemon.BookOfPage of = Daemon.ReadBook(entry.FullPath, text);
                 var bookMarks = new Dictionary<string, BookMark>(StringComparer.Ordinal);
@@ -132,14 +140,14 @@ internal static partial class Program
                 MarkdownPage page = MarkdownPage.Parse(text, entry.FullPath, Daemon.LoadScript, bookMarks, of.Numbering, of.KeywordLinks);
                 foreach (MarkdownProblem problem in page.Errors)
                 {
-                    progress.Error($"{entry.Source}:{problem.Line}:{problem.Column}: {problem.Message}");
+                    progress.Error($"{entry.Relative}:{problem.Line}:{problem.Column}: {problem.Message}");
                     errors++;
                 }
                 foreach (MarkdownProblem problem in page.Warnings.Concat(of.Warnings))
                 {
-                    progress.Warning($"{entry.Source}:{problem.Line}:{problem.Column}: {problem.Message}");
+                    progress.Warning($"{entry.Relative}:{problem.Line}:{problem.Column}: {problem.Message}");
                 }
-                string title = HtmlExporter.PlainText(page.Title ?? DisplayName(Path.GetFileName(entry.Source)[..^".geo.md".Length]));
+                string title = HtmlExporter.PlainText(page.Title ?? DisplayName(Path.GetFileName(entry.Relative)[..^".geo.md".Length]));
                 book[i] = entry = entry with { Title = title };
                 entry.Number = page.SectionNumber;
                 entry.Body = Convert(page, entry, book, progress);
@@ -206,7 +214,7 @@ internal static partial class Program
             }
             catch (FormatException e)
             {
-                progress.Error($"{entry.Source}: {e.Message}");
+                progress.Error($"{entry.Relative}: {e.Message}");
                 IElement faulty = document.CreateElement("code");
                 faulty.TextContent = "$" + source + "$";
                 return faulty;

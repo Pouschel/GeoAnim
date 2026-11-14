@@ -452,6 +452,46 @@ internal static partial class Program
     internal static bool IsIntroduction(string relative) =>
         relative.Contains('/') && System.Text.RegularExpressions.Regex.IsMatch(relative[(relative.LastIndexOf('/') + 1)..], @"^0+_.*\.geo\.md$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
+    /// <summary>
+    /// The places of a book's pages (relative paths with "/") in its structure: a page beside a folder of the same name
+    /// with pages in it ("20_Geraden.geo.md" beside "20_Geraden/") is the folder's introduction, as if it were
+    /// "20_Geraden/00_20_Geraden.geo.md" – its heading the chapter's, its text before the chapter's first page. Only the
+    /// pages that move are keys. <paramref name="errors"/>: a chapter with such a page and an introduction "00_…" in it
+    /// too (that page stays where it is).
+    /// </summary>
+    internal static Dictionary<string, string> BookPlaces(IEnumerable<string> pages, List<(string Page, string Message)>? errors = null)
+    {
+        List<string> all = pages.Where(p => p.EndsWith(".geo.md", StringComparison.OrdinalIgnoreCase)).ToList();
+        var places = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (string page in all)
+        {
+            string folder = page[..^".geo.md".Length] + "/";
+            List<string> inside = all.Where(p => p.StartsWith(folder, StringComparison.OrdinalIgnoreCase)).ToList();
+            if (inside.Count == 0)
+            {
+                continue;
+            }
+            // the folder as it is written (on Windows its name may differ in case)
+            folder = inside[0][..folder.Length];
+            if (inside.FirstOrDefault(p => p.IndexOf('/', folder.Length) < 0 && IsIntroduction(p)) is { } other)
+            {
+                errors?.Add((page, $"The chapter {folder.TrimEnd('/')} has two introductions: {page} beside it and {other} in it."));
+                errors?.Add((other, $"The chapter {folder.TrimEnd('/')} has two introductions: {page} beside it and {other} in it."));
+                continue;
+            }
+            places[page] = folder + "00_" + page[(page.LastIndexOf('/') + 1)..];
+        }
+        return places;
+    }
+
+    /// <summary>The pages of a book (relative paths) in book order, each with its place in the structure (see <see cref="BookPlaces"/>).</summary>
+    internal static List<(string Page, string Place)> InBookOrder(IEnumerable<string> pages, List<(string Page, string Message)>? errors = null)
+    {
+        List<string> list = pages.ToList();
+        Dictionary<string, string> places = BookPlaces(list, errors);
+        return list.Select(p => (Page: p, Place: places.GetValueOrDefault(p, p))).OrderBy(p => p.Place, BookOrder.Instance).ToList();
+    }
+
     // a link of a page to another one by its script's name ("../10_Grundlagen/20_Strecken.html#2") → by its page's name;
     // null: not a link to a page of the book (a site, a file, a page written with its new name)
     private static string? PageAddress(string source, string page, string href, Dictionary<string, string> pageOfSource)

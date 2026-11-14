@@ -145,7 +145,11 @@ internal static partial class Program
         private int errors;
 
         // a page: its source (relative to the book), file in the project, its place in the book (for labels)
-        private sealed record TypstPage(string Source, string FullPath, string File, int Index);
+        // Source: its place in the book's structure (a page beside its folder: in it, see BookPlaces); Relative: where it is
+        private sealed record TypstPage(string Source, string FullPath, string File, int Index)
+        {
+            public string Relative { get; init; } = Source;
+        }
 
         // a link to the web in the text: its number (the same address keeps its number), address, text (Typst markup and
         // plain) and the page where it stands first
@@ -158,16 +162,20 @@ internal static partial class Program
 
         public int Write(string output)
         {
-            List<string> sources = Directory.EnumerateFiles(root, "*.geo.md", SearchOption.AllDirectories)
+            var structure = new List<(string Page, string Message)>();
+            List<(string Page, string Place)> sources = InBookOrder(Directory.EnumerateFiles(root, "*.geo.md", SearchOption.AllDirectories)
                 .Select(file => Path.GetRelativePath(root, file).Replace('\\', '/'))
-                .Where(relative => !relative.Split('/').Any(part => part.StartsWith('_')))
-                .ToList();
-            sources.Sort(BookOrder.Instance);
+                .Where(relative => !relative.Split('/').Any(part => part.StartsWith('_'))), structure);
             var progress = new Progress(sources.Count);
             settings = BookFile.Read(root, progress.Warning, out string? bookError);
             if (bookError != null)
             {
                 progress.Error(bookError);
+            }
+            foreach ((string page, string message) in structure)
+            {
+                progress.Error($"{page}: {message}");
+                errors++;
             }
             if (sources.Count == 0)
             {
@@ -177,12 +185,13 @@ internal static partial class Program
             }
             style = new FigureStyle(settings.FigureUnit ?? FigureStyle.Default.PointsPerUnit, settings.FigureSize ?? FigureStyle.Default.SizeFactor);
             textSize = settings.TextSize ?? 11;
-            var book = sources.Select((source, i) => new TypstPage(source, Path.GetFullPath(Path.Combine(root, source)),
-                $"p{(i + 1).ToString("00", CultureInfo.InvariantCulture)}-{Path.GetFileNameWithoutExtension(PageName(source[..^".md".Length]))}.typ", i + 1)).ToList();
+            var book = sources.Select((source, i) => new TypstPage(source.Place, Path.GetFullPath(Path.Combine(root, source.Page)),
+                $"p{(i + 1).ToString("00", CultureInfo.InvariantCulture)}-{Path.GetFileNameWithoutExtension(PageName(source.Page[..^".md".Length]))}.typ", i + 1)
+                { Relative = source.Page }).ToList();
             var pages = new Dictionary<string, string>(StringComparer.Ordinal);
             foreach (TypstPage entry in book)
             {
-                progress.Step(entry.Source);
+                progress.Step(entry.Relative);
                 string text = File.ReadAllText(entry.FullPath);
                 Daemon.BookOfPage of = Daemon.ReadBook(entry.FullPath, text);
                 var bookMarks = new Dictionary<string, BookMark>(StringComparer.Ordinal);
@@ -193,14 +202,14 @@ internal static partial class Program
                 MarkdownPage page = MarkdownPage.Parse(text, entry.FullPath, Daemon.LoadScript, bookMarks, of.Numbering, of.KeywordLinks);
                 foreach (MarkdownProblem problem in page.Errors)
                 {
-                    progress.Error($"{entry.Source}:{problem.Line}:{problem.Column}: {problem.Message}");
+                    progress.Error($"{entry.Relative}:{problem.Line}:{problem.Column}: {problem.Message}");
                     errors++;
                 }
                 foreach (MarkdownProblem problem in page.Warnings.Concat(of.Warnings))
                 {
-                    progress.Warning($"{entry.Source}:{problem.Line}:{problem.Column}: {problem.Message}");
+                    progress.Warning($"{entry.Relative}:{problem.Line}:{problem.Column}: {problem.Message}");
                 }
-                string title = HtmlExporter.PlainText(page.Title ?? DisplayName(Path.GetFileName(entry.Source)[..^".geo.md".Length]));
+                string title = HtmlExporter.PlainText(page.Title ?? DisplayName(Path.GetFileName(entry.Relative)[..^".geo.md".Length]));
                 titles[entry.Source] = title;
                 pages[entry.File] = "#import \"../style.typ\": *\n\n" + Convert(page, entry, book, title, progress);
             }
@@ -503,7 +512,7 @@ internal static partial class Program
             }
             catch (FormatException e)
             {
-                context.Progress.Error($"{context.Page.Source}: {e.Message}");
+                context.Progress.Error($"{context.Page.Relative}: {e.Message}");
                 errors++;
                 return "#raw(" + String("$" + source + "$") + ")";
             }

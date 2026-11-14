@@ -290,6 +290,45 @@ public sealed class TypstTests : IDisposable
     }
 
     [Fact]
+    public void APageBesideItsFolderIsTheChaptersIntroduction()
+    {
+        Write("index.yaml", "title: Buch\n");
+        Write("10_Vorwort.geo.md", "# Vorwort\n\nText.\n");
+        Write("20_Geraden.geo.md", "# Geraden im Raum\n\nWorum es geht.\n");
+        string intro = Path.Combine(folder, "20_Geraden.geo.md");
+        Write("20_Geraden/10_Schnitt.geo.md", "# Schnitt\n\nText.\n");
+        string first = Path.Combine(folder, "20_Geraden/10_Schnitt.geo.md");
+        Write("30_Kreise/10_Kreis.geo.md", "# Kreis\n\nText.\n");
+
+        // its number is the chapter's, the chapter's pages after it
+        Assert.Equal("1", Daemon.ReadBook(intro, File.ReadAllText(intro)).Numbering.Section);
+        Assert.Equal("1.1", Daemon.ReadBook(first, File.ReadAllText(first)).Numbering.Section);
+        Assert.Equal(["20_Geraden.geo.md", "20_Geraden/10_Schnitt.geo.md"],
+            Program.InBookOrder(["20_Geraden/10_Schnitt.geo.md", "20_Geraden.geo.md"]).Select(p => p.Page));
+
+        // print: its heading is the chapter's (no heading from the folder's name); a chapter without one has that
+        string output = Path.Combine(folder, "out");
+        Assert.Equal(0, Program.Typst([folder, "-o", output]));
+        string main = File.ReadAllText(Path.Combine(output, "book.typ"));
+        Assert.DoesNotContain("[Geraden]", main);
+        Assert.Contains("#chapter(\"2\", [Kreise])", main);
+        Assert.True(main.IndexOf("p02-Geraden.typ", StringComparison.Ordinal) < main.IndexOf("p03-Schnitt.typ", StringComparison.Ordinal));
+        Assert.Contains("#chapter(\"1\", [Geraden im Raum]", File.ReadAllText(Path.Combine(output, "pages", "p02-Geraden.typ")));
+
+        // the book as one HTML file: in the contents the chapter with its title
+        Assert.Equal(0, Program.HtmlBook([folder, "-o", Path.Combine(folder, "buch.html")]));
+        string html = File.ReadAllText(Path.Combine(folder, "buch.html"));
+        Assert.Contains("<li class=\"contents-chapter\"><details><summary><a href=\"#p2\">1 Geraden im Raum</a></summary><ol>\n<li><a href=\"#p3\">1.1 Schnitt</a></li>", html);
+
+        // and an introduction "00_" in the folder too: an error on both
+        Write("20_Geraden/00_Einleitung.geo.md", "# Einleitung\n\nText.\n");
+        string second = Path.Combine(folder, "20_Geraden/00_Einleitung.geo.md");
+        Assert.Contains(Daemon.ReadBook(intro, File.ReadAllText(intro)).Errors, e => e.Message.Contains("has two introductions"));
+        Assert.Contains(Daemon.ReadBook(second, File.ReadAllText(second)).Errors, e => e.Message.Contains("has two introductions"));
+        Assert.Equal(1, Program.HtmlBook([folder, "-o", Path.Combine(folder, "buch.html")]));
+    }
+
+    [Fact]
     public void TheBookBecomesATypstProject()
     {
         Write("index.yaml", "title: Buch\nauthor: Thomas\n");

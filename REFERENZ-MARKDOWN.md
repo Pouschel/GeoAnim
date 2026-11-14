@@ -196,7 +196,7 @@ Durch zwei verschiedene Punkte verläuft **genau eine Gerade**.
 | Aussage | `::: axiom {#ax-gerade} …` | Axiom 2, Satz 2.14 |
 | Formel | `$$…$$ {#gl-pythagoras}` | (2.3) – „nach §gl-pythagoras“, „aus Ungleichung §gl-dreieck“ |
 | Seite | `# Abstandsaxiome {#abstandsaxiome}` (die `#`-Überschrift, der Seitentitel) | Abschnitt 2.1 |
-| Kapitel | `# Geraden und ihre Ordnung {#kap-geraden}` in der Kapiteleinführung (`00_….geo.md`) | Kapitel 2 |
+| Kapitel | `# Geraden und ihre Ordnung {#kap-geraden}` in der Kapiteleinführung (`00_….geo.md` oder neben dem Ordner) | Kapitel 2 |
 | Abschnitt in einer Seite | `## Die Gerade {#abschnitt-gerade}` | „Die Gerade“ (`##`, `###` … haben keine Nummern) |
 
 **Verweis** – `§name` irgendwo im Text: `Nach §ax-gerade ist die Gerade in §abb-gerade eindeutig.` → „Nach Axiom 2 ist
@@ -246,6 +246,9 @@ Einführung steht dort der Ordnername), ihr Text steht vor dem ersten Abschnitt,
 Seite danach bleibt 2.1. Eine Marke an ihrer Überschrift ergibt „Kapitel 2“. Ihre Aussagen und Abbildungen zählen im
 Kapitel vor denen von 2.1. Im Inhaltsverzeichnis (PDF, E-Book, HTML) steht das Kapitel mit ihrem Titel und führt zu ihr;
 im PDF beginnt das Kapitel mit ihr auf einer rechten Seite. Das gilt ebenso für einen Unterordner („2.3“, Verweis „Abschnitt 2.3“).
+Statt im Ordner kann die Einführung auch **neben ihm** liegen, mit genau seinem Namen: `20_Geraden.geo.md` neben
+`20_Geraden/` ist die Einführung von `20_Geraden/` – gleich wie `20_Geraden/00_….geo.md`; ihre Skripte und Bilder liegen
+neben ihr. Hat ein Kapitel beides, ist das ein Fehler („has two introductions“).
 
 **Zähler:** Jede nummerierte Art zählt entweder mit einem eigenen Zähler oder mit dem gemeinsamen. Ein Zähler gilt im
 ganzen Buch, in jedem Kapitel oder auf jeder Seite; im Kapitel steht die Kapitelnummer davor (Satz 2.14), auf der Seite

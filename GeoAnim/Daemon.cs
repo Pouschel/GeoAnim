@@ -345,7 +345,7 @@ internal static class Daemon
                 json.WriteEndObject();
             }
             json.WriteEndArray();
-            Problems("errors", page.Errors);
+            Problems("errors", page.Errors.Concat(book.Errors));
             Problems("warnings", page.Warnings.Concat(book.Warnings));
         });
     }
@@ -382,6 +382,9 @@ internal static class Daemon
     {
         // the keywords of the book's pages (not of its scripts), for the editor to find the place of one
         public List<(string File, PageKeywordDefinition Keyword)> Definitions { get; } = [];
+
+        // errors of the book's structure that concern the page (a chapter with two introductions)
+        public List<MarkdownProblem> Errors { get; } = [];
 
         // where the marks of the book are used (the page itself as in the editor)
         public IReadOnlyDictionary<string, IReadOnlyList<MarkUse>> UsedIn { get; init; } = new Dictionary<string, IReadOnlyList<MarkUse>>();
@@ -439,10 +442,14 @@ internal static class Daemon
         {
             files.Add(own);
         }
-        files.Sort(Program.BookOrder.Instance);
+        // in book order by their places (a page beside a folder of the same name is its introduction)
+        var structure = new List<(string Page, string Message)>();
+        Dictionary<string, string> places = Program.BookPlaces(files, structure);
+        string PlaceOf(string relative) => places.GetValueOrDefault(relative, relative);
+        files = files.OrderBy(PlaceOf, Program.BookOrder.Instance).ToList();
         MarksOfPage ownMarks = MarkdownPage.ReadMarks(text, numbering);
         // the numbers of the chapters and pages; the counts of the pages before, through the book and in the chapter
-        Dictionary<string, string> numbers = BookNumbers(files.Where(f => f.EndsWith(".geo.md", StringComparison.OrdinalIgnoreCase)));
+        Dictionary<string, string> numbers = BookNumbers(files.Where(f => f.EndsWith(".geo.md", StringComparison.OrdinalIgnoreCase)).Select(PlaceOf));
         var bookCounts = new Dictionary<string, int>(StringComparer.Ordinal);
         var chapterCounts = new Dictionary<string, int>(StringComparer.Ordinal);
         string? chapter = null;
@@ -480,7 +487,7 @@ internal static class Daemon
             {
                 continue;
             }
-            PageNumbering pageNumbering = NumberingOf(relative);
+            PageNumbering pageNumbering = NumberingOf(PlaceOf(relative));
             readPages.Add((file, read, pageNumbering, read.Title ?? Program.DisplayName(Path.GetFileName(file)[..^".geo.md".Length])));
             foreach (PageMark mark in read.Marks)
             {
@@ -514,6 +521,7 @@ internal static class Daemon
             .ToDictionary(k => k.Key, k => k.Value.Link, StringComparer.Ordinal);
         var book = new BookOfPage(marks, ownNumbering, links, warnings) { UsedIn = MarkdownPage.BookUses(readPages, allMarks) };
         book.Definitions.AddRange(definitions);
+        book.Errors.AddRange(structure.Where(e => string.Equals(e.Page, own, StringComparison.OrdinalIgnoreCase)).Select(e => new MarkdownProblem(1, 1, e.Message)));
         return book;
 
         // the numbers of a page: its section and chapter, the counts before it (a new chapter starts its counters again)
