@@ -6,6 +6,9 @@ internal static class Layers
     /// <summary>An object with "back": below everything (also below the fills of polygons and angles).</summary>
     public const int Back = 0;
 
+    /// <summary>Half-planes: below the fills of polygons and angles (they cover much of the picture).</summary>
+    public const int HalfPlane = 5;
+
     public const int Polygon = 10;
     public const int Curve = 20;
     public const int Point = 30;

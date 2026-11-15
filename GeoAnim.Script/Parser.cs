@@ -9,7 +9,7 @@ internal sealed partial class Parser
     internal static readonly HashSet<string> Keywords = new(StringComparer.Ordinal)
     {
         "title", "description", "info", "keyword", "view", "background", "grid", "axes", "speed", "print", "var", "default", "include", "input", "output", "use",
-        "draw", "steps", "copy", "set", "step", "textstep", "point", "segment", "line", "ray", "circle", "ellipse", "arc", "sector", "polygon", "angle",
+        "draw", "steps", "copy", "set", "step", "textstep", "point", "segment", "line", "ray", "circle", "ellipse", "arc", "sector", "polygon", "halfplane", "angle",
         "text", "number", "length", "degrees", "area", "perimeter", "show", "hide", "all", "highlight", "unhighlight", "keep", "move", "rotate", "reflect", "along", "around", "across", "in", "by", "pause", "together", "end", "midpoint", "intersect", "parallel", "perpendicular", "center", "through",
         "radius", "at", "from", "to", "on", "x", "y", "below", "gap", "align", "left", "right",
         "duration", "color", "width", "fill", "opacity", "size", "labelsize", "labelpos", "labeldir", "labelgap", "label", "nolabel", "hidden", "invisible", "offset", "shift",
@@ -25,7 +25,7 @@ internal sealed partial class Parser
     /// <summary>The kinds a "default" can name.</summary>
     private static readonly HashSet<string> DefaultKinds = new(StringComparer.Ordinal)
     {
-        "point", "segment", "line", "ray", "circle", "ellipse", "arc", "sector", "polygon", "angle", "text", "show", "hide", "highlight", "unhighlight", "move", "rotate", "reflect",
+        "point", "segment", "line", "ray", "circle", "ellipse", "arc", "sector", "polygon", "halfplane", "angle", "text", "show", "hide", "highlight", "unhighlight", "move", "rotate", "reflect",
     };
 
     private readonly List<Token> tokens;
@@ -265,6 +265,7 @@ internal sealed partial class Parser
                         "ellipse" => ParseEllipse(Next()),
                         "arc" or "sector" => ParseArc(Next()),
                         "polygon" => ParsePolygon(Next()),
+                        "halfplane" => ParseHalfPlane(Next()),
                         "angle" => ParseAngle(Next()),
                         "text" => ParseText(Next()),
                         _ => null,
@@ -329,6 +330,9 @@ internal sealed partial class Parser
                 break;
             case "polygon":
                 statement = ParsePolygon(word);
+                break;
+            case "halfplane":
+                statement = ParseHalfPlane(word);
                 break;
             case "arc":
             case "sector":
@@ -737,6 +741,25 @@ internal sealed partial class Parser
             throw Error(Current, "A polygon needs at least 3 points.");
         }
         return new DefineStatement(word.Line, word.Column, "polygon", [name], new PolygonDefinition(vertices), ParseOptions());
+    }
+
+    // "halfplane H = g side P", "halfplane H = g opposite P"
+    private DefineStatement ParseHalfPlane(Token word)
+    {
+        NameRef name = ExpectNewName();
+        ExpectSymbol("=");
+        if (TryParseUse() is { } use)
+        {
+            return new DefineStatement(word.Line, word.Column, "halfplane", [name], use, ParseOptions());
+        }
+        NameRef line = ExpectName();
+        bool opposite = Current.Is("opposite");
+        if (!opposite && !Current.Is("side"))
+        {
+            throw Error(Current, $"Expected \"side <point>\" (the side of {line.Name} with the point) or \"opposite <point>\" (the other side), not {Current.Describe()}.");
+        }
+        position++;
+        return new DefineStatement(word.Line, word.Column, "halfplane", [name], new HalfPlaneDefinition(line, ExpectName(), opposite), ParseOptions());
     }
 
     // "arc b = k from A to B", "sector s = k from A to B"

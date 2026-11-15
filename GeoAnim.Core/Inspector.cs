@@ -158,13 +158,14 @@ internal sealed class Inspector
             GeoAngle angle => $"Scheitel {Position(angle.Vertex)}, {F(angle.Degrees)}°",
             GeoArc arc => $"von {End(arc.Clockwise ? arc.To : arc.From)} bis {End(arc.Clockwise ? arc.From : arc.To)}{(arc.Clockwise ? " im Uhrzeigersinn" : "")}, {F(arc.Degrees)}°, " + (arc.IsSector ? $"Fläche {F(arc.Area)}" : $"Länge {F(arc.Length)}"),
             GeoPolygon polygon => "Ecken " + string.Join(", ", polygon.Vertices.Select(Position)),
+            GeoHalfPlane half => $"Seite von {half.Line.Name}, auf der {half.Point.Name} {(half.Opposite ? "nicht " : "")}liegt",
             GeoNumber number => "Wert " + F(number.Value),
             GeoText text => "„" + text.Content + "“",
             _ => "",
         };
         if (!item.IsDefined)
         {
-            values = item is GeoPoint or GeoStraight or GeoCircle or GeoEllipse or GeoArc or GeoAngle or GeoPolygon ? "existiert hier nicht (zuletzt " + values + ")" : "existiert hier nicht";
+            values = item is GeoPoint or GeoStraight or GeoCircle or GeoEllipse or GeoArc or GeoAngle or GeoPolygon or GeoHalfPlane ? "existiert hier nicht (zuletzt " + values + ")" : "existiert hier nicht";
         }
         var notes = new List<string>();
         if (item is not GeoNumber)

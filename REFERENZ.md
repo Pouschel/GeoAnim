@@ -9,7 +9,7 @@ Alle Befehle mit allen Schreibweisen und den Optionen, die jeweils erlaubt sind.
 - [Grundregeln](#grundregeln)
 - [Einstellungen](#einstellungen): `title`, `description`, `view`, `background`, `grid`, `axes`, `speed`, `keyword`
 - [Texte, Vars, Voreinstellungen](#texte-vars-voreinstellungen): `set`, `var`, `default`
-- [Objekte](#objekte): `point`, `segment`, `line`, `ray`, `circle`, `ellipse`, `arc`, `sector`, `polygon`, `angle`, `text`
+- [Objekte](#objekte): `point`, `segment`, `line`, `ray`, `circle`, `ellipse`, `arc`, `sector`, `polygon`, `halfplane`, `angle`, `text`
 - [Zahlen](#zahlen): `number`
 - [Schritte und Aktionen](#schritte-und-aktionen): `step`, `textstep`, `info`, `show`, `hide`, `highlight`, `unhighlight`, `move`, `rotate`, `reflect`, `pause`, `together`
 - [Dateien](#dateien): `include`, `use`, `input`, `output`
@@ -130,6 +130,23 @@ Ist die Summe kleiner als der Abstand von F und G, gibt es die Ellipse nicht: be
 | `polygon D = use datei A B …` | Ergebnis einer anderen Datei |
 
 **Optionen:** `color` `width` `fill` `opacity`, *Zeichnen*.
+
+### `halfplane` – Halbebene
+
+| Schreibweise | Halbebene |
+|---|---|
+| `halfplane H = g side P` | die Seite von g, auf der P liegt (g: Gerade, Strecke oder Strahl – dann seine Gerade) |
+| `halfplane H = g opposite P` | die andere Seite |
+| `halfplane H = use datei A B …` | Ergebnis einer anderen Datei |
+
+Eine gefüllte Fläche bis zum Bildrand, unter den Füllungen von Vielecken und Winkeln; überlappende Halbebenen mischen
+ihre Farben. Ihr Rand wird nicht gezeichnet – dafür die Gerade (oder ein Strahl, eine Strecke) selbst, mit eigener Farbe
+und Stärke. Sie wächst beim Zeichnen von der Geraden aus bis zum Bildrand. Zieht P über g, wechselt sie die Seite; liegt P
+auf g, gibt es sie nicht. Für den Ausschnitt im Druck zählt sie nicht (wie Geraden): Das Bild wird auf die übrigen
+Objekte zugeschnitten, die Halbebene daran abgeschnitten. `side` und `opposite` gelten nur hier, sie können sonst Namen
+sein.
+
+**Optionen:** `fill` (Standard: schwarz, also grau) `opacity` (Standard 0,2), `back` `front`, *Zeichnen*.
 
 ### `arc`, `sector` – Kreisbogen, Kreissektor
 
@@ -277,6 +294,6 @@ Aktionen stehen in einem Schritt und laufen nacheinander. Die Optionen *Ablauf* 
 
 ## Schlüsselwörter
 
-Diese Wörter können keine Namen sein (`foci` und `sum` der Ellipse dagegen schon, sie gelten nur dort):
+Diese Wörter können keine Namen sein (`foci` und `sum` der Ellipse, `side` und `opposite` der Halbebene dagegen schon, sie gelten nur dort):
 
-`title` `description` `info` `keyword` `view` `background` `grid` `axes` `speed` `var` `default` `include` `input` `output` `use` `draw` `steps` `copy` `set` `step` `textstep` `point` `segment` `line` `ray` `circle` `ellipse` `arc` `sector` `polygon` `angle` `text` `number` `length` `degrees` `area` `perimeter` `show` `hide` `all` `highlight` `unhighlight` `keep` `move` `rotate` `reflect` `along` `around` `across` `in` `by` `pause` `together` `end` `midpoint` `intersect` `parallel` `perpendicular` `center` `through` `radius` `at` `from` `to` `on` `x` `y` `below` `gap` `align` `left` `right` `duration` `color` `width` `fill` `opacity` `size` `labelsize` `labelpos` `labeldir` `labelgap` `label` `nolabel` `hidden` `invisible` `offset` `shift` `arrow` `start` `both` `straight` `back` `front` `halo` `clockwise` `linear` `ease` `easein` `easeout` `easeinout`
+`title` `description` `info` `keyword` `view` `background` `grid` `axes` `speed` `var` `default` `include` `input` `output` `use` `draw` `steps` `copy` `set` `step` `textstep` `point` `segment` `line` `ray` `circle` `ellipse` `arc` `sector` `polygon` `halfplane` `angle` `text` `number` `length` `degrees` `area` `perimeter` `show` `hide` `all` `highlight` `unhighlight` `keep` `move` `rotate` `reflect` `along` `around` `across` `in` `by` `pause` `together` `end` `midpoint` `intersect` `parallel` `perpendicular` `center` `through` `radius` `at` `from` `to` `on` `x` `y` `below` `gap` `align` `left` `right` `duration` `color` `width` `fill` `opacity` `size` `labelsize` `labelpos` `labeldir` `labelgap` `label` `nolabel` `hidden` `invisible` `offset` `shift` `arrow` `start` `both` `straight` `back` `front` `halo` `clockwise` `linear` `ease` `easein` `easeout` `easeinout`

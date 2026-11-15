@@ -13,7 +13,7 @@ internal sealed class Primitive(int id, string type, int layer)
 
     public int Id { get; } = id;
 
-    /// <summary>"dot", "line", "arc", "polygon" or "text".</summary>
+    /// <summary>"dot", "line", "arc", "polygon", "halfplane", "text" ….</summary>
     public string Type { get; } = type;
 
     /// <summary>Drawing order: higher layers are drawn on top.</summary>

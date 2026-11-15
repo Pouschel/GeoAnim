@@ -213,6 +213,9 @@ public static partial class FigureRenderer
                     case "polygon":
                         DrawPolygon(values, counts);
                         break;
+                    case "halfplane":
+                        DrawHalfPlane(values);
+                        break;
                     case "angle":
                         DrawAngle(values, counts);
                         break;
@@ -553,6 +556,66 @@ public static partial class FigureRenderer
             items.Append("<path d=\"").Append(d).Append("\" fill=\"").Append(Text(v, "fill") ?? "none").Append("\" fill-opacity=\"").Append(N(Number(v, "fillOpacity", 0)))
                 .Append("\" stroke=\"").Append(Text(v, "color")).Append("\" stroke-width=\"").Append(N(width)).Append("\" stroke-linejoin=\"round\"/>");
             CountPath(d.ToString(), width, counts);
+        }
+
+        // a half-plane as the player draws it: in the script's view (the picture's cut takes off the rest); it never counts
+        // for the content
+        private void DrawHalfPlane(Dictionary<string, object> v)
+        {
+            List<(double X, double Y)> corners = HalfPlaneIn(Number(v, "x"), Number(v, "y"), Number(v, "nx"), Number(v, "ny"), Number(v, "reach"), scriptView);
+            if (corners.Count < 3)
+            {
+                return;
+            }
+            var d = new StringBuilder();
+            for (int i = 0; i < corners.Count; i++)
+            {
+                d.Append(i == 0 ? 'M' : 'L').Append(N(ToX(corners[i].X))).Append(' ').Append(N(ToY(corners[i].Y)));
+            }
+            d.Append('Z');
+            items.Append("<path d=\"").Append(d).Append("\" fill=\"").Append(Text(v, "fill") ?? "none").Append("\" fill-opacity=\"")
+                .Append(N(Number(v, "fillOpacity", 0))).Append("\"/>");
+        }
+
+        // the corners of the part of the view on the side of the line through (x, y) with the normal (nx, ny) into it, as far
+        // as "reach" of the way to the farthest corner (as player.js's halfPlaneIn)
+        private static List<(double X, double Y)> HalfPlaneIn(double x, double y, double nx, double ny, double reach, View view)
+        {
+            double length = Math.Sqrt(nx * nx + ny * ny);
+            if (!(length > 1e-9) || !(reach > 0))
+            {
+                return [];
+            }
+            nx /= length;
+            ny /= length;
+            double Distance((double X, double Y) p) => (p.X - x) * nx + (p.Y - y) * ny;
+            List<(double X, double Y)> polygon = [(view.XMin, view.YMin), (view.XMax, view.YMin), (view.XMax, view.YMax), (view.XMin, view.YMax)];
+            double farthest = polygon.Max(Distance);
+            if (!(farthest > 0))
+            {
+                return [];
+            }
+            double limit = Math.Min(reach, 1) * farthest;
+            static List<(double X, double Y)> Clip(List<(double X, double Y)> points, Func<(double X, double Y), double> f)
+            {
+                var result = new List<(double X, double Y)>();
+                for (int i = 0; i < points.Count; i++)
+                {
+                    (double X, double Y) a = points[i], b = points[(i + 1) % points.Count];
+                    double fa = f(a), fb = f(b);
+                    if (fa >= 0)
+                    {
+                        result.Add(a);
+                    }
+                    if ((fa >= 0) != (fb >= 0))
+                    {
+                        double u = fa / (fa - fb);
+                        result.Add((a.X + (b.X - a.X) * u, a.Y + (b.Y - a.Y) * u));
+                    }
+                }
+                return result;
+            }
+            return Clip(Clip(polygon, Distance), p => limit - Distance(p));
         }
 
         // ------------------------------------------------------------------ angles

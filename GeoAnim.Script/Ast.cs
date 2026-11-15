@@ -164,6 +164,9 @@ internal sealed record ParallelDefinition(NameRef Straight, NameRef Through, boo
 
 internal sealed record PolygonDefinition(IReadOnlyList<NameRef> Vertices) : Definition;
 
+/// <summary>"halfplane H = g side P" (the side of g with P) or "g opposite P" (the other side).</summary>
+internal sealed record HalfPlaneDefinition(NameRef Line, NameRef Point, bool Opposite) : Definition;
+
 /// <summary>"angle w = A B C": at B, counterclockwise from BA to BC.</summary>
 internal sealed record AngleDefinition(NameRef A, NameRef Vertex, NameRef C) : Definition;
 

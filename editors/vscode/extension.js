@@ -936,6 +936,7 @@ const SYMBOL_KINDS = {
   arc: vscode.SymbolKind.Struct,
   sector: vscode.SymbolKind.Struct,
   polygon: vscode.SymbolKind.Class,
+  halfplane: vscode.SymbolKind.Class,
   angle: vscode.SymbolKind.Enum,
   text: vscode.SymbolKind.String,
   set: vscode.SymbolKind.String,

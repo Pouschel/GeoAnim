@@ -167,6 +167,44 @@
     return fromCentre && !full ? `M ${toX(v.cx)} ${toY(v.cy)} L ${d.slice(2)} Z` : full && fromCentre ? d + ' Z' : d
   }
 
+  // the corners of the part of a rectangle (xmin … ymax) on the side of a line where 0 <= distance <= reach · the farthest
+  // (the line through x, y with the normal nx, ny); [] if none
+  function halfPlaneIn (v, view) {
+    const length = Math.hypot(v.nx, v.ny)
+    if (!(length > 1e-9) || !(v.reach > 0)) {
+      return []
+    }
+    const nx = v.nx / length
+    const ny = v.ny / length
+    const distance = ([x, y]) => (x - v.x) * nx + (y - v.y) * ny
+    let polygon = [[view.xmin, view.ymin], [view.xmax, view.ymin], [view.xmax, view.ymax], [view.xmin, view.ymax]]
+    const farthest = Math.max(...polygon.map(distance))
+    if (!(farthest > 0)) {
+      return []
+    }
+    const limit = Math.min(v.reach, 1) * farthest
+    // keep the part where f(p) >= 0 (Sutherland–Hodgman)
+    const clip = (points, f) => {
+      const result = []
+      for (let i = 0; i < points.length; i++) {
+        const a = points[i]
+        const b = points[(i + 1) % points.length]
+        const fa = f(a)
+        const fb = f(b)
+        if (fa >= 0) {
+          result.push(a)
+        }
+        if ((fa >= 0) !== (fb >= 0)) {
+          const u = fa / (fa - fb)
+          result.push([a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u])
+        }
+      }
+      return result
+    }
+    polygon = clip(polygon, distance)
+    return clip(polygon, p => limit - distance(p))
+  }
+
   const RENDERERS = {
     ellipse (element, v) {
       element.setAttribute('d', ellipsePath(v, false))
@@ -307,6 +345,15 @@
         d = `M ${cx} ${cy} L ${arc.slice(1)} Z`
       }
       element.setAttribute('d', d)
+      element.setAttribute('stroke', 'none')
+      element.setAttribute('fill', v.fill)
+      element.setAttribute('fill-opacity', v.fillOpacity)
+    },
+    // the half-plane in the view: from the line (through x, y; normal nx, ny into it) as far as "reach" of the way to
+    // its farthest corner
+    halfplane (element, v) {
+      const points = halfPlaneIn(v, animation.view).map(([x, y]) => toX(x) + ',' + toY(y))
+      element.setAttribute('points', points.join(' '))
       element.setAttribute('stroke', 'none')
       element.setAttribute('fill', v.fill)
       element.setAttribute('fill-opacity', v.fillOpacity)
@@ -485,7 +532,7 @@
     element[name].setAttribute('fill', color)
   }
 
-  const TAGS = { dot: 'circle', line: 'g', arc: 'path', disc: 'path', ellipse: 'path', ellipsedisc: 'path', part: 'g', polygon: 'polygon', text: 'g', angle: 'g' }
+  const TAGS = { dot: 'circle', line: 'g', arc: 'path', disc: 'path', ellipse: 'path', ellipsedisc: 'path', part: 'g', polygon: 'polygon', halfplane: 'polygon', text: 'g', angle: 'g' }
 
   // ------------------------------------------------------------------ angles
 

@@ -591,6 +591,7 @@ public static class ScriptCompiler
         {
             "point" => ["color", "size", "labelsize", "labeldir", "labelgap", "label", "offset", "shift", "stacking", "halo", "draw"],
             "polygon" => ["color", "width", "fill", "opacity", "stacking", "draw"],
+            "halfplane" => ["fill", "opacity", "stacking", "draw"],
             "text" => ["color", "size", "offset", "shift", "align", "labeldir", "labelgap", "stacking", "halo", "draw"],
             "segment" or "ray" => ["color", "width", "label", "labelsize", "labelpos", "offset", "shift", "arrow", "stacking", "halo", "draw"],
             "line" => ["color", "width", "label", "labelsize", "labelpos", "offset", "shift", "stacking", "halo", "draw"],
@@ -781,6 +782,11 @@ public static class ScriptCompiler
                     break;
                 case PolygonDefinition d:
                     created = c.Polygon(name0, d.Vertices.Select(ResolvePoint).ToList(), options);
+                    break;
+                case HalfPlaneDefinition d:
+                    created = c.HalfPlane(name0, Resolve(d.Line) as GeoStraight
+                        ?? throw new ScriptError(d.Line.Line, d.Line.Column, $"{d.Line.Name} is a {Resolve(d.Line).Kind}, not a line (or segment or ray)."),
+                        ResolvePoint(d.Point), d.Opposite, options);
                     break;
                 case TextDefinition d when d.Above != null:
                     created = c.Text(name0, d.Content, Resolve(d.Above) as GeoText

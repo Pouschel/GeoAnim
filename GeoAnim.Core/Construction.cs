@@ -336,6 +336,10 @@ public sealed class Construction
     public GeoPolygon Polygon(string name, IReadOnlyList<GeoPoint> vertices, Options? options = null) =>
         Define(new GeoPolygon(name, vertices, options ?? Options.None));
 
+    /// <summary>The half-plane of the line (of a segment or ray: its line) on the side of a point, or with <paramref name="opposite"/> on the other side.</summary>
+    public GeoHalfPlane HalfPlane(string name, GeoStraight line, GeoPoint point, bool opposite = false, Options? options = null) =>
+        Define(new GeoHalfPlane(name, line, point, opposite, options ?? Options.None));
+
     public GeoText Text(string name, string content, double x, double y, Options? options = null) =>
         Define(new GeoText(name, CheckText(content), new Vec(x, y), options ?? Options.None));
 
