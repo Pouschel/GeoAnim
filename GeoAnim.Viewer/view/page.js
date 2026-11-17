@@ -342,6 +342,36 @@
     return element
   }
 
+  // a test or worksheet: the group and the students' sheet or the solutions (the editor makes it anew)
+  const groupSelect = document.getElementById('group')
+  const solutionButton = document.getElementById('solution')
+  let sheetSolution = true
+  function sendVariant () {
+    if (host) {
+      host.postMessage({ type: 'variant', group: groupSelect.value || null, solution: sheetSolution })
+    }
+  }
+  groupSelect.addEventListener('change', sendVariant)
+  solutionButton.addEventListener('click', () => {
+    sheetSolution = !sheetSolution
+    sendVariant()
+  })
+  function showSheet (message) {
+    const groups = message.sheet ? (message.groups || []) : []
+    groupSelect.hidden = groups.length === 0
+    if (groupSelect.dataset.groups !== groups.join('|')) {
+      groupSelect.dataset.groups = groups.join('|')
+      groupSelect.replaceChildren(...groups.map(g => Object.assign(document.createElement('option'), { value: g, textContent: 'Gruppe ' + g })))
+    }
+    if (message.group) {
+      groupSelect.value = message.group
+    }
+    sheetSolution = message.solution !== false
+    solutionButton.hidden = !message.sheet
+    solutionButton.textContent = sheetSolution ? 'Lösung' : 'Schüler'
+    solutionButton.title = sheetSolution ? 'Mit den Lösungen; klicken: das Blatt der Schüler' : 'Das Blatt der Schüler; klicken: mit den Lösungen'
+  }
+
   // a test or worksheet: its sheets exported (by the editor)
   const exportButton = document.getElementById('export')
   exportButton.addEventListener('click', () => {
@@ -404,6 +434,7 @@
       }
     } else if (message.type === 'page') {
       exportButton.hidden = !message.sheet
+      showSheet(message)
       figures = message.figures || {}
       if (message.html !== null && message.html !== undefined) {
         show(message.html)

@@ -106,4 +106,89 @@ public sealed class SheetTests : IDisposable
         File.WriteAllText(file, "# Seite\n\nText.\n");
         Assert.Equal(1, Program.Sheet([file]));
     }
+
+    private const string Random = """
+        ---
+        type: test
+        groups: [A, B, C, D]
+        seed: 482
+        ---
+
+        ::: let
+        n = random 3..6
+        z = random 9..63 except 32
+        k = 2^n - random(1, 3)
+        planeten = Merkur, Venus, Erde, Mars, Jupiter
+        p = pick 3 from planeten
+        mond = alt Phobos | Io
+        :::
+
+        {{n}} Byte sind [[{{8*n}}]] Bit; ({{bin(z)}})₂ = [[{{z}}]]; {{k}} < 2^{{n}}.
+
+        Ordne: {{shuffle(p)}} [[{{p}}]]
+
+        Ein Mond {{alt: des Mars | des Jupiter | des Saturn}}: [[{{mond}}]]
+
+        ::: pick 3
+        + richtig 1
+        + richtig 2
+        + richtig 3
+        - falsch 1
+        - falsch 2
+        :::
+        """;
+
+    // the text of a sheet without its markup (blanks with solutions as [[…]])
+    private static string Text(string html) => System.Text.RegularExpressions.Regex.Replace(
+        System.Text.RegularExpressions.Regex.Replace(html, "<span class=\"blank blank-solution\"[^>]*>(.*?)</span>", "[[$1]]"), "<[^>]+>", "");
+
+    [Fact]
+    public void GroupsHaveTheirOwnValuesTheSameOnBothSheets()
+    {
+        string Sheet(string group, bool solution) => Text(MarkdownPage.Parse(Random, variant: new SheetVariant(group, solution)).Html);
+        Assert.Empty(MarkdownPage.Parse(Random).Errors);
+        var match = System.Text.RegularExpressions.Regex.Match(Sheet("A", true), @"(\d) Byte sind \[\[(\d+)\]\] Bit; \((\d+)\)₂ = \[\[(\d+)\]\]; (\d+) &lt; 2\^(\d)");
+        Assert.True(match.Success, Sheet("A", true));
+        int n = int.Parse(match.Groups[1].Value);
+        Assert.InRange(n, 3, 6);
+        Assert.Equal(8 * n, int.Parse(match.Groups[2].Value));
+        Assert.Equal(System.Convert.ToInt32(match.Groups[3].Value, 2), int.Parse(match.Groups[4].Value));
+        Assert.NotEqual(32, int.Parse(match.Groups[4].Value));
+        Assert.InRange((1 << n) - int.Parse(match.Groups[5].Value), 1, 3);
+        // the students' sheet has the same values (only the solutions missing); again the same
+        Assert.Contains($"{n} Byte sind  Bit; ({match.Groups[3].Value})₂ =", Sheet("A", false));
+        Assert.Equal(Sheet("A", true), Sheet("A", true));
+        // the groups differ (one of them at least)
+        Assert.True(new[] { "B", "C", "D" }.Any(g => Sheet(g, true) != Sheet("A", true)));
+        // alternatives by group, from the start again when there are fewer
+        Assert.Contains("Ein Mond des Mars: [[Phobos]]", Sheet("A", true));
+        Assert.Contains("Ein Mond des Jupiter: [[Io]]", Sheet("B", true));
+        Assert.Contains("Ein Mond des Saturn: [[Phobos]]", Sheet("C", true));
+        Assert.Contains("Ein Mond des Mars: [[Io]]", Sheet("D", true));
+        // picked in the order of the list as the solution, shown mixed
+        var order = System.Text.RegularExpressions.Regex.Match(Sheet("A", true), @"Ordne: ([^\[]+) \[\[([^\]]+)\]\]");
+        string[] shown = order.Groups[1].Value.Split(", "), solution = order.Groups[2].Value.Split(", ");
+        Assert.Equal(3, solution.Length);
+        Assert.Equal(solution.OrderBy(p => Array.IndexOf(new[] { "Merkur", "Venus", "Erde", "Mars", "Jupiter" }, p)), solution);
+        Assert.Equal(solution.Order(), shown.Order());
+        // true or false: 3 of them, at least one of each, the answer as a blank
+        foreach (string group in new[] { "A", "B", "C", "D" })
+        {
+            string sheet = Sheet(group, true);
+            int right = System.Text.RegularExpressions.Regex.Matches(sheet, @"richtig \d \[\[wahr\]\]").Count;
+            int wrong = System.Text.RegularExpressions.Regex.Matches(sheet, @"falsch \d \[\[falsch\]\]").Count;
+            Assert.Equal(3, right + wrong);
+            Assert.True(right >= 1 && wrong >= 1);
+        }
+    }
+
+    [Fact]
+    public void MistakesInTheGroupsValuesAreErrorsWithTheirLines()
+    {
+        MarkdownPage page = MarkdownPage.Parse("---\ntype: test\n---\n\n::: let\nx = 2^q + 1\nquatsch\n:::\n\n{{x}} und {{sol 3}}\n\n::: pick 9\n+ a\n:::\n");
+        Assert.Contains(page.Errors, e => e.Line == 6 && e.Message.Contains("no value \"q\""));
+        Assert.Contains(page.Errors, e => e.Line == 7 && e.Message.Contains("name = …"));
+        Assert.Contains(page.Errors, e => e.Line == 10 && e.Message.Contains("[[sol: …]]"));
+        Assert.Contains(page.Errors, e => e.Line == 12 && e.Message.Contains("only 1 lines"));
+    }
 }

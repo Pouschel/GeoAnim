@@ -395,8 +395,8 @@ Nenne einen Marsmond: [[Phobos]]
 | `\points` | „___ / 22 Punkte   Note: ___“ und der Notenspiegel: ab wie vielen Punkten welche Note (1 ab 96 %, 2 ab 80 %, 3 ab 60 %, 4 ab 40 %, 5 ab 20 % der Summe, aufgerundet; ohne Zusatzaufgaben) | ebenso |
 | `\points +` | ebenso mit Plusnoten (1+ ab 97 %, 1 ab 94 %, 2+ ab 90 %, 2 ab 80 %, 3+ ab 75 %, 3 ab 60 %, 4 ab 40 %, 5 ab 20 %) | ebenso |
 
-Das Schülerblatt enthält keine Lösung, auch nicht versteckt. Die Vorschau in VS Code zeigt die Lösung der ersten
-Gruppe; ihr Knopf **Export** (oben rechts) speichert die Datei und schreibt Blätter und Lösung als HTML und PDF neben
+Das Schülerblatt enthält keine Lösung, auch nicht versteckt. Die Vorschau in VS Code zeigt zuerst die Lösung der
+ersten Gruppe (oben rechts umschaltbar: Gruppe, Lösung/Schüler); ihr Knopf **Export** (oben rechts) speichert die Datei und schreibt Blätter und Lösung als HTML und PDF neben
 sie. Die Schrift ist 12 pt mit weitem Zeilenabstand, die Linien sind so breit, wie man von Hand schreibt (eine Linie je
 Zeichen der Antwort und 3em dazu, mindestens 5em).
 
@@ -406,7 +406,53 @@ ganze Breite des Fensters und wächst mit ihm – für die Tafel; gedruckt wird 
 `lek-Lsg.pdf` über ein Typst-Projekt (`lek-typst`, Vorlage `sheet` in `standard.typ`; eine `style.typ` neben der Datei
 ändert das Aussehen).
 
-`seed` im Kopf ist für die Zufallszahlen der Gruppen vorgesehen (kommt noch).
+### Gruppen und Zufall
+
+Jede Gruppe hat ihren eigenen Zufall: aus `seed` im Kopf (ohne: 1) und der Gruppe. Dieselbe Gruppe bekommt immer
+dieselben Werte – auf dem Schülerblatt und in der Lösung; ein anderer `seed` gibt neue Blätter.
+
+```markdown
+::: let
+n = random 3..6                     # ganze Zahl von … bis
+z = random 9..63 except n, 32       # ohne diese
+x = random 0.5..3 step 0.5          # in Schritten
+k = 2^n - random(1, 3)              # rechnen; random(a, b) auch in Ausdrücken
+planeten = Merkur, Venus, Erde, Mars, Jupiter
+p = pick 3 from planeten            # 3 davon, in der Reihenfolge der Liste
+mond = alt Phobos | Io | Titan      # je Gruppe eine
+:::
+
+{{n}} Byte sind [[{{8*n}}]] Bit.  ({{bin(z)}})₂ = [[{{z}}]]
+Ordne nach dem Abstand: {{shuffle(p)}} [[{{p}}]]
+Nenne einen Mond {{alt: des Mars | des Jupiter | des Saturn}}: [[{{mond}}]]
+
+::: pick 3
++ Ein Bit kann genau zwei Zustände darstellen.
+- Ein Bit besteht immer aus acht Nullen und Einsen.
+- Ein Bit und ein Byte sind dasselbe.
++ …
+:::
+```
+
+| Schreibweise | Bedeutung |
+|---|---|
+| `::: let` … `:::` | Werte, von oben nach unten; je Zeile `name = …` (`#` Kommentar) |
+| `random a..b` | eine ganze Zahl von a bis b (beide dabei); `step 0.5` in Schritten, `except …` ohne diese |
+| `pick 3 from liste` | 3 aus der Liste, in deren Reihenfolge (die Lösung einer Ordnungsaufgabe); gemischt zeigen: `shuffle(…)` |
+| `shuffle liste` | die Liste gemischt (wo möglich anders als vorher) |
+| `alt A \| B \| C` | Gruppe 1 die erste, Gruppe 2 die zweite …; gibt es weniger als Gruppen, wieder von vorn |
+| `a, b, c` | eine Liste (Zahlen, Ausdrücke oder Wörter) |
+| `{{…}}` im Text | der Wert eines Ausdrucks – auch in Formeln, Lücken und Aufgabentiteln; Zahlen deutsch (2,5) |
+| `{{alt: A \| B \| C}}` | die Alternative der Gruppe, direkt im Text |
+| `::: pick 3` … `:::` | 3 der Zeilen zufällig, gemischt, als Liste; `+ …`/`- …`: wahre und falsche Aussagen, mindestens eine von jeder Art, dahinter die Lücke mit „wahr“/„falsch“ (`::: pick 3 wf`: „w“/„f“) |
+
+Ausdrücke: Zahlen, `"Text"`, Namen aus `let`, `+ - * / % ^`, Klammern, `liste[1]` (ab 1) und die Funktionen
+`random(a, b)`, `bin(n)` (`bin(n, 8)`: 8 Stellen), `hex(n)`, `round(x)` (`round(x, 2)`), `floor`, `ceil`, `abs`,
+`sqrt`, `min`, `max`, `sum`, `count`, `gcd`, `lcm`, `sorted`, `reversed`, `shuffle`, `first`, `last`, `join(liste, " < ")`.
+Ein unbekannter Name, ein Fehler im Ausdruck oder `::: pick` mit zu wenigen Zeilen ist ein Fehler mit Zeile; im Text steht
+dann „??“. Das alte `{{sol …}}` meldet, wie es jetzt heißt.
+
+In der Vorschau wählt man oben rechts die Gruppe und schaltet zwischen „Lösung“ und „Schüler“ um.
 
 ## Beispiel
 

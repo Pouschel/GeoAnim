@@ -239,7 +239,9 @@ svg.formula {
 }
 
 #mode,
-#export {
+#export,
+#solution,
+#group {
   padding: 3px 10px;
   border: 1px solid #c7ccd4;
   border-radius: 4px;
@@ -249,12 +251,15 @@ svg.formula {
   cursor: pointer;
 }
 
+#group[hidden],
+#solution[hidden],
 #export[hidden] {
   display: none;
 }
 
 #mode:hover,
-#export:hover {
+#export:hover,
+#solution:hover {
   background: #f3f4f6;
 }
 

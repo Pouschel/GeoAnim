@@ -178,6 +178,20 @@ public sealed partial class MarkdownPage
             Groups = head.GetValueOrDefault("groups") as List<string> ?? [],
             Seed = head.GetValueOrDefault("seed") as int?,
         } : null;
+        // its groups' differences ("::: let", "::: pick", "{{…}}") worked out for the sheet's group, then read again
+        if (sheet != null)
+        {
+            variant ??= new SheetVariant(sheet.Groups.FirstOrDefault(), Solution: true);
+            int groupIndex = variant.Group != null ? Math.Max(0, sheet.Groups.ToList().IndexOf(variant.Group)) : 0;
+            string expanded = SheetScript.Expand(text, sheet.Seed ?? 1, groupIndex, errors);
+            if (expanded != text)
+            {
+                text = expanded;
+                document = Markdown.Parse(text, Pipeline);
+                locate = Locator(text);
+                document.Descendants<YamlFrontMatterBlock>().FirstOrDefault()?.Parent?.Remove(document.Descendants<YamlFrontMatterBlock>().First());
+            }
+        }
 
         RescueAttributes(document, text);
         AttachFormulaMarks(document);

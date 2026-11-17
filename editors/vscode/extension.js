@@ -309,10 +309,14 @@ async function compile (document) {
 }
 
 // a Markdown page: its errors in the editor, the page in the preview
+// a test or worksheet in the preview: which sheet ({ group, solution }) for each document; none: the first group's solution
+const sheetVariants = new Map()
+
 async function renderMarkdown (document) {
   let result
   try {
-    result = await request({ type: 'markdown', file: document.uri.scheme === 'file' ? document.uri.fsPath : '', text: document.getText() })
+    const variant = sheetVariants.get(document.uri.toString())
+    result = await request(Object.assign({ type: 'markdown', file: document.uri.scheme === 'file' ? document.uri.fsPath : '', text: document.getText() }, variant || {}))
   } catch (error) {
     return
   }
@@ -689,6 +693,9 @@ function sendPage (result, keepPosition) {
     html: result.html,
     figures: result.figures || {},
     sheet: !!result.sheet,
+    groups: result.groups || [],
+    group: result.group || null,
+    solution: result.solution !== false,
     error: error ? `Line ${error.line}, column ${error.column}: ${error.message}` : null,
     line: keepPosition ? undefined : topLine(pageDocument)
   })
@@ -764,6 +771,10 @@ function openPagePreview (document) {
     }
     if (message && message.type === 'export') {
       exportSheet(pageDocument)
+    }
+    if (message && message.type === 'variant' && pageDocument) {
+      sheetVariants.set(pageDocument.uri.toString(), { group: message.group || null, solution: !!message.solution })
+      compile(pageDocument)
     }
     if (message && message.type === 'ready') {
       pageReady = true

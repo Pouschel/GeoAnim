@@ -71,7 +71,11 @@ internal static class Daemon
                 "print" => Print(id, root.GetProperty("file").GetString() ?? "", root.GetProperty("text").GetString() ?? "",
                     root.TryGetProperty("step", out JsonElement step) && step.ValueKind == JsonValueKind.Number ? step.GetInt32() : -1),
                 "player" => Answer(id, json => json.WriteString("html", HtmlExporter.ExportPlayer())),
-                "markdown" => RenderMarkdown(id, root.GetProperty("file").GetString() ?? "", root.GetProperty("text").GetString() ?? ""),
+                "markdown" => RenderMarkdown(id, root.GetProperty("file").GetString() ?? "", root.GetProperty("text").GetString() ?? "",
+                    // a test or worksheet: which sheet (the group, for the students or with the solutions)
+                    root.TryGetProperty("solution", out JsonElement solution) && solution.ValueKind is JsonValueKind.True or JsonValueKind.False
+                        ? new SheetVariant(root.TryGetProperty("group", out JsonElement group) && group.ValueKind == JsonValueKind.String ? group.GetString() : null, solution.GetBoolean())
+                        : null),
                 "page" => Answer(id, json => json.WriteString("html", HtmlExporter.ExportPagePreview())),
                 "steps" => Steps(id, root.GetProperty("file").GetString() ?? ""),
                 "keywords" => Answer(id, json =>
@@ -229,7 +233,7 @@ internal static class Daemon
         });
     }
 
-    private static string RenderMarkdown(JsonElement id, string file, string text)
+    private static string RenderMarkdown(JsonElement id, string file, string text, SheetVariant? variant = null)
     {
         string? path = Path.IsPathRooted(file) ? Path.GetFullPath(file) : null;
         BookOfPage book = path == null ? new BookOfPage([], PageNumbering.None, new Dictionary<string, KeywordLink>(), []) : ReadBook(path, text);
@@ -239,14 +243,37 @@ internal static class Daemon
         {
             bookMarks.TryAdd(other.Mark.Name, other);
         }
-        MarkdownPage page = MarkdownPage.Parse(text, path, LoadScript, bookMarks, book.Numbering, book.KeywordLinks, path == null ? null : book.UsedIn);
+        // (a group the sheet does not have: its first)
+        MarkdownPage page = MarkdownPage.Parse(text, path, LoadScript, bookMarks, book.Numbering, book.KeywordLinks, path == null ? null : book.UsedIn, variant);
+        if (page.Document is { } head && variant?.Group is { } asked && !head.Groups.Contains(asked))
+        {
+            variant = new SheetVariant(head.Groups.FirstOrDefault(), variant.Solution);
+            page = MarkdownPage.Parse(text, path, LoadScript, bookMarks, book.Numbering, book.KeywordLinks, path == null ? null : book.UsedIn, variant);
+        }
         (FigureStyle Style, double TextSize) print = path == null ? (FigureStyle.Default, 11) : BookPictures.PrintOf(Path.GetDirectoryName(path)!);
+        // a sheet's text is 12pt
+        if (page.Document != null)
+        {
+            print = (print.Style, 12);
+        }
         return Answer(id, json =>
         {
             json.WriteString("html", page.Html);
             json.WriteString("title", page.Title);
-            // a test or worksheet: the preview offers to export its sheets
+            // a test or worksheet: the preview offers to export its sheets, and to show each group's, with or without
+            // the solutions
             json.WriteBoolean("sheet", page.Document != null);
+            if (page.Document is { } sheet)
+            {
+                json.WriteStartArray("groups");
+                foreach (string name in sheet.Groups)
+                {
+                    json.WriteStringValue(name);
+                }
+                json.WriteEndArray();
+                json.WriteString("group", variant?.Group ?? sheet.Groups.FirstOrDefault());
+                json.WriteBoolean("solution", variant?.Solution ?? true);
+            }
             json.WriteStartObject("figures");
             foreach (PageFigure figure in page.PageFigures.DistinctBy(f => f.Key))
             {
