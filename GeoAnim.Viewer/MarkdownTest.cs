@@ -152,11 +152,11 @@ public sealed partial class MarkdownPage
                 .Write(InlineHtml(answer)).Write("</span>");
         }
 
-        // as wide as the answer in handwriting, and some more: at least 4em
+        // as wide as the answer in handwriting (which is larger than print), and some more: at least 5em
         private static string WidthOf(string answer)
         {
             int letters = HtmlExporter.PlainText(answer).Replace("$", "").Length;
-            return Math.Max(4, Math.Round(0.6 * letters + 2)).ToString(CultureInfo.InvariantCulture) + "em";
+            return Math.Max(5, letters + 3).ToString(CultureInfo.InvariantCulture) + "em";
         }
     }
 
@@ -209,7 +209,7 @@ public sealed partial class MarkdownPage
             string? html = command.Groups[1].Value switch
             {
                 "page" => "<div class=\"page-break\"></div>",
-                "points" => PointsTable(tasks),
+                "points" when !command.Groups[2].Success || command.Groups[2].Value == "+" => GradeTable(tasks, plus: command.Groups[2].Success),
                 _ when command.Groups[2].Success && BlankWidth().Match(command.Groups[2].Value) is { Success: true } length =>
                     $"<div class=\"space\" style=\"height: {length.Groups[1].Value.Replace(',', '.')}{(length.Groups[2].Success ? length.Groups[2].Value : "em")}\"></div>",
                 _ => null,
@@ -230,22 +230,30 @@ public sealed partial class MarkdownPage
         return tasks;
     }
 
-    // the points of the tasks: their numbers, most points, a row to write in; the extra tasks apart; the sum
-    private static string PointsTable(List<TestTask> tasks)
+    // the grades by the share of the points (percent from which a grade is given): plain and with "+"
+    private static readonly (string Grade, int Percent)[] Grades = [("1", 96), ("2", 80), ("3", 60), ("4", 40), ("5", 20)];
+    private static readonly (string Grade, int Percent)[] PlusGrades =
+        [("1+", 97), ("1", 94), ("2+", 90), ("2", 80), ("3+", 75), ("3", 60), ("4", 40), ("5", 20)];
+
+    // the line for the points and the grade, and the grades with the points they need (of the sum without the extra
+    // tasks, rounded up)
+    private static string GradeTable(List<TestTask> tasks, bool plus)
     {
-        var html = new StringBuilder("<table class=\"points-table\"><thead><tr><th>Aufgabe</th>");
-        foreach (TestTask task in tasks)
+        double total = tasks.Where(t => t.Number != null).Sum(t => t.Points);
+        var html = new StringBuilder("<p class=\"grade-line\"><span class=\"grade-blank\"></span> / ").Append(Points(total))
+            .Append(" Punkte<span class=\"grade-gap\"></span>Note: <span class=\"grade-blank\"></span></p>\n");
+        html.Append("<table class=\"points-table\"><tbody><tr><th>Note</th>");
+        (string Grade, int Percent)[] grades = plus ? PlusGrades : Grades;
+        foreach ((string grade, _) in grades)
         {
-            html.Append("<th>").Append(task.Number?.ToString(CultureInfo.InvariantCulture) ?? "Z").Append("</th>");
+            html.Append("<td>").Append(grade).Append("</td>");
         }
-        html.Append("<th>Summe</th></tr></thead><tbody><tr><td>Punkte</td>");
-        foreach (TestTask task in tasks)
+        html.Append("</tr><tr><th>ab Punkte</th>");
+        foreach ((_, int percent) in grades)
         {
-            html.Append("<td>").Append(task.Number == null ? "+" : "").Append(Points(task.Points)).Append("</td>");
+            html.Append("<td>").Append(Points(Math.Ceiling(percent * total / 100))).Append("</td>");
         }
-        html.Append("<td>").Append(Points(tasks.Where(t => t.Number != null).Sum(t => t.Points))).Append("</td></tr><tr><td>erreicht</td>");
-        html.Append(string.Concat(Enumerable.Repeat("<td></td>", tasks.Count + 1))).Append("</tr></tbody></table>");
-        return html.ToString();
+        return html.Append("</tr></tbody></table>").ToString();
     }
 
     /// <summary>

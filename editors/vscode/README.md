@@ -108,7 +108,9 @@ Datei-Symbol-Design (etwa Seti, die Voreinstellung) für die Sprache kein eigene
   Marken des ganzen Buchs an (Abbildungen, Aussagen, Abschnitte – mit Nummer und Text), in `![](#` bzw.
   `![](datei.geo#` (auch nach `..`) die Schritte des Skripts mit Nummer und Schrittbeschreibung; das Tooltip auf
   `§name` zeigt das Ziel, F12 bzw. Strg+Klick springt zur Marke (auch auf eine andere Seite), ebenso ein Klick auf einen
-  Verweis in der Vorschau. Über einer Aussage mit Marke (`::: lemma {#lem-a}`) steht grau, wo sie im Buch verwendet wird
+  Verweis in der Vorschau. Bei einem Test oder Arbeitsblatt (`type: test` im Kopf) hat die Vorschau oben rechts den
+  Knopf **Export**: Er speichert die Datei und schreibt Schülerblätter und Lösung als HTML und PDF neben sie (wie
+  `geoanim sheet datei -pdf`; Meldungen in der Ausgabe „GeoAnim“). Über einer Aussage mit Marke (`::: lemma {#lem-a}`) steht grau, wo sie im Buch verwendet wird
   („verwendet in: Beweis von Satz 3.4 · Abschnitt 2.1“ oder „nicht verwendet“); ein Klick listet die Stellen, ebenso
   Umschalt+F12 auf `§name` oder `{#name}`. Die Vorschau zeigt dasselbe unter der Aussage, ein Klick führt zur Stelle.
   F12/Strg+Klick geht auch auf Links (`[…](seite.geo.md#marke)`: die Seite an der Marke), auf

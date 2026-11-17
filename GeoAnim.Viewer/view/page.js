@@ -342,6 +342,14 @@
     return element
   }
 
+  // a test or worksheet: its sheets exported (by the editor)
+  const exportButton = document.getElementById('export')
+  exportButton.addEventListener('click', () => {
+    if (host) {
+      host.postMessage({ type: 'export' })
+    }
+  })
+
   // the switch between book and web: all figures anew
   const modeButton = document.getElementById('mode')
   function showMode () {
@@ -395,6 +403,7 @@
         }
       }
     } else if (message.type === 'page') {
+      exportButton.hidden = !message.sheet
       figures = message.figures || {}
       if (message.html !== null && message.html !== undefined) {
         show(message.html)

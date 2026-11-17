@@ -229,11 +229,17 @@ svg.formula {
 }
 
 /* the switch between book and web */
-#mode {
+#tools {
   position: fixed;
   top: 8px;
   right: 8px;
   z-index: 1;
+  display: flex;
+  gap: 6px;
+}
+
+#mode,
+#export {
   padding: 3px 10px;
   border: 1px solid #c7ccd4;
   border-radius: 4px;
@@ -243,7 +249,12 @@ svg.formula {
   cursor: pointer;
 }
 
-#mode:hover {
+#export[hidden] {
+  display: none;
+}
+
+#mode:hover,
+#export:hover {
   background: #f3f4f6;
 }
 
@@ -505,13 +516,27 @@ a.keyword:hover {
   border: 1px solid #555;
 }
 
-.points-table th:first-child,
-.points-table td:first-child {
+.points-table th {
+  font-weight: 400;
   text-align: left;
 }
 
-.points-table tr:last-child td {
-  height: 1.8em;
+/* "___ / 22 Punkte   Note: ___" */
+.grade-line {
+  margin-top: 2em;
+  font-size: 1.15em;
+  font-weight: 700;
+}
+
+.grade-blank {
+  display: inline-block;
+  width: 4em;
+  border-bottom: 1px solid #333;
+}
+
+.grade-gap {
+  display: inline-block;
+  width: 3em;
 }
 
 @media print {

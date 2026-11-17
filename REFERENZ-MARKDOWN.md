@@ -392,14 +392,17 @@ Nenne einen Marsmond: [[Phobos]]
 | `[[sol: …]]` | nichts | nur die Lösung, rot, ohne Linie (z. B. zu einer Zeichnung) |
 | `\space 3cm` | Platz zum Schreiben (Absatz für sich) | ebenso |
 | `\page` | neue Seite (am Bildschirm eine gestrichelte Linie) | ebenso |
-| `\points` | Punktetabelle: Aufgaben, Punkte, Summe, eine Zeile zum Eintragen | ebenso |
+| `\points` | „___ / 22 Punkte   Note: ___“ und der Notenspiegel: ab wie vielen Punkten welche Note (1 ab 96 %, 2 ab 80 %, 3 ab 60 %, 4 ab 40 %, 5 ab 20 % der Summe, aufgerundet; ohne Zusatzaufgaben) | ebenso |
+| `\points +` | ebenso mit Plusnoten (1+ ab 97 %, 1 ab 94 %, 2+ ab 90 %, 2 ab 80 %, 3+ ab 75 %, 3 ab 60 %, 4 ab 40 %, 5 ab 20 %) | ebenso |
 
 Das Schülerblatt enthält keine Lösung, auch nicht versteckt. Die Vorschau in VS Code zeigt die Lösung der ersten
-Gruppe.
+Gruppe; ihr Knopf **Export** (oben rechts) speichert die Datei und schreibt Blätter und Lösung als HTML und PDF neben
+sie. Die Schrift ist 12 pt mit weitem Zeilenabstand, die Linien sind so breit, wie man von Hand schreibt (eine Linie je
+Zeichen der Antwort und 3em dazu, mindestens 5em).
 
 **Ausgabe:** `geoanim sheet lek.geo.md [-o Ordner] [-pdf]` schreibt neben die Datei je Gruppe ein Schülerblatt
-(`lek-A.html` …) und eine Datei mit den Lösungen aller Gruppen nacheinander (`lek-Lsg.html`). Das HTML füllt die
-Breite des Fensters und wächst mit ihm – für die Tafel; gedruckt wird es A4. Mit `-pdf` dazu `lek-A.pdf` … und
+(`lek-A.html` …, ohne Gruppen `lek.html`) und eine Datei mit den Lösungen aller Gruppen nacheinander (`lek-Lsg.html`). Das HTML füllt die
+ganze Breite des Fensters und wächst mit ihm – für die Tafel; gedruckt wird es A4. Mit `-pdf` dazu `lek-A.pdf` … und
 `lek-Lsg.pdf` über ein Typst-Projekt (`lek-typst`, Vorlage `sheet` in `standard.typ`; eine `style.typ` neben der Datei
 ändert das Aussehen).
 

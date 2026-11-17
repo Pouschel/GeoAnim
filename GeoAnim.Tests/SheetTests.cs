@@ -53,18 +53,20 @@ public sealed class SheetTests : IDisposable
         Assert.Contains(">2. Wahr oder falsch (1,5 P)</h2>", students.Html);
         Assert.Contains(">Zusatzaufgabe (1 P)</h2>", students.Html);
         // the students' sheet: lines, no answer in it at all
-        Assert.Contains("<span class=\"blank\" style=\"width: 4em\"></span>", students.Html);
+        Assert.Contains("<span class=\"blank\" style=\"width: 5em\"></span>", students.Html);
         Assert.Contains("<span class=\"blank\" style=\"width: 3em\"></span>", students.Html);
         Assert.DoesNotContain(">40<", students.Html);
         Assert.DoesNotContain("falsch<", students.Html);
         Assert.DoesNotContain("Phobos", students.Html);
         Assert.Contains("<div class=\"space\" style=\"height: 2cm\"></div>", students.Html);
         Assert.Contains("<div class=\"page-break\"></div>", students.Html);
-        // the points: per task, the extra one apart, the sum without it
-        Assert.Contains("<td>Punkte</td><td>3</td><td>1,5</td><td>+1</td><td>4,5</td>", students.Html);
+        // the points and the grade: the sum without the extra task; from how many points a grade (rounded up)
+        Assert.Contains("</span> / 4,5 Punkte<", students.Html);
+        Assert.Contains("<tr><th>Note</th><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td></tr><tr><th>ab Punkte</th><td>5</td><td>4</td><td>3</td><td>2</td><td>1</td></tr>", students.Html);
+        Assert.Contains("<td>1+</td><td>1</td><td>2+</td>", MarkdownPage.Parse(Test.Replace("\\points", "\\points +")).Html);
 
         MarkdownPage solutions = MarkdownPage.Parse(Test, variant: new SheetVariant("A", Solution: true));
-        Assert.Contains("<span class=\"blank blank-solution\" style=\"min-width: 4em\">40</span>", solutions.Html);
+        Assert.Contains("<span class=\"blank blank-solution\" style=\"min-width: 5em\">40</span>", solutions.Html);
         Assert.Contains("<span class=\"solution\">falsch</span>", solutions.Html);
         Assert.Contains("Lösung · Gruppe A", System.Net.WebUtility.HtmlDecode(solutions.Html));
         // the preview: with the solutions, the first group
@@ -96,10 +98,10 @@ public sealed class SheetTests : IDisposable
         string page = File.ReadAllText(Path.Combine(project, "pages", "lek-A.typ"));
         Assert.Contains("#sheet-head(\"Informatik 10: LEK Binärzahlen\", info: \"Gruppe A · 20 min\", solution: false", page);
         Assert.Contains("#heading(level: 2, outlined: false)[1\\. Bits und Bytes (3 P)]", page);
-        Assert.Contains("#blank(4em)", page);
+        Assert.Contains("#blank(5em)", page);
         Assert.Contains("#v(2cm)", page);
         Assert.Contains("#pagebreak(weak: true)", page);
-        Assert.Contains("#blank-solution(4em)[40]", File.ReadAllText(Path.Combine(project, "pages", "lek-A-Lsg.typ")));
+        Assert.Contains("#blank-solution(5em)[40]", File.ReadAllText(Path.Combine(project, "pages", "lek-A-Lsg.typ")));
 
         File.WriteAllText(file, "# Seite\n\nText.\n");
         Assert.Equal(1, Program.Sheet([file]));

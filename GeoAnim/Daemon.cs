@@ -245,6 +245,8 @@ internal static class Daemon
         {
             json.WriteString("html", page.Html);
             json.WriteString("title", page.Title);
+            // a test or worksheet: the preview offers to export its sheets
+            json.WriteBoolean("sheet", page.Document != null);
             json.WriteStartObject("figures");
             foreach (PageFigure figure in page.PageFigures.DistinctBy(f => f.Key))
             {

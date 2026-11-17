@@ -12,7 +12,11 @@
   <body>
     <div id="error" hidden></div>
     <!-- figures as in the book (stills) or as on the web (players) -->
-    <button id="mode" type="button"></button>
+    <div id="tools">
+      <!-- a test or worksheet: its sheets as HTML and PDF beside the file -->
+      <button id="export" type="button" hidden title="Schülerblätter und Lösung als HTML und PDF neben die Datei schreiben">Export</button>
+      <button id="mode" type="button"></button>
+    </div>
     <main id="page"></main>
     <script src="page.js"></script>
   </body>

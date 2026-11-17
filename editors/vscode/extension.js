@@ -688,9 +688,48 @@ function sendPage (result, keepPosition) {
     type: 'page',
     html: result.html,
     figures: result.figures || {},
+    sheet: !!result.sheet,
     error: error ? `Line ${error.line}, column ${error.column}: ${error.message}` : null,
     line: keepPosition ? undefined : topLine(pageDocument)
   })
+}
+
+// a test or worksheet: "geoanim sheet <file> -pdf" (saved first) – the sheets as HTML and PDF beside the file, the Typst
+// project in a folder beside them; what it says in the output
+async function exportSheet (document) {
+  if (!document) {
+    return
+  }
+  if (document.isDirty && !(await document.save())) {
+    return
+  }
+  const file = document.uri.fsPath
+  const program = findProgram()
+  const [command, args] = program.toLowerCase().endsWith('.dll') ? ['dotnet', [program, 'sheet', file, '-pdf']] : [program, ['sheet', file, '-pdf']]
+  output.appendLine(`Export: ${path.basename(file)}`)
+  await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: `GeoAnim: ${path.basename(file)} exportieren …` }, () =>
+    new Promise(resolve => {
+      const run = childProcess.spawn(command, args, { cwd: path.dirname(file) })
+      let said = ''
+      run.stdout.on('data', chunk => { said += chunk })
+      run.stderr.on('data', chunk => { said += chunk })
+      run.on('error', error => {
+        output.appendLine(error.message)
+        vscode.window.showErrorMessage(`GeoAnim: Export nicht möglich (${error.message}).`)
+        resolve()
+      })
+      run.on('close', code => {
+        // the progress line ("\r") only as its last state
+        output.appendLine(said.split('\n').map(line => line.split('\r').pop()).join('\n').trim())
+        if (code === 0) {
+          vscode.window.showInformationMessage(`GeoAnim: Blätter und Lösung von ${path.basename(file)} geschrieben (HTML und PDF neben der Datei).`)
+        } else {
+          vscode.window.showErrorMessage('GeoAnim: Export mit Fehlern – Details in der Ausgabe „GeoAnim“.', 'Ausgabe zeigen')
+            .then(choice => { if (choice) output.show(true) })
+        }
+        resolve()
+      })
+    }))
 }
 
 function showPage (document) {
@@ -722,6 +761,9 @@ function openPagePreview (document) {
     }
     if (message && message.type === 'reveal' && typeof message.line === 'number') {
       revealInPage(message)
+    }
+    if (message && message.type === 'export') {
+      exportSheet(pageDocument)
     }
     if (message && message.type === 'ready') {
       pageReady = true

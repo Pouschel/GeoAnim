@@ -137,6 +137,8 @@ internal static partial class Program
         public int WriteSheets(string file, string text, DocumentHead head, string folder, string stem, Progress progress)
         {
             int errors = 0;
+            // the figures in proportion to the sheet's text (12pt, as in its PDF)
+            textSize = 12;
             List<string?> groups = head.Groups.Count > 0 ? head.Groups.Cast<string?>().ToList() : [null];
             var solutions = new List<string>();
             foreach (string? group in groups)
@@ -212,9 +214,17 @@ internal static partial class Program
               font-size: clamp(16px, 1.45vw, 34px);
             }
 
+            /* the whole width of the window (a board is wide): no breaks that are not needed */
             #page {
-              max-width: 46em;
+              max-width: none;
               min-height: 0;
+              padding: 1.5em 3em 3em;
+            }
+
+            /* room to write between the lines (on paper) */
+            .sheet p,
+            .sheet li {
+              line-height: 1.9;
             }
 
             .sheet-break {
@@ -231,7 +241,7 @@ internal static partial class Program
               html,
               body {
                 background: #fff;
-                font-size: 11pt;
+                font-size: 12pt;
               }
 
               #page {

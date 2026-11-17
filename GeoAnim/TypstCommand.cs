@@ -328,6 +328,8 @@ internal static partial class Program
             string label = element.Id is { Length: > 0 } id && element.LocalName != "figure" ? " <" + LabelOf(context.Page, id) + ">" : "";
             switch (element.LocalName)
             {
+                case "p" when element.ClassList.Contains("grade-line"):
+                    return "#block(above: 2em, text(size: 1.15em, weight: \"bold\")[" + Inlines(element.ChildNodes, context).Trim() + "])";
                 case "p":
                     return Paragraph(Inlines(element.ChildNodes, context).Trim()) + label;
                 case "h1" or "h2" or "h3" or "h4" or "h5" or "h6":
@@ -399,9 +401,9 @@ internal static partial class Program
                 var line = row.Children.Where(c => c.LocalName is "td" or "th").Select(c => "[" + Inlines(c.ChildNodes, context).Trim() + "]").ToList();
                 cells.Add(header ? "table.header(" + string.Join(", ", line) + ")" : string.Join(", ", line));
             }
-            // the points of a test: columns of the same width, room to write the points in
+            // the grades of a test: columns of the same width
             string layout = table.ClassList.Contains("points-table")
-                ? $"columns: (auto,{string.Concat(Enumerable.Repeat(" 2.6em,", columns - 2))} auto), align: (left,{string.Concat(Enumerable.Repeat(" center,", columns - 1))}), stroke: 0.6pt, inset: 0.5em"
+                ? $"columns: (auto,{string.Concat(Enumerable.Repeat(" 2.6em,", columns - 1))}), align: (left,{string.Concat(Enumerable.Repeat(" center,", columns - 1))}), stroke: 0.6pt, inset: 0.5em"
                 : $"columns: {columns}, stroke: 0.4pt, inset: 0.4em";
             return $"#table({layout}, {string.Join(", ", cells.Where(c => c.Length > 0))})";
         }
@@ -438,6 +440,10 @@ internal static partial class Program
                     return "#blank-solution(" + CssLength(element, "min-width") + ")[" + Content() + "]";
                 case "span" when element.ClassList.Contains("blank"):
                     return "#blank(" + CssLength(element, "width") + ")";
+                case "span" when element.ClassList.Contains("grade-blank"):
+                    return "#blank(4em)";
+                case "span" when element.ClassList.Contains("grade-gap"):
+                    return "#h(3em)";
                 case "span" when element.ClassList.Contains("solution"):
                     return "#solution[" + Content() + "]";
                 case "span" when element.ClassList.Contains("formula-gap"):
