@@ -127,6 +127,121 @@ internal static partial class Program
             return errors > 0 ? 1 : 0;
         }
 
+        // ------------------------------------------------------------------ a test or worksheet
+
+        /// <summary>
+        /// The sheets of a test or worksheet (see <see cref="Sheet"/>) as HTML files, each standing alone: for every group
+        /// the students' (no solutions in it, not even hidden) and one with the solutions of all groups, one after another.
+        /// Returns the number of errors.
+        /// </summary>
+        public int WriteSheets(string file, string text, DocumentHead head, string folder, string stem, Progress progress)
+        {
+            int errors = 0;
+            List<string?> groups = head.Groups.Count > 0 ? head.Groups.Cast<string?>().ToList() : [null];
+            var solutions = new List<string>();
+            foreach (string? group in groups)
+            {
+                foreach (bool solution in new[] { false, true })
+                {
+                    progress.Step((group != null ? "Gruppe " + group : "Blatt") + (solution ? ", Lösung" : ""));
+                    MarkdownPage page = MarkdownPage.Parse(text, file, Daemon.LoadScript, variant: new SheetVariant(group, solution));
+                    // the problems once (they are the same on every sheet)
+                    if (group == groups[0] && !solution)
+                    {
+                        foreach (MarkdownProblem problem in page.Errors)
+                        {
+                            progress.Error($"{Path.GetFileName(file)}:{problem.Line}:{problem.Column}: {problem.Message}");
+                            errors++;
+                        }
+                        foreach (MarkdownProblem problem in page.Warnings)
+                        {
+                            progress.Warning($"{Path.GetFileName(file)}:{problem.Line}:{problem.Column}: {problem.Message}");
+                        }
+                    }
+                    var entry = new BookPage(Path.GetFileName(file), file, "s" + (solutions.Count + 1).ToString(CultureInfo.InvariantCulture));
+                    string body = Convert(page, entry, [entry]);
+                    if (solution)
+                    {
+                        solutions.Add(body);
+                    }
+                    else
+                    {
+                        File.WriteAllText(Path.Combine(folder, stem + (group != null ? "-" + group : "") + ".html"),
+                            SheetDocument(head, [body]), new UTF8Encoding(false));
+                    }
+                }
+            }
+            File.WriteAllText(Path.Combine(folder, stem + "-Lsg.html"), SheetDocument(head, solutions), new UTF8Encoding(false));
+            return errors;
+        }
+
+        // the sheets in one file: to read on a screen or a board (the text grows with the window) and to print, each
+        // sheet on new pages
+        private static string SheetDocument(DocumentHead head, List<string> sheets)
+        {
+            var html = new StringBuilder($"""
+                <!doctype html>
+                <html lang="de">
+                <head>
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+                <title>{X(HtmlExporter.PlainText(head.Title ?? "Arbeitsblatt"))}</title>
+                <style>
+                {HtmlExporter.PageStyles()}
+                {SheetStyleSheet}
+                </style>
+                </head>
+                <body>
+                <main id="page">
+
+                """);
+            for (int i = 0; i < sheets.Count; i++)
+            {
+                if (i > 0)
+                {
+                    html.Append("<div class=\"page-break sheet-break\"></div>\n");
+                }
+                html.Append("<section class=\"sheet\">\n").Append(sheets[i]).Append("\n</section>\n");
+            }
+            return html.Append("</main>\n</body>\n</html>\n").ToString();
+        }
+
+        // a sheet on a screen: wider, its text growing with the window (on a board as on a laptop); in print A4
+        private const string SheetStyleSheet = """
+            body {
+              font-size: clamp(16px, 1.45vw, 34px);
+            }
+
+            #page {
+              max-width: 46em;
+              min-height: 0;
+            }
+
+            .sheet-break {
+              margin: 2.5em -2em;
+              border-top: 3px double #b0b6bf;
+            }
+
+            @media print {
+              @page {
+                size: A4;
+                margin: 18mm 18mm 20mm;
+              }
+
+              html,
+              body {
+                background: #fff;
+                font-size: 11pt;
+              }
+
+              #page {
+                max-width: none;
+                padding: 0;
+                box-shadow: none;
+              }
+            }
+            """;
+
         // ------------------------------------------------------------------ a page
 
         // the HTML of a page in the file: figures as stills, its ids and links made unique in the file ("p3-ax")
@@ -158,7 +273,8 @@ internal static partial class Program
                     element.RemoveAttribute(name);
                 }
             }
-            if (body.QuerySelector("h1") == null)
+            // a test or worksheet has its head instead
+            if (body.QuerySelector("h1") == null && page.Document == null)
             {
                 IElement heading = document.CreateElement("h1");
                 heading.TextContent = (entry.Number != null ? entry.Number + " " : "") + entry.Title;

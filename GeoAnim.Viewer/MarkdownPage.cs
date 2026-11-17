@@ -72,9 +72,10 @@ public sealed partial class MarkdownPage
         .UseCustomContainers()
         .UseGenericAttributes()
         .UsePreciseSourceLocation()
+        .Use<BlankExtension>()
         .Build();
 
-    private static readonly string[] FrontMatterKeys = ["title", "description", "keywords"];
+    private static readonly string[] FrontMatterKeys = ["title", "description", "keywords", "type", "subject", "time", "groups", "seed"];
 
     private MarkdownPage(string html)
     {
@@ -122,11 +123,12 @@ public sealed partial class MarkdownPage
     /// <paramref name="numbering"/> the numbers of the page in the book (its section, the counts of the pages before it).
     /// </summary>
     /// <paramref name="usedIn"/>: where the marks of the book are used (<see cref="BookUses"/>); given, a statement with a
-    /// mark shows them under it (for the author: in the preview and the book as one HTML file).
+    /// mark shows them under it (for the author: in the preview and the book as one HTML file). <paramref name="variant"/>:
+    /// for a test or worksheet which sheet (default: with the solutions, for the first group).
     public static MarkdownPage Parse(string text, string? file = null, Func<string, AnimationData>? loadScript = null,
         IReadOnlyDictionary<string, BookMark>? bookMarks = null, PageNumbering? numbering = null, IReadOnlyDictionary<string, KeywordLink>? keywordLinks = null,
-        IReadOnlyDictionary<string, IReadOnlyList<MarkUse>>? usedIn = null) =>
-        Build(text, file, loadScript, bookMarks, numbering ?? PageNumbering.None, keywordLinks, usedIn, render: true);
+        IReadOnlyDictionary<string, IReadOnlyList<MarkUse>>? usedIn = null, SheetVariant? variant = null) =>
+        Build(text, file, loadScript, bookMarks, numbering ?? PageNumbering.None, keywordLinks, usedIn, render: true, variant);
 
     /// <summary>
     /// The marks of a page (for the references of the other pages) and how many of each counter it has, without making its
@@ -149,7 +151,7 @@ public sealed partial class MarkdownPage
 
     private static MarkdownPage Build(string text, string? file, Func<string, AnimationData>? loadScript,
         IReadOnlyDictionary<string, BookMark>? bookMarks, PageNumbering numbering, IReadOnlyDictionary<string, KeywordLink>? keywordLinks,
-        IReadOnlyDictionary<string, IReadOnlyList<MarkUse>>? usedIn, bool render)
+        IReadOnlyDictionary<string, IReadOnlyList<MarkUse>>? usedIn, bool render, SheetVariant? variant = null)
     {
         var errors = new List<MarkdownProblem>();
         var warnings = new List<MarkdownProblem>();
@@ -161,11 +163,21 @@ public sealed partial class MarkdownPage
         // the front matter
         string? title = null, description = null;
         var keywords = new List<string>();
+        var head = new Dictionary<string, object>(StringComparer.Ordinal);
         if (document.Descendants<YamlFrontMatterBlock>().FirstOrDefault() is { } front)
         {
-            ReadFrontMatter(front, ref title, ref description, keywords, errors, warnings);
+            ReadFrontMatter(front, ref title, ref description, keywords, head, errors, warnings);
             front.Parent?.Remove(front);
         }
+        // a test or worksheet: a sheet of its own (with its tasks); its head as it shows on the sheet
+        DocumentHead? sheet = head.TryGetValue("type", out object? type) ? new DocumentHead((string)type)
+        {
+            Title = title,
+            Subject = head.GetValueOrDefault("subject") as string,
+            Time = head.GetValueOrDefault("time") as string,
+            Groups = head.GetValueOrDefault("groups") as List<string> ?? [],
+            Seed = head.GetValueOrDefault("seed") as int?,
+        } : null;
 
         RescueAttributes(document, text);
         AttachFormulaMarks(document);
@@ -251,6 +263,8 @@ public sealed partial class MarkdownPage
         }
         CheckMarks(marks, page, bookMarks, errors);
         LinkKeywords(document, keywordLinks ?? new Dictionary<string, KeywordLink>());
+        List<TestTask> tasks = sheet != null ? ReadTasks(text, document, locate, errors) : [];
+        variant ??= sheet != null ? new SheetVariant(sheet.Groups.FirstOrDefault(), Solution: true) : null;
 
         // a "$" that does not start a formula (no closing one, or a space after it): as in scripts a mistake
         foreach (LiteralInline literal in document.Descendants<LiteralInline>())
@@ -286,11 +300,18 @@ public sealed partial class MarkdownPage
         renderer.ObjectRenderers.Insert(0, new GeoFigureRenderer());
         renderer.ObjectRenderers.Replace<Markdig.Extensions.CustomContainers.HtmlCustomContainerRenderer>(new StatementRenderer(usedIn, page));
         renderer.ObjectRenderers.Insert(0, new MarkReferenceRenderer());
+        renderer.ObjectRenderers.Replace<BlankRenderer>(new BlankRenderer(variant));
+        if (sheet != null)
+        {
+            writer.Write(HeadHtml(sheet, variant!, heading));
+        }
         renderer.Render(document);
         writer.Flush();
 
         return new MarkdownPage(writer.ToString())
         {
+            Document = sheet,
+            Tasks = tasks,
             FrontTitle = title,
             Heading = heading,
             Description = description,
@@ -308,7 +329,7 @@ public sealed partial class MarkdownPage
     }
 
     private static void ReadFrontMatter(YamlFrontMatterBlock front, ref string? title, ref string? description, List<string> keywords,
-        List<MarkdownProblem> errors, List<MarkdownProblem> warnings)
+        Dictionary<string, object> head, List<MarkdownProblem> errors, List<MarkdownProblem> warnings)
     {
         // the YAML between the lines "---"; its lines count from the line after the first "---"
         int firstLine = front.Line + 2;
@@ -366,6 +387,52 @@ public sealed partial class MarkdownPage
                         {
                             errors.Add(new MarkdownProblem(firstLine + (int)item.Start.Line - 1, (int)item.Start.Column, "A keyword must be a word (\"Punkt/e/en\")."));
                         }
+                    }
+                    break;
+                // a test or worksheet
+                case "type":
+                    if (value is YamlScalarNode { Value: { } kind } && DocumentTypes.Contains(kind.Trim()))
+                    {
+                        head["type"] = kind.Trim();
+                    }
+                    else
+                    {
+                        errors.Add(new MarkdownProblem(line, column, $"\"type\" is {string.Join(" or ", DocumentTypes)} (a sheet of its own)."));
+                    }
+                    break;
+                case "subject" or "time":
+                    if (value is YamlScalarNode { Value: { } text })
+                    {
+                        head[key] = text.Trim();
+                    }
+                    else
+                    {
+                        errors.Add(new MarkdownProblem(line, column, $"\"{key}\" must be a text."));
+                    }
+                    break;
+                case "groups":
+                    // [A, B, C], one per line with "-", or "A B C"
+                    {
+                        IEnumerable<YamlNode> names = value is YamlSequenceNode list ? list.Children : [value];
+                        var groups = names.OfType<YamlScalarNode>().SelectMany(n => (n.Value ?? "").Split([' ', ','], StringSplitOptions.RemoveEmptyEntries)).ToList();
+                        if (groups.Count == 0 || groups.Distinct(StringComparer.Ordinal).Count() != groups.Count)
+                        {
+                            errors.Add(new MarkdownProblem(line, column, "\"groups\" are names, each once: groups: [A, B, C]."));
+                        }
+                        else
+                        {
+                            head["groups"] = groups;
+                        }
+                    }
+                    break;
+                case "seed":
+                    if (value is YamlScalarNode { Value: { } seed } && int.TryParse(seed, NumberStyles.Integer, CultureInfo.InvariantCulture, out int number))
+                    {
+                        head["seed"] = number;
+                    }
+                    else
+                    {
+                        errors.Add(new MarkdownProblem(line, column, "\"seed\" must be a whole number."));
                     }
                     break;
                 default:

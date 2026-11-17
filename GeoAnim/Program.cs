@@ -54,6 +54,10 @@ internal static partial class Program
               server): the pages one after another, figures as stills in their size in print, the contents at the side
               (chapters fold out).
               Default: dir.html next to the folder.
+          geoanim sheet <file.geo.md> [-o <folder>] [-pdf]
+              A test or worksheet ("type: test" or "worksheet" in its head) as sheets: for every group the students'
+              (file-A.html, no solutions in it) and one with the solutions of all groups (file-Lsg.html); with -pdf also
+              as PDF (file-A.pdf …, file-Lsg.pdf) through a Typst project (file-typst). Default folder: the file's.
           geoanim daemon
               Compiles for an editor (the VS Code extension): JSON requests on standard input, answers on standard output.
         """;
@@ -66,7 +70,7 @@ internal static partial class Program
             Console.InputEncoding = Encoding.UTF8;
             return Daemon.Run(Console.In, Console.Out);
         }
-        if (args.Length >= 2 && args[0] is "figure" or "formula" or "epub" or "typst" or "html")
+        if (args.Length >= 2 && args[0] is "figure" or "formula" or "epub" or "typst" or "html" or "sheet")
         {
             try
             {
@@ -77,6 +81,7 @@ internal static partial class Program
                     "formula" => Formula(rest),
                     "typst" => Typst(rest),
                     "html" => HtmlBook(rest),
+                    "sheet" => Sheet(rest),
                     _ => Epub(rest),
                 };
             }

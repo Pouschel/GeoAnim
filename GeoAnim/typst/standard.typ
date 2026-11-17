@@ -276,3 +276,40 @@
 
 // a figure GeoAnim could not make (a faulty script): its address in a frame
 #let missing-figure(source) = box(stroke: 0.6pt + red, inset: 1em, text(fill: red, raw(source)))
+
+// ------------------------------------------------------------------ tests and worksheets ("type: test" / "worksheet")
+
+// a sheet: A4, no running head, the page number at the bottom only with more than one page ("1 / 2"); several sheets
+// in one file (the solutions of all groups): each counts its pages from 1, numbering: "1"
+#let sheet(text-size: 11pt, language: "de", margin: (x: 1.8cm, top: 1.6cm, bottom: 1.8cm), font: text-font, numbering: "1 / 1", body) = {
+  set page(paper: "a4", margin: margin, footer: context {
+    let total = counter(page).final().first()
+    if total > 1 { align(center, text(size: 0.85em, counter(page).display(numbering, both: numbering.contains("/")))) }
+  })
+  set text(font: font, size: text-size, lang: language)
+  set par(justify: false, leading: 0.62em, spacing: 1em)
+  show heading: set text(weight: "bold")
+  show heading.where(level: 2): it => block(above: 1.5em, below: 0.8em, sticky: true, text(size: 1.15em, it.body))
+  show heading.where(level: 3): it => block(above: 1.2em, below: 0.6em, sticky: true, it.body)
+  body
+}
+
+// the head: title, group and time (with the solutions red), the lines for name, class and date
+#let sheet-head(title, info: "", solution: false, fields: ("Name", "Klasse", "Datum")) = {
+  block(width: 100%, below: 1.4em, {
+    grid(columns: (1fr, auto), align: (left + bottom, right + bottom),
+      text(size: 1.35em, weight: "bold", title),
+      text(fill: if solution { rgb("#d32f2f") } else { black }, weight: if solution { "bold" } else { "regular" }, info))
+    v(0.6em)
+    grid(columns: fields.enumerate().map(((i, _)) => if i == 0 { 2fr } else { 1fr }), column-gutter: 1.5em,
+      ..fields.map(f => block(width: 100%, stroke: (bottom: 0.6pt), inset: (bottom: 3pt), f + ":")))
+    v(0.3em)
+    line(length: 100%, stroke: 1.2pt)
+  })
+}
+
+// a blank to write on; with the solution the answer on it (red); a solution without a blank
+#let blank(width) = box(width: width, stroke: (bottom: 0.6pt), outset: (bottom: 2pt), height: 0.9em)
+#let blank-solution(width, body) = box(stroke: (bottom: 0.6pt), outset: (bottom: 2pt),
+  box(width: width, align(center, text(fill: rgb("#d32f2f"), weight: "semibold", body))))
+#let solution(body) = text(fill: rgb("#d32f2f"), weight: "semibold", body)

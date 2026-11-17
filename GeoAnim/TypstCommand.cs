@@ -89,7 +89,7 @@ internal static partial class Program
 
     // "typst compile book.typ book.pdf" in the project's folder; first which Typst it is (a warning if it is older than
     // the one GeoAnim is tested with)
-    private static int CompilePdf(string project, string pdf)
+    private static int CompilePdf(string project, string pdf, string main = "book.typ")
     {
         try
         {
@@ -111,7 +111,7 @@ internal static partial class Program
             // the fonts of the project (STIX Two Text in all four styles), whatever is installed
             start.ArgumentList.Add("--font-path");
             start.ArgumentList.Add("fonts");
-            start.ArgumentList.Add("book.typ");
+            start.ArgumentList.Add(main);
             start.ArgumentList.Add(pdf);
             using Process process = Process.Start(start)!;
             string errors = process.StandardError.ReadToEnd();
@@ -129,7 +129,7 @@ internal static partial class Program
         catch (System.ComponentModel.Win32Exception)
         {
             Console.Error.WriteLine("Typst is not installed (or not on the PATH): https://typst.app – e.g. \"winget install Typst.Typst\". "
-                + $"The project is ready in {project}: typst compile --font-path fonts book.typ");
+                + $"The project is ready in {project}: typst compile --font-path fonts {main}");
             return 1;
         }
     }
@@ -257,7 +257,7 @@ internal static partial class Program
             {
                 markup.Append(Chapter(entry, page.SectionNumber, Escape(title), "")).Append("\n\n");
             }
-            else if (body.QuerySelector("h1") == null)
+            else if (body.QuerySelector("h1") == null && page.Document == null)
             {
                 markup.Append("#heading(level: ").Append(PageLevel(entry)).Append(")[")
                     .Append(page.SectionNumber != null ? "#section-number[" + Escape(page.SectionNumber) + "]" : "").Append(Escape(title)).Append("]\n\n");
@@ -316,7 +316,7 @@ internal static partial class Program
 
         private static bool IsBlock(IElement element) => element.LocalName switch
         {
-            "p" or "h1" or "h2" or "h3" or "h4" or "h5" or "h6" or "ul" or "ol" or "blockquote" or "pre" or "table" or "hr" or "figure" or "div" => true,
+            "p" or "h1" or "h2" or "h3" or "h4" or "h5" or "h6" or "ul" or "ol" or "blockquote" or "pre" or "table" or "hr" or "figure" or "div" or "header" => true,
             _ => false,
         };
 
@@ -343,7 +343,8 @@ internal static partial class Program
                             return Chapter(context.Page, number?.TextContent.Trim(), Inlines(element.ChildNodes, context).Trim(), label);
                         }
                         int typstLevel = PageLevel(context.Page) + level - 1;
-                        return $"#heading(level: {typstLevel}{(pageHeading ? "" : ", outlined: false")})[{Inlines(element.ChildNodes, context).Trim()}]{label}";
+                        // "1. Bits" (a task of a test): no list
+                        return $"#heading(level: {typstLevel}{(pageHeading ? "" : ", outlined: false")})[{Paragraph(Inlines(element.ChildNodes, context).Trim())}]{label}";
                     }
                 case "ul":
                 case "ol":
@@ -373,6 +374,15 @@ internal static partial class Program
                     }
                 case "div" when element.ClassList.Contains("formula-block"):
                     return DisplayFormula(element, context) + label;
+                // a test or worksheet
+                case "header" when element.ClassList.Contains("sheet-head"):
+                    return "#sheet-head(" + String(element.GetAttribute("data-title") ?? "") + ", info: " + String(element.GetAttribute("data-info") ?? "")
+                        + ", solution: " + (element.QuerySelector(".sheet-solution") != null ? "true" : "false")
+                        + ", fields: (" + string.Concat((element.GetAttribute("data-fields") ?? "").Split('|').Select(f => String(f) + ",")) + "))";
+                case "div" when element.ClassList.Contains("page-break"):
+                    return "#pagebreak(weak: true)";
+                case "div" when element.ClassList.Contains("space"):
+                    return "#v(" + CssLength(element, "height") + ")";
                 default:
                     return Blocks(element.ChildNodes, context).Trim();
             }
@@ -389,7 +399,11 @@ internal static partial class Program
                 var line = row.Children.Where(c => c.LocalName is "td" or "th").Select(c => "[" + Inlines(c.ChildNodes, context).Trim() + "]").ToList();
                 cells.Add(header ? "table.header(" + string.Join(", ", line) + ")" : string.Join(", ", line));
             }
-            return $"#table(columns: {columns}, stroke: 0.4pt, inset: 0.4em, {string.Join(", ", cells.Where(c => c.Length > 0))})";
+            // the points of a test: columns of the same width, room to write the points in
+            string layout = table.ClassList.Contains("points-table")
+                ? $"columns: (auto,{string.Concat(Enumerable.Repeat(" 2.6em,", columns - 2))} auto), align: (left,{string.Concat(Enumerable.Repeat(" center,", columns - 1))}), stroke: 0.6pt, inset: 0.5em"
+                : $"columns: {columns}, stroke: 0.4pt, inset: 0.4em";
+            return $"#table({layout}, {string.Join(", ", cells.Where(c => c.Length > 0))})";
         }
 
         private string Inlines(IEnumerable<INode> nodes, PageContext context) => string.Concat(nodes.Select(node => Inline(node, context)));
@@ -420,6 +434,12 @@ internal static partial class Program
                     return Link(element, Content(), context);
                 case "svg" when element.ClassList.Contains("formula"):
                     return Formula(element.GetAttribute("aria-label") ?? "", context);
+                case "span" when element.ClassList.Contains("blank-solution"):
+                    return "#blank-solution(" + CssLength(element, "min-width") + ")[" + Content() + "]";
+                case "span" when element.ClassList.Contains("blank"):
+                    return "#blank(" + CssLength(element, "width") + ")";
+                case "span" when element.ClassList.Contains("solution"):
+                    return "#solution[" + Content() + "]";
                 case "span" when element.ClassList.Contains("formula-gap"):
                     return "#h(0.2778em, weak: true)";
                 case "wbr":
@@ -579,6 +599,10 @@ internal static partial class Program
         }
 
         // text for Typst's markup: its special characters escaped
+        // a length in an element's style ("width: 6em"): as Typst writes it; 4em if there is none
+        private static string CssLength(IElement element, string property) =>
+            Regex.Match(element.GetAttribute("style") ?? "", "(?:^|;)\\s*" + property + @":\s*(\d+(?:\.\d+)?(?:em|cm|mm|pt))") is { Success: true } found ? found.Groups[1].Value : "4em";
+
         private static string Escape(string text) => MarkupCharacter().Replace(text, @"\$0");
 
         [GeneratedRegex(@"[\\#$*_\[\]<>@`~=\-+/]")]
@@ -590,6 +614,26 @@ internal static partial class Program
         // ------------------------------------------------------------------ the project
 
         private void WriteProject(string output, List<TypstPage> book, Dictionary<string, string> pages)
+        {
+            WriteFiles(output, pages, root);
+            var utf8 = new UTF8Encoding(false);
+            // the book's icon, for the title page
+            foreach (string old in Directory.EnumerateFiles(output, "icon.*"))
+            {
+                File.Delete(old);
+            }
+            if (IconFile is { } icon)
+            {
+                File.Copy(settings.IconFile!, Path.Combine(output, icon), overwrite: true);
+            }
+            File.WriteAllText(Path.Combine(output, "book.typ"), Main(book), utf8);
+            // the page on the web with all links ("links:" in index.yaml says where it goes)
+            File.WriteAllText(Path.Combine(output, "links.html"), LinksPage(book), utf8);
+        }
+
+        // the pages, pictures and formulas, the fonts, GeoAnim's standard look and the style.typ in styleFolder (else one
+        // that imports the standard)
+        private void WriteFiles(string output, Dictionary<string, string> pages, string styleFolder)
         {
             // what an earlier export left (pages, pictures): made anew
             foreach (string folder in new[] { "pages", "figures", "formulas" })
@@ -626,7 +670,7 @@ internal static partial class Program
             {
                 File.WriteAllText(Path.Combine(output, "standard.typ"), reader.ReadToEnd(), utf8);
             }
-            string own = Path.Combine(root, "style.typ");
+            string own = Path.Combine(styleFolder, "style.typ");
             if (File.Exists(own))
             {
                 File.Copy(own, Path.Combine(output, "style.typ"), overwrite: true);
@@ -640,18 +684,6 @@ internal static partial class Program
 
                     """, utf8);
             }
-            // the book's icon, for the title page
-            foreach (string old in Directory.EnumerateFiles(output, "icon.*"))
-            {
-                File.Delete(old);
-            }
-            if (IconFile is { } icon)
-            {
-                File.Copy(settings.IconFile!, Path.Combine(output, icon), overwrite: true);
-            }
-            File.WriteAllText(Path.Combine(output, "book.typ"), Main(book), utf8);
-            // the page on the web with all links ("links:" in index.yaml says where it goes)
-            File.WriteAllText(Path.Combine(output, "links.html"), LinksPage(book), utf8);
         }
 
         // the name of the book's icon in the project ("icon.svg"), if it has one Typst can show

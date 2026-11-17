@@ -8,7 +8,7 @@ Skriptsprache der `.geo`-Dateien steht in der [Referenz](REFERENZ.md), der Über
 ## Inhalt
 
 - [Datei](#datei)
-- [Kopf](#kopf): `title`, `description`, `keywords`
+- [Kopf](#kopf): `title`, `description`, `keywords` (Tests: `type`, `subject`, `time`, `groups`)
 - [Text und Formeln](#text-und-formeln)
 - [Abbildungen](#abbildungen): Verweise, Schritte, eigenes Skript
 - [Buch und Web](#buch-und-web): Bildfolge, Zuschnitt
@@ -18,6 +18,7 @@ Skriptsprache der `.geo`-Dateien steht in der [Referenz](REFERENZ.md), der Über
 - [Nummerierung](#nummerierung): Kapitel, Abschnitte, Zähler, `numbering:`
 - [Stichwörter](#stichwörter): `{kw}` am Begriff, Links auf andere Seiten
 - [Fehler und Warnungen](#fehler-und-warnungen)
+- [Tests und Arbeitsblätter](#tests-und-arbeitsblätter): `type: test`, Lücken `[[…]]`, Punkte, `\page`, `geoanim sheet`
 - [Beispiel](#beispiel)
 
 ## Datei
@@ -40,7 +41,8 @@ Stelle (`{kw}`). Der Kopf wird noch gelesen, ist aber nur für alte Seiten da.
 | `description` | `description: Was ein Punkt ist …` | Kurzbeschreibung (Übersicht, Suchmaschinen) |
 | `keywords` | `keywords: [Punkt/e/en, Lage]` | Stichwörter der ganzen Seite (Links führen an den Seitenanfang), Schreibweise wie bei `keyword` in Skripten; auch eines allein oder eines je Zeile mit `- `; Stichwörter an einer bestimmten Stelle: siehe [Stichwörter](#stichwörter) |
 
-Ein unbekannter Schlüssel ist eine Warnung, ein Fehler im YAML ein Fehler (mit Zeile).
+Ein unbekannter Schlüssel ist eine Warnung, ein Fehler im YAML ein Fehler (mit Zeile). Für Tests und Arbeitsblätter hat
+der Kopf eigene Schlüssel: siehe [Tests und Arbeitsblätter](#tests-und-arbeitsblätter).
 
 ## Text und Formeln
 
@@ -342,6 +344,66 @@ Fehler werden in VS Code rot unterstrichen und stehen in der Vorschau über der 
 
 Warnungen (gelb): ein unbekannter Schlüssel im Kopf, ein unbekanntes Attribut, ein Stichwort, das eine andere Seite oder
 ein Skript des Buchs schon hat.
+
+## Tests und Arbeitsblätter
+
+Eine `.geo.md` mit `type: test` (oder `type: worksheet`) im Kopf ist ein Blatt für sich, kein Teil eines Buchs – alles
+andere (Formeln, Abbildungen aus Skripten, Bilder, Kästen) geht wie auf Buchseiten. Leg solche Dateien nicht in einen
+Buchordner.
+
+```markdown
+---
+type: test               # oder worksheet
+title: LEK Binärzahlen
+subject: Informatik 10   # vor dem Titel
+time: 20 min
+groups: [A, B, C]        # ohne: ein Blatt ohne Gruppe
+---
+
+## Bits und Bytes {3}
+
+a) 5 Byte sind [[40]] Bit. *(1 P)*
+
+b) $2^3=$ [[$8$|3em]]
+
+## Wahr oder falsch {2}
+
+Die Astronomie untersucht künstliche Satelliten. [[sol: falsch]]
+
+\space 3cm
+
+\page
+
+## Zusatzaufgabe {+1}
+
+Nenne einen Marsmond: [[Phobos]]
+
+\points
+```
+
+| Schreibweise | Schülerblatt | Lösung |
+|---|---|---|
+| Kopf | Fach: Titel, Gruppe und Zeit rechts; Zeilen für Name, Klasse, Datum (Arbeitsblatt: Name, Datum) | dazu rot „Lösung“ |
+| `## Titel {3}` | „1. Titel (3 P)“ – Aufgaben werden durchnummeriert und gezählt; auch `{1,5}` | ebenso |
+| `## Titel {+1}` | Zusatzaufgabe „Titel (1 P)“: ohne Nummer, nicht in der Summe | ebenso |
+| `[[40]]` | eine Linie, so breit, wie die Antwort braucht (mindestens 4em) | die Antwort rot auf der Linie |
+| `[[40\|6em]]` | Linie mit fester Breite (em, cm, mm) | ebenso |
+| `[[$8$]]` | Antworten dürfen Formeln und Markdown enthalten | |
+| `[[sol: …]]` | nichts | nur die Lösung, rot, ohne Linie (z. B. zu einer Zeichnung) |
+| `\space 3cm` | Platz zum Schreiben (Absatz für sich) | ebenso |
+| `\page` | neue Seite (am Bildschirm eine gestrichelte Linie) | ebenso |
+| `\points` | Punktetabelle: Aufgaben, Punkte, Summe, eine Zeile zum Eintragen | ebenso |
+
+Das Schülerblatt enthält keine Lösung, auch nicht versteckt. Die Vorschau in VS Code zeigt die Lösung der ersten
+Gruppe.
+
+**Ausgabe:** `geoanim sheet lek.geo.md [-o Ordner] [-pdf]` schreibt neben die Datei je Gruppe ein Schülerblatt
+(`lek-A.html` …) und eine Datei mit den Lösungen aller Gruppen nacheinander (`lek-Lsg.html`). Das HTML füllt die
+Breite des Fensters und wächst mit ihm – für die Tafel; gedruckt wird es A4. Mit `-pdf` dazu `lek-A.pdf` … und
+`lek-Lsg.pdf` über ein Typst-Projekt (`lek-typst`, Vorlage `sheet` in `standard.typ`; eine `style.typ` neben der Datei
+ändert das Aussehen).
+
+`seed` im Kopf ist für die Zufallszahlen der Gruppen vorgesehen (kommt noch).
 
 ## Beispiel
 

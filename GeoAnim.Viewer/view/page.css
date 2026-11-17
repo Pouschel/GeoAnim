@@ -418,3 +418,106 @@ a.keyword:hover {
 #error[hidden] {
   display: none;
 }
+
+/* ------------------------------------------------------------------ tests and worksheets ("type: test" / "worksheet") */
+
+.sheet-head {
+  margin: 0 0 1.2em;
+  padding-bottom: 0.6em;
+  border-bottom: 1.5px solid #222;
+}
+
+.sheet-title {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.2em 1em;
+  font-size: 1.35em;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.sheet-info {
+  font-size: 0.75em;
+  font-weight: 400;
+}
+
+.sheet-solution {
+  color: #d32f2f;
+  font-weight: 700;
+}
+
+/* name, class, date: a line to write on after each */
+.sheet-fields {
+  display: flex;
+  gap: 1.5em;
+  margin-top: 0.9em;
+}
+
+.sheet-fields > span {
+  flex: 1;
+  border-bottom: 1px solid #555;
+}
+
+.sheet-fields > span:first-child {
+  flex: 2;
+}
+
+/* a blank: a line to write on; with the solutions the answer on it, red */
+.blank {
+  display: inline-block;
+  min-height: 1.1em;
+  border-bottom: 1px solid #333;
+  vertical-align: baseline;
+}
+
+.blank-solution,
+.solution {
+  color: #d32f2f;
+  font-weight: 600;
+}
+
+.blank-solution {
+  text-align: center;
+}
+
+.space {
+  display: block;
+}
+
+/* a new page: in print; on the screen a dashed line */
+.page-break {
+  margin: 1.5em -1em;
+  border-top: 1px dashed #b0b6bf;
+}
+
+.points-table {
+  margin: 1.5em 0 0.5em;
+  border-collapse: collapse;
+  text-align: center;
+}
+
+.points-table th,
+.points-table td {
+  min-width: 2.2em;
+  padding: 0.3em 0.5em;
+  border: 1px solid #555;
+}
+
+.points-table th:first-child,
+.points-table td:first-child {
+  text-align: left;
+}
+
+.points-table tr:last-child td {
+  height: 1.8em;
+}
+
+@media print {
+  .page-break {
+    margin: 0;
+    border: 0;
+    break-after: page;
+  }
+}
