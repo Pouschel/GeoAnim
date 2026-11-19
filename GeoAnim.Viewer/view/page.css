@@ -626,3 +626,14 @@ a.keyword:hover {
 /* "::: merke": what must not be overlooked */
 .statement-merke { border-left: 4px solid #e0a100; background: #fff6d6; }
 .toc li { line-height: 1.45; }
+
+/* the button on code blocks: their text into the clipboard (not in print) */
+pre { position: relative; }
+.copy-code {
+  position: absolute; top: 0.35em; right: 0.35em;
+  padding: 0.15em 0.6em; border: 1px solid #c7ccd4; border-radius: 4px;
+  background: #fff; color: #444; font: 0.75rem system-ui, sans-serif; cursor: pointer;
+  opacity: 0.55;
+}
+pre:hover .copy-code, .copy-code:focus { opacity: 1; }
+@media print { .copy-code { display: none; } }

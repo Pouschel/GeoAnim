@@ -197,6 +197,33 @@ public static partial class HtmlExporter
     /// <summary>The look of a book page as in the preview (fonts inside), for a page of its own.</summary>
     internal static string PageStyles() => InlineCss("fonts/fonts.css") + "\n" + InlineCss("page.css");
 
+    /// <summary>
+    /// A button "Kopieren" on every code block: its text into the clipboard with one click (code, the code of a puzzle).
+    /// </summary>
+    internal const string CopyScript = """
+        (() => {
+          for (const pre of document.querySelectorAll('pre')) {
+            const text = pre.textContent.replace(/\n$/, '')
+            const button = Object.assign(document.createElement('button'), { type: 'button', className: 'copy-code', textContent: 'Kopieren', title: 'Den Code in die Zwischenablage kopieren' })
+            button.addEventListener('click', async () => {
+              try {
+                await navigator.clipboard.writeText(text)
+              } catch {
+                const area = Object.assign(document.createElement('textarea'), { value: text })
+                document.body.append(area)
+                area.select()
+                document.execCommand('copy')
+                area.remove()
+              }
+              button.textContent = 'Kopiert ✓'
+              setTimeout(() => { button.textContent = 'Kopieren' }, 1500)
+            })
+            pre.append(button)
+          }
+        })()
+
+        """;
+
     private static string InlineCss(string path)
     {
         string folder = path.Contains('/') ? path.Substring(0, path.LastIndexOf('/') + 1) : string.Empty;

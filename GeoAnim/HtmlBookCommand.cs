@@ -217,7 +217,7 @@ internal static partial class Program
                 }
                 html.Append("<section class=\"sheet\">\n").Append(sheets[i]).Append("\n</section>\n");
             }
-            return html.Append("</main>\n</body>\n</html>\n").ToString();
+            return html.Append("</main>\n<script>\n").Append(HtmlExporter.CopyScript).Append("</script>\n</body>\n</html>\n").ToString();
         }
 
         // a sheet on a screen: wider, its text growing with the window (on a board as on a laptop); in print A4
@@ -272,6 +272,21 @@ internal static partial class Program
             IHtmlDocument document = new HtmlParser().ParseDocument("<!DOCTYPE html><html><body>" + page.Html + "</body></html>");
             IHtmlElement body = document.Body!;
             Dictionary<string, PageFigure> figures = page.PageFigures.DistinctBy(f => f.Key).ToDictionary(f => f.Key);
+            // pictures in the text ("… ![](pfeil.png) …"): in the file too, so that it needs nothing beside it
+            foreach (IElement image in body.QuerySelectorAll("img").ToList())
+            {
+                string? source = image.GetAttribute("src");
+                if (source == null || source.StartsWith("data:", StringComparison.Ordinal) || source.Contains("://", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+                string path = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(entry.FullPath)!, Uri.UnescapeDataString(source.Split('#', '?')[0])));
+                if (File.Exists(path) && PictureRow.IsPicture(source))
+                {
+                    byte[] data = File.ReadAllBytes(path);
+                    image.SetAttribute("src", "data:" + PictureRow.MediaTypeOf(path, data) + ";base64," + System.Convert.ToBase64String(data));
+                }
+            }
             foreach (IElement item in body.QuerySelectorAll(".geo-item[data-figure]").ToList())
             {
                 if (figures.TryGetValue(item.GetAttribute("data-figure")!, out PageFigure? figure))
@@ -458,7 +473,7 @@ internal static partial class Program
                 open = folders;
                 html.Append(page.Body).Append("\n</section>\n");
             }
-            html.Append("</main>\n<script>\n").Append(Script).Append("</script>\n</body>\n</html>\n");
+            html.Append("</main>\n<script>\n").Append(Script).Append(HtmlExporter.CopyScript).Append("</script>\n</body>\n</html>\n");
             return html.ToString();
         }
 

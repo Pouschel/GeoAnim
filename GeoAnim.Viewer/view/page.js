@@ -76,6 +76,7 @@
     }
     shownHtml = html
     startFigures()
+    copyButtons()
     window.scrollTo({ top })
     // the cursor's place again, in the new blocks
     if (selection) {
@@ -273,6 +274,29 @@
       row.appendChild(cell)
     }
     item.appendChild(row)
+  }
+
+  // a button "Kopieren" on every code block (as in the exported HTML)
+  function copyButtons () {
+    for (const pre of page.querySelectorAll('pre:not([data-copy])')) {
+      pre.dataset.copy = ''
+      const text = pre.textContent.replace(/\n$/, '')
+      const button = Object.assign(document.createElement('button'), { type: 'button', className: 'copy-code', textContent: 'Kopieren', title: 'Den Code in die Zwischenablage kopieren' })
+      button.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(text)
+        } catch {
+          const area = Object.assign(document.createElement('textarea'), { value: text })
+          document.body.append(area)
+          area.select()
+          document.execCommand('copy')
+          area.remove()
+        }
+        button.textContent = 'Kopiert ✓'
+        setTimeout(() => { button.textContent = 'Kopieren' }, 1500)
+      })
+      pre.append(button)
+    }
   }
 
   // a length in pt ("4cm", "40mm", "120pt", "2in"), or null
