@@ -38,6 +38,9 @@ public sealed record DocumentHead(string Type)
 
     public bool IsTest => Type == "test";
 
+    /// <summary>A document ("type: document"): a page of its own (to hand out or show), without names, points and solutions.</summary>
+    public bool IsDocument => Type == "document";
+
     /// <summary>Questions for ILIAS ("type: ilias"): a pool of questions for every group, checked in an HTML file.</summary>
     public bool IsIlias => Type == "ilias";
 }
@@ -60,7 +63,7 @@ public sealed partial class MarkdownPage
     /// <summary>The tasks of a test (headings "## … {3}"), in their order.</summary>
     public IReadOnlyList<TestTask> Tasks { get; private set; } = [];
 
-    internal static readonly string[] DocumentTypes = ["test", "worksheet", "ilias"];
+    internal static readonly string[] DocumentTypes = ["test", "worksheet", "ilias", "document"];
 
     // ------------------------------------------------------------------ blanks: [[answer]], [[answer|6em]], [[sol: …]]
 
@@ -306,6 +309,92 @@ public sealed partial class MarkdownPage
     // a paragraph that is one command: "\page", "\space 3cm", "\points"
     [GeneratedRegex(@"^\\(page|points|space)(?:\s+(\S+))?\s*$")]
     private static partial Regex SheetCommand();
+
+    // a paragraph that is one command on any page: "\toc" (or "\toc 2-3"), "\clear"
+    [GeneratedRegex(@"^\\(toc|clear)(?:\s+(\d)(?:\s*-\s*(\d))?)?\s*$")]
+    private static partial Regex PageCommand();
+
+    /// <summary>
+    /// "\toc": the contents of the page – its headings of levels 2 and 3 (\toc 2-4: 2 to 4), linked (the headings get an
+    /// id); "\clear": what floats beside the text (a picture with float=right) ends here.
+    /// </summary>
+    private static void ReadPageCommands(string text, MarkdownDocument document, Func<int, (int, int)> locate)
+    {
+        foreach (ParagraphBlock paragraph in document.Descendants<ParagraphBlock>().ToList())
+        {
+            string source = text.Substring(paragraph.Span.Start, paragraph.Span.Length).Trim();
+            if (PageCommand().Match(source) is not { Success: true } command)
+            {
+                continue;
+            }
+            string html;
+            if (command.Groups[1].Value == "clear")
+            {
+                html = "<div class=\"clear\"></div>";
+            }
+            else
+            {
+                int from = command.Groups[2].Success ? int.Parse(command.Groups[2].Value, CultureInfo.InvariantCulture) : 2;
+                int to = command.Groups[3].Success ? int.Parse(command.Groups[3].Value, CultureInfo.InvariantCulture) : command.Groups[2].Success ? from : 3;
+                html = Contents(text, document, from, Math.Max(from, to));
+            }
+            ContainerBlock parent = paragraph.Parent!;
+            int index = parent.IndexOf(paragraph);
+            parent.RemoveAt(index);
+            var block = new HtmlBlock(null) { Type = HtmlBlockType.NonInterruptingBlock, Line = paragraph.Line, Column = paragraph.Column, Span = paragraph.Span };
+            block.Lines = new StringLineGroup(html);
+            parent.Insert(index, block);
+        }
+    }
+
+    // the contents: a list of the headings of these levels (nested), each a link; the headings get ids ("bildschirmausgabe-mit-print")
+    private static string Contents(string text, MarkdownDocument document, int from, int to)
+    {
+        var html = new StringBuilder($"<nav class=\"toc\" data-levels=\"{from}-{to}\">");
+        var used = new HashSet<string>(StringComparer.Ordinal);
+        int depth = 0;
+        foreach (HeadingBlock heading in document.Descendants<HeadingBlock>().Where(h => h.Level >= from && h.Level <= to))
+        {
+            string title = HeadingText(text, heading);
+            string id = heading.GetAttributes().Id ?? "";
+            if (id.Length == 0)
+            {
+                string slug = Regex.Replace(title.ToLowerInvariant().Replace("ä", "ae").Replace("ö", "oe").Replace("ü", "ue").Replace("ß", "ss"), @"[^a-z0-9]+", "-").Trim('-');
+                id = slug.Length > 0 ? slug : "abschnitt";
+                for (int k = 2; !used.Add(id); k++)
+                {
+                    id = (slug.Length > 0 ? slug : "abschnitt") + "-" + k.ToString(CultureInfo.InvariantCulture);
+                }
+                heading.GetAttributes().Id = id;
+            }
+            // nested lists in the items (an item stays open for the deeper ones)
+            int level = heading.Level - from + 1;
+            if (depth >= level)
+            {
+                html.Append("</li>");
+                for (; depth > level; depth--)
+                {
+                    html.Append("</ul></li>");
+                }
+            }
+            // (deeper: a list in the open item; a level skipped: an item of its own around it)
+            for (bool first = true; depth < level; depth++, first = false)
+            {
+                html.Append(first ? "<ul>" : "<li><ul>");
+            }
+            html.Append("<li><a href=\"#").Append(id).Append("\">").Append(InlineHtml(title)).Append("</a>");
+        }
+        if (depth > 0)
+        {
+            html.Append("</li>");
+            for (; depth > 1; depth--)
+            {
+                html.Append("</ul></li>");
+            }
+            html.Append("</ul>");
+        }
+        return html.Append("</nav>").ToString();
+    }
 
     private static string Points(double points) => points.ToString("0.##", CultureInfo.GetCultureInfo("de-DE"));
 
@@ -616,7 +705,7 @@ public sealed partial class MarkdownPage
         {
             info.Add(head.Time);
         }
-        string[] fields = head.IsIlias ? [] : head.IsTest ? ["Name", "Klasse", "Datum"] : ["Name", "Datum"];
+        string[] fields = head.IsIlias || head.IsDocument ? [] : head.IsTest ? ["Name", "Klasse", "Datum"] : ["Name", "Datum"];
         var html = new StringBuilder("<header class=\"sheet-head\" data-title=\"").Append(WebUtility.HtmlEncode(HtmlExporter.PlainText(full)))
             .Append("\" data-info=\"").Append(WebUtility.HtmlEncode(string.Join(" · ", info)))
             .Append("\" data-fields=\"").Append(string.Join("|", fields)).Append("\">");

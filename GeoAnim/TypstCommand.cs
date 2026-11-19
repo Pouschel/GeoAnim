@@ -316,7 +316,7 @@ internal static partial class Program
 
         private static bool IsBlock(IElement element) => element.LocalName switch
         {
-            "p" or "h1" or "h2" or "h3" or "h4" or "h5" or "h6" or "ul" or "ol" or "blockquote" or "pre" or "table" or "hr" or "figure" or "div" or "header" => true,
+            "p" or "h1" or "h2" or "h3" or "h4" or "h5" or "h6" or "ul" or "ol" or "blockquote" or "pre" or "table" or "hr" or "figure" or "div" or "header" or "nav" => true,
             _ => false,
         };
 
@@ -385,6 +385,11 @@ internal static partial class Program
                     return "#sheet-head(" + String(element.GetAttribute("data-title") ?? "") + ", info: " + String(element.GetAttribute("data-info") ?? "")
                         + ", solution: " + (element.QuerySelector(".sheet-solution") != null ? "true" : "false")
                         + ", fields: (" + string.Concat((element.GetAttribute("data-fields") ?? "").Split('|').Select(f => String(f) + ",")) + "))";
+                // "\toc": the list of the page's headings, linked; "\clear": nothing in print (no floats)
+                case "nav" when element.ClassList.Contains("toc"):
+                    return "#block(above: 1em, below: 1.4em, inset: (left: 0.8em), stroke: (left: 1pt + luma(200)))[\n" + Blocks(element.ChildNodes, context).Trim() + "\n]";
+                case "div" when element.ClassList.Contains("clear"):
+                    return "";
                 case "div" when element.ClassList.Contains("page-break"):
                     return "#pagebreak(weak: true)";
                 case "div" when element.ClassList.Contains("space"):

@@ -52,6 +52,10 @@ internal static partial class Program
             // questions for ILIAS: their pools and the files to check them (no PDF)
             return Ilias(file, text, head, folder, stem);
         }
+        if (head.IsDocument)
+        {
+            return Document(file, text, head, folder, stem, pdf);
+        }
         int groups = Math.Max(1, head.Groups.Count);
         var progress = new Progress(groups * 2 * (pdf ? 2 : 1));
         int errors = new HtmlBookWriter(Path.GetDirectoryName(file)!).WriteSheets(file, text, head, folder, stem, progress);
@@ -77,6 +81,28 @@ internal static partial class Program
         return 0;
     }
 
+    /// <summary>A document ("type: document"): name.html (for screens and boards) and with -pdf name.pdf.</summary>
+    private static int Document(string file, string text, DocumentHead head, string folder, string stem, bool pdf)
+    {
+        var progress = new Progress(pdf ? 2 : 1);
+        progress.Step("HTML");
+        MarkdownPage page = MarkdownPage.Parse(text, file, Daemon.LoadScript);
+        foreach (MarkdownProblem problem in page.Errors)
+        {
+            progress.Error($"{Path.GetFileName(file)}:{problem.Line}:{problem.Column}: {problem.Message}");
+        }
+        new HtmlBookWriter(Path.GetDirectoryName(file)!).WriteControl(file, page, head, Path.Combine(folder, stem + ".html"));
+        if (!pdf)
+        {
+            progress.Finish($"Wrote {stem}.html to {folder}");
+            return page.Errors.Count > 0 ? 1 : 0;
+        }
+        string project = Path.Combine(folder, stem + "-typst");
+        List<string> mains = new TypstWriter(Path.GetDirectoryName(file)!).WriteSheets(file, text, head, project, stem, progress);
+        progress.Finish($"Wrote {stem}.html to {folder}; the Typst project: {project}");
+        return page.Errors.Count > 0 ? 1 : CompilePdf(project, Path.Combine(folder, stem + ".pdf"), mains[0]);
+    }
+
     private sealed partial class TypstWriter
     {
         /// <summary>
@@ -93,7 +119,8 @@ internal static partial class Program
             int index = 0;
             foreach (string? group in groups)
             {
-                foreach (bool solution in new[] { false, true })
+                // (a document: one, without solutions)
+                foreach (bool solution in head.IsDocument ? new[] { false } : [false, true])
                 {
                     progress.Step("PDF: " + (group != null ? "Gruppe " + group : "Blatt") + (solution ? ", Lösung" : ""));
                     MarkdownPage page = MarkdownPage.Parse(text, file, Daemon.LoadScript, variant: new SheetVariant(group, solution));
@@ -110,7 +137,10 @@ internal static partial class Program
                     }
                 }
             }
-            mains[stem + "-Lsg.typ"] = Main(solutions, several: solutions.Count > 1);
+            if (!head.IsDocument)
+            {
+                mains[stem + "-Lsg.typ"] = Main(solutions, several: solutions.Count > 1);
+            }
             Directory.CreateDirectory(output);
             WriteFiles(output, pages, Path.GetDirectoryName(file)!);
             foreach ((string name, string markup) in mains)

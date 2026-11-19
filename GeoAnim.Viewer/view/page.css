@@ -608,3 +608,21 @@ a.keyword:hover {
 /* a structure diagram ("::: nassi"): its picture as wide in em as drawn, smaller in a narrow column */
 .nassi { margin: 1em 0 1.2em; text-align: center; }
 .nassi-picture { width: var(--width); max-width: 100%; height: auto; }
+
+/* a figure with float=right (left): beside the text on screens – on a board in landscape less empty room; "\clear" ends
+   it. In print (PDF) such figures stand centred */
+.geo-float-right { float: right; clear: right; margin: 0.3em 0 0.8em 1.4em; max-width: 50%; }
+.geo-float-left { float: left; clear: left; margin: 0.3em 1.4em 0.8em 0; max-width: 50%; }
+.geo-float-right .geo-row, .geo-float-left .geo-row { margin: 0; }
+.clear { clear: both; }
+
+/* "\toc": the contents of the page */
+.toc { margin: 1em 0 1.5em; padding: 0.5em 1em; border-left: 3px solid #c7ccd4; }
+.toc ul { margin: 0.2em 0; padding-left: 1.3em; list-style: none; }
+.toc > ul { padding-left: 0; }
+.toc a { color: inherit; text-decoration: none; }
+.toc a:hover { text-decoration: underline; }
+
+/* "::: merke": what must not be overlooked */
+.statement-merke { border-left: 4px solid #e0a100; background: #fff6d6; }
+.toc li { line-height: 1.45; }

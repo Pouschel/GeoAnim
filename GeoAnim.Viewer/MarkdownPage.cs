@@ -185,8 +185,8 @@ public sealed partial class MarkdownPage
         if (sheet != null)
         {
             variant ??= new SheetVariant(sheet.Groups.FirstOrDefault(), Solution: true);
-            // questions for ILIAS: always with their answers (the students see them in ILIAS)
-            if (sheet.IsIlias)
+            // questions for ILIAS: always with their answers (the students see them in ILIAS); a document has none
+            if (sheet.IsIlias || sheet.IsDocument)
             {
                 variant = variant with { Solution = true };
             }
@@ -329,7 +329,8 @@ public sealed partial class MarkdownPage
         }
         CheckMarks(marks, page, bookMarks, errors);
         LinkKeywords(document, keywordLinks ?? new Dictionary<string, KeywordLink>());
-        List<TestTask> tasks = sheet == null ? [] : sheet.IsIlias ? ReadQuestions(text, document, locate, errors) : ReadTasks(text, document, locate, errors);
+        List<TestTask> tasks = sheet == null || sheet.IsDocument ? [] : sheet.IsIlias ? ReadQuestions(text, document, locate, errors) : ReadTasks(text, document, locate, errors);
+        ReadPageCommands(text, document, locate);
         variant ??= sheet != null ? new SheetVariant(sheet.Groups.FirstOrDefault(), Solution: true) : null;
 
         // a "$" that does not start a formula (no closing one, or a space after it): as in scripts a mistake
@@ -371,7 +372,8 @@ public sealed partial class MarkdownPage
         renderer.ObjectRenderers.Replace<Markdig.Extensions.CustomContainers.HtmlCustomContainerRenderer>(new StatementRenderer(usedIn, page));
         renderer.ObjectRenderers.Insert(0, new MarkReferenceRenderer());
         renderer.ObjectRenderers.Replace<BlankRenderer>(new BlankRenderer(variant, sheet?.IsIlias == true));
-        if (sheet != null)
+        // (a document has its own heading)
+        if (sheet is { IsDocument: false })
         {
             writer.Write(HeadHtml(sheet, variant!, heading));
         }
@@ -1292,7 +1294,9 @@ public sealed partial class MarkdownPage
     {
         protected override void Write(HtmlRenderer renderer, GeoFigureBlock figure)
         {
-            renderer.Write("<figure class=\"geo-figure").Write(figure.Row ? " geo-pictures" : "").Write('"').WriteAttributes(figure).WriteLine('>');
+            // float=right: beside the text on screens (a class, as data-… is not kept everywhere); in print centred
+            string floating = figure.GetAttributes().Properties?.FirstOrDefault(p => p.Key == "data-float").Value is { } side ? " geo-float-" + side : "";
+            renderer.Write("<figure class=\"geo-figure").Write(figure.Row ? " geo-pictures" : "").Write(floating).Write('"').WriteAttributes(figure).WriteLine('>');
             renderer.WriteLine("<div class=\"geo-row\">");
             var captions = new StringBuilder();
             foreach (FigureItem item in figure.Items)

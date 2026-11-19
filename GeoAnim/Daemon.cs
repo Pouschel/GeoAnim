@@ -267,6 +267,7 @@ internal static class Daemon
             // the solutions
             json.WriteBoolean("sheet", page.Document != null);
             json.WriteBoolean("ilias", page.Document?.IsIlias == true);
+            json.WriteBoolean("document", page.Document?.IsDocument == true);
             if (page.Document is { } sheet)
             {
                 json.WriteStartArray("groups");

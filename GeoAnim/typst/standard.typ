@@ -220,6 +220,9 @@
     context block(width: 100%, above: 1.2em, below: 1.2em, inset: (left: 0.8em, y: 0.2em), stroke: (left: 1.5pt + color-of("rule-statement")), content)
   } else if kind == "definition" {
     context block(width: 100%, above: 1.2em, below: 1.2em, inset: (left: 0.8em, y: 0.2em), stroke: (left: 1.5pt + color-of("rule-definition")), content)
+  } else if kind == "merke" {
+    // what must not be overlooked: a yellow box with a bar
+    block(width: 100%, above: 1.2em, below: 1.2em, inset: (left: 0.8em, rest: 0.6em), fill: rgb("#fff6d6"), stroke: (left: 3pt + rgb("#e0a100")), content)
   } else if kind == "box" {
     context block(width: 100%, above: 1.2em, below: 1.2em, inset: 0.7em, fill: color-of("fill-box"), radius: 2pt, content)
   } else {

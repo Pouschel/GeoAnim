@@ -85,10 +85,11 @@ public sealed partial class MarkdownPage
         ["proof"] = ("Beweis", false),
         ["example"] = ("Beispiel", true),
         ["remark"] = ("Bemerkung", false),
+        ["merke"] = ("Merke", false),
         ["box"] = ("", false),
     };
 
-    private static readonly Dictionary<string, string> KindAliases = new() { ["def"] = "definition" };
+    private static readonly Dictionary<string, string> KindAliases = new() { ["def"] = "definition", ["note"] = "merke" };
 
     private const string FigureName = "Abb.";
     private const string SectionName = "Abschnitt";

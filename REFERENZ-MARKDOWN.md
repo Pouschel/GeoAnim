@@ -19,6 +19,7 @@ Skriptsprache der `.geo`-Dateien steht in der [Referenz](REFERENZ.md), der Über
 - [Nummerierung](#nummerierung): Kapitel, Abschnitte, Zähler, `numbering:`
 - [Stichwörter](#stichwörter): `{kw}` am Begriff, Links auf andere Seiten
 - [Fehler und Warnungen](#fehler-und-warnungen)
+- [Dokumente](#dokumente): `type: document`, `\toc`, `\clear`, `float=right`, `::: merke`
 - [Tests und Arbeitsblätter](#tests-und-arbeitsblätter): `type: test`, Lücken `[[…]]`, Punkte, `\page`, `geoanim sheet`
 - [Beispiel](#beispiel)
 
@@ -228,6 +229,7 @@ Durch zwei verschiedene Punkte verläuft **genau eine Gerade**.
 | `proof` | Beweis | nein | ohne Kasten, endet mit ∎; gehört zur letzten Aussage davor (Satz, Lemma, Folgerung) auf der Seite – `::: proof §satz-x` für den Beweis einer anderen: „Beweis von Satz 3.2.“ |
 | `example` | Beispiel | ja | ohne Kasten |
 | `remark` | Bemerkung | nein | ohne Kasten |
+| `merke` (`note`) | Merke | nein | gelber Kasten (für Dokumente: was nicht überlesen werden darf) |
 | `box` | – (nur ein Titel, wenn es einen gibt) | nein | neutraler grauer Kasten, nicht kursiv |
 
 - **Eröffnungszeile:** `::: art`, dann freiwillig die Marke `{#name}` und ein Titel (Markdown und Formeln erlaubt; er
@@ -404,6 +406,40 @@ Fehler werden in VS Code rot unterstrichen und stehen in der Vorschau über der 
 
 Warnungen (gelb): ein unbekannter Schlüssel im Kopf, ein unbekanntes Attribut, ein Stichwort, das eine andere Seite oder
 ein Skript des Buchs schon hat.
+
+## Dokumente
+
+`type: document` macht eine Seite für sich: zum Austeilen, Hochladen oder für die Tafel – ohne Namensfelder, Punkte und Lösungen, und nicht Teil eines Buchs. **Export** (oder `geoanim sheet seite.geo.md -pdf`) schreibt `seite.html` (für Bildschirm und Tafel: volle Breite, die Schrift wächst mit dem Fenster) und `seite.pdf` neben die Datei.
+
+```markdown
+---
+type: document
+title: Einführung
+---
+
+# Einführung
+
+\toc 2-3
+
+## Bildschirmausgabe mit `print`
+
+![](Bsp1.jpg){width=9cm float=right}
+
+::: merke
+Anweisungen werden mit einem Semikolon (`;`) beendet.
+:::
+
+\clear
+```
+
+| Schreibweise | Bedeutung |
+|---|---|
+| `\toc` (`\toc 2-3`, `\toc 2`) | das Inhaltsverzeichnis der Seite: ihre Überschriften dieser Ebenen (ohne Angabe 2 und 3), verlinkt – geht auf jeder Seite |
+| `{float=right}` (`left`) an einem Bild | im HTML rechts neben dem Text, höchstens halb so breit wie die Spalte; im PDF steht es mittig |
+| `\clear` | das Umfließen endet hier (alles danach unter dem Bild) |
+| `::: merke` … `:::` | ein gelber Kasten „Merke.“ für das, was nicht überlesen werden darf (ohne Nummer; auch auf anderen Seiten) |
+
+Alte Markdown-Seiten (mit `{{toc 2 3}}`, `^^^ right 336`, `![](bild.jpg=336)`, Zitaten als Merksätzen) wandelt `tools/md2geo.py` um: `python md2geo.py ordner` schreibt neben jede `.md` eine `.geo.md`.
 
 ## Tests und Arbeitsblätter
 
