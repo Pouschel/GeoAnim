@@ -473,7 +473,7 @@ Nenne einen Mond {{alt: des Mars | des Jupiter | des Saturn}}: [[{{mond}}]]
 | `a, b, c` | eine Liste (Zahlen, Ausdrücke oder Wörter) |
 | `{{…}}` im Text | der Wert eines Ausdrucks – auch in Formeln, Lücken und Aufgabentiteln; Zahlen deutsch (2,5) |
 | `{{alt: A \| B \| C}}` | die Alternative der Gruppe, direkt im Text |
-| `::: pick 3` … `:::` | 3 der Zeilen zufällig, gemischt, als Liste (ohne Zahl: alle); `+ …`/`- …`: wahre und falsche Aussagen, mindestens eine von jeder Art, dahinter die Lücke mit „wahr“/„falsch“ (`::: pick 3 wf`: „w“/„f“; `::: pick 3 ja\|nein`: diese Wörter) |
+| `::: pick 3` … `:::` | 3 der Zeilen zufällig, gemischt, als Liste (ohne Zahl: alle); `+ …`/`- …`: wahre und falsche Aussagen (`+`/`-` sagen nur, welche – jede wird ein Absatz, keine Liste), mindestens eine von jeder Art, dahinter die Lücke mit „wahr“/„falsch“ (`::: pick 3 wf`: „w“/„f“; `::: pick 3 ja\|nein`: diese Wörter) |
 
 Ausdrücke: Zahlen, `"Text"`, Namen aus `let`, `+ - * / % ^`, Klammern, `liste[1]` (ab 1) und die Funktionen
 `random(a, b)`, `bin(n)` (`bin(n, 8)`: 8 Stellen), `hex(n)`, `round(x)` (`round(x, 2)`), `floor`, `ceil`, `abs`,
