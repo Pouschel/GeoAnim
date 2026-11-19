@@ -185,8 +185,14 @@ public sealed partial class MarkdownPage
         if (sheet != null)
         {
             variant ??= new SheetVariant(sheet.Groups.FirstOrDefault(), Solution: true);
+            // questions for ILIAS: always with their answers (the students see them in ILIAS)
+            if (sheet.IsIlias)
+            {
+                variant = variant with { Solution = true };
+            }
             int groupIndex = variant.Group != null ? Math.Max(0, sheet.Groups.ToList().IndexOf(variant.Group)) : 0;
-            string expanded = SheetScript.Expand(text, sheet.Seed ?? 1, groupIndex, errors, variant.Group, sheet.Generators);
+            string expanded = SheetScript.Expand(text, sheet.Seed ?? 1, groupIndex, errors, variant.Group, sheet.Generators,
+                new SheetOptions { Groups = sheet.Groups, Solution = variant.Solution || sheet.IsIlias, Ilias = sheet.IsIlias, Warnings = warnings });
             if (expanded != text)
             {
                 text = expanded;
@@ -313,7 +319,7 @@ public sealed partial class MarkdownPage
         }
         CheckMarks(marks, page, bookMarks, errors);
         LinkKeywords(document, keywordLinks ?? new Dictionary<string, KeywordLink>());
-        List<TestTask> tasks = sheet != null ? ReadTasks(text, document, locate, errors) : [];
+        List<TestTask> tasks = sheet == null ? [] : sheet.IsIlias ? ReadQuestions(text, document, locate, errors) : ReadTasks(text, document, locate, errors);
         variant ??= sheet != null ? new SheetVariant(sheet.Groups.FirstOrDefault(), Solution: true) : null;
 
         // a "$" that does not start a formula (no closing one, or a space after it): as in scripts a mistake
@@ -348,9 +354,13 @@ public sealed partial class MarkdownPage
         renderer.ObjectRenderers.Replace<HtmlMathInlineRenderer>(new FormulaInlineRenderer(errors, locate));
         renderer.ObjectRenderers.Replace<HtmlMathBlockRenderer>(new FormulaBlockRenderer(errors, locate));
         renderer.ObjectRenderers.Insert(0, new GeoFigureRenderer());
+        if (renderer.ObjectRenderers.FindExact<Markdig.Renderers.Html.CodeBlockRenderer>() is { } codeBlocks)
+        {
+            renderer.ObjectRenderers.Replace<Markdig.Renderers.Html.CodeBlockRenderer>(new CodeHighlighting.Renderer(codeBlocks));
+        }
         renderer.ObjectRenderers.Replace<Markdig.Extensions.CustomContainers.HtmlCustomContainerRenderer>(new StatementRenderer(usedIn, page));
         renderer.ObjectRenderers.Insert(0, new MarkReferenceRenderer());
-        renderer.ObjectRenderers.Replace<BlankRenderer>(new BlankRenderer(variant));
+        renderer.ObjectRenderers.Replace<BlankRenderer>(new BlankRenderer(variant, sheet?.IsIlias == true));
         if (sheet != null)
         {
             writer.Write(HeadHtml(sheet, variant!, heading));

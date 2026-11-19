@@ -10,7 +10,8 @@ internal static partial class Program
     /// geoanim sheet &lt;file.geo.md&gt; [-o &lt;folder&gt;] [-pdf]: a test or worksheet ("type: test" or "type: worksheet" in
     /// its head) as its sheets – for every group the students' (name-A.html, without the solutions) and one file with the
     /// solutions of all groups (name-Lsg.html); with -pdf also as PDF (name-A.pdf …, name-Lsg.pdf) through a Typst project
-    /// (name-typst). Default folder: the file's.
+    /// (name-typst). Default folder: the file's. Questions for ILIAS ("type: ilias"): for every group its pool to import
+    /// (name-U__qti_1.zip) and an HTML file to check it (name-U.html).
     /// </summary>
     internal static int Sheet(List<string> arguments)
     {
@@ -46,6 +47,11 @@ internal static partial class Program
         string folder = output ?? Path.GetDirectoryName(file)!;
         Directory.CreateDirectory(folder);
         string stem = Path.GetFileName(file)[..^".geo.md".Length];
+        if (head.IsIlias)
+        {
+            // questions for ILIAS: their pools and the files to check them (no PDF)
+            return Ilias(file, text, head, folder, stem);
+        }
         int groups = Math.Max(1, head.Groups.Count);
         var progress = new Progress(groups * 2 * (pdf ? 2 : 1));
         int errors = new HtmlBookWriter(Path.GetDirectoryName(file)!).WriteSheets(file, text, head, folder, stem, progress);

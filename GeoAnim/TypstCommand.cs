@@ -446,6 +446,15 @@ internal static partial class Program
                     return "#h(3em)";
                 case "span" when element.ClassList.Contains("solution"):
                     return "#solution[" + Content() + "]";
+                // a choice in a blank: the right ones with the solutions; in a single choice its mark
+                case "span" when element.ClassList.Contains("choice-right"):
+                    return element.ChildNodes.Length == 0 ? "#solution[✔] " : "#solution[" + Content() + "]";
+                case "span" when element.ClassList.Contains("choice-wrong"):
+                    return "#text(fill: luma(140))[✗] ";
+                case "span" when element.ClassList.Contains("choice-box"):
+                    return "☐ ";
+                case "span" when element.ClassList.Contains("choice-bar"):
+                    return " | ";
                 case "span" when element.ClassList.Contains("formula-gap"):
                     return "#h(0.2778em, weak: true)";
                 case "wbr":

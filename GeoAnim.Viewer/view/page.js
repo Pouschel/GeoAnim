@@ -406,7 +406,9 @@
       groupSelect.value = message.group
     }
     sheetSolution = message.solution !== false
-    solutionButton.hidden = !message.sheet
+    // questions for ILIAS: always with their answers
+    solutionButton.hidden = !message.sheet || message.ilias === true
+    exportButton.title = message.ilias ? 'Die Fragen jeder Gruppe für ILIAS (ZIP) und zur Kontrolle (HTML) neben die Datei schreiben' : 'Schülerblätter und Lösung als HTML und PDF neben die Datei schreiben'
     solutionButton.textContent = sheetSolution ? 'Lösung' : 'Schüler'
     solutionButton.title = sheetSolution ? 'Mit den Lösungen; klicken: das Blatt der Schüler' : 'Das Blatt der Schüler; klicken: mit den Lösungen'
   }

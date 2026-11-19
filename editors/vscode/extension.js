@@ -729,7 +729,9 @@ async function exportSheet (document) {
         // the progress line ("\r") only as its last state
         output.appendLine(said.split('\n').map(line => line.split('\r').pop()).join('\n').trim())
         if (code === 0) {
-          vscode.window.showInformationMessage(`GeoAnim: Blätter und Lösung von ${path.basename(file)} geschrieben (HTML und PDF neben der Datei).`)
+          vscode.window.showInformationMessage(said.includes('for ILIAS')
+            ? `GeoAnim: Fragen von ${path.basename(file)} für ILIAS geschrieben (je Gruppe ZIP und HTML neben der Datei).`
+            : `GeoAnim: Blätter und Lösung von ${path.basename(file)} geschrieben (HTML und PDF neben der Datei).`)
         } else {
           vscode.window.showErrorMessage('GeoAnim: Export mit Fehlern – Details in der Ausgabe „GeoAnim“.', 'Ausgabe zeigen')
             .then(choice => { if (choice) output.show(true) })

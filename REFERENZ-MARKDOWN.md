@@ -415,6 +415,8 @@ Nenne einen Marsmond: [[Phobos]]
 | `## Titel {+1}` | Zusatzaufgabe „Titel (1 P)“: ohne Nummer, nicht in der Summe | ebenso |
 | `[[40]]` | eine Linie, so breit, wie die Antwort braucht (mindestens 4em) | die Antwort rot auf der Linie |
 | `[[40\|6em]]` | Linie mit fester Breite (em, cm, mm) | ebenso |
+| `[[zwei \| *drei \| vier]]` | eine Auswahl zum Unterstreichen (je Gruppe gemischt, `{ordered}` dahinter: wie geschrieben) | die richtigen rot |
+| `## Titel {3} @A` | die Aufgabe nur auf den Blättern dieser Gruppen (`@-`: auf keinem) | ebenso |
 | `[[$8$]]` | Antworten dürfen Formeln und Markdown enthalten | |
 | `[[sol: …]]` | nichts | nur die Lösung, rot, ohne Linie (z. B. zu einer Zeichnung) |
 | `\space 3cm` | Platz zum Schreiben (Absatz für sich) | ebenso |
@@ -471,7 +473,7 @@ Nenne einen Mond {{alt: des Mars | des Jupiter | des Saturn}}: [[{{mond}}]]
 | `a, b, c` | eine Liste (Zahlen, Ausdrücke oder Wörter) |
 | `{{…}}` im Text | der Wert eines Ausdrucks – auch in Formeln, Lücken und Aufgabentiteln; Zahlen deutsch (2,5) |
 | `{{alt: A \| B \| C}}` | die Alternative der Gruppe, direkt im Text |
-| `::: pick 3` … `:::` | 3 der Zeilen zufällig, gemischt, als Liste; `+ …`/`- …`: wahre und falsche Aussagen, mindestens eine von jeder Art, dahinter die Lücke mit „wahr“/„falsch“ (`::: pick 3 wf`: „w“/„f“) |
+| `::: pick 3` … `:::` | 3 der Zeilen zufällig, gemischt, als Liste (ohne Zahl: alle); `+ …`/`- …`: wahre und falsche Aussagen, mindestens eine von jeder Art, dahinter die Lücke mit „wahr“/„falsch“ (`::: pick 3 wf`: „w“/„f“; `::: pick 3 ja\|nein`: diese Wörter) |
 
 Ausdrücke: Zahlen, `"Text"`, Namen aus `let`, `+ - * / % ^`, Klammern, `liste[1]` (ab 1) und die Funktionen
 `random(a, b)`, `bin(n)` (`bin(n, 8)`: 8 Stellen), `hex(n)`, `round(x)` (`round(x, 2)`), `floor`, `ceil`, `abs`,
@@ -530,6 +532,82 @@ public class BinDec(Random random, int group, string name)
 - **Fehler:** Baufehler (`BinDec.cs(12): CS1002: ; erwartet`), eine unbekannte Klasse oder ein unbekanntes Member (mit der
   Liste der vorhandenen) und Ausnahmen aus dem C#-Code (`BinDec.GetTask: IndexOutOfRangeException: …`) sind Fehler an der
   Zeile, die sie benutzt.
+
+### Fragen für ILIAS
+
+`type: ilias` macht aus der Datei Fragen für den ILIAS-Import: je Gruppe einen Fragenpool (`lek-U__qti_1.zip`, `lek-A__qti_1.zip` …) und eine HTML-Datei zur Kontrolle mit Antworten und Punkten (`lek-U.html` …). Gruppen, `let`, `alt`, `pick`, `{{…}}` und Generatoren gehen wie bei Tests – so braucht eine Aufgabe, die sich von Gruppe zu Gruppe nur in Zahlen oder Wörtern unterscheidet, nur einmal dazustehen.
+
+````markdown
+---
+type: ilias
+title: LEK Repeat
+groups: [U, A, N]          # Übung, Arbeit, Nachschreiben
+seed: 482
+---
+
+## Datentypen {cs}
+
+::: let
+f = alt "3.14" | "2.75" | "1.5"
+:::
+
+`"{{f}}`: [[Number | String | *kein gültiger Datentyp]]
+
+Ein Byte hat [[zwei | vier | *acht | 16]]{ordered} Bits, ein Kibibyte [[1024]]{2 chars=6} Byte.
+
+## print-Ausgabe @A N
+
+```eleu
+print({{z}});
+```
+
+::: pick ja|nein
++ `print({{z}});`
+- `print({{x}} + {{y}});`
+:::
+
+## Operatoren {6}
+
+::: match
+Zuweisung von Werten -> `=`
+Test auf Gleichheit -> `==`
+-> `===`
+:::
+
+## Passwort
+
+::: choice
+- Mein Passwort musste zurückgesetzt werden.
++ Mein Passwort musste __nicht__ zurückgesetzt werden.
+:::
+````
+
+Jede Überschrift `##` ist eine Frage. Ihre Art ergibt sich aus dem, was darin steht:
+
+| Inhalt | Frage in ILIAS | Punkte |
+|---|---|---|
+| Lücken `[[…]]` | Lückentext (cloze) | die Summe der Lücken (jede 1, `{2}` dahinter: 2); `## Titel {7}` prüft die Summe nur |
+| `::: match` | Zuordnung | `## Titel {6}`, verteilt auf die Paare (ohne: 1 je Paar) |
+| `::: choice` | Single Choice | `## Titel {2}` für die richtige Antwort (ohne: 1) |
+
+| Schreibweise | Bedeutung |
+|---|---|
+| `[[*Number \| String \| kein gültiger Datentyp]]` | Auswahllücke: `*` vor den richtigen Antworten (auch mehreren). Die Auswahl wird je Gruppe gemischt (ILIAS mischt sie dazu für jeden Schüler) |
+| `[[…]]{ordered}` | die Auswahl bleibt, wie sie dasteht (für Zahlen, „zwei \| vier \| acht“) |
+| `[[take();]]` | Freitextlücke; `[[Binärzahl \| Dualzahl]]`: beides richtig |
+| `[[…]]{2 chars=16}` | 2 Punkte; höchstens 16 Zeichen (ohne: die längste Antwort und 5 dazu) |
+| `## Titel {cs}` | wie ILIAS geschriebene Antworten wertet: `ci` (Groß-/Kleinschreibung egal), `cs` (genau), `l1`, `l2` (1 oder 2 Buchstaben dürfen abweichen; Voreinstellung `l2`) |
+| `## Titel @A N` | die Frage nur für diese Gruppen (geht auch auf Tests und Arbeitsblättern); `@-`: beiseitegelegt, für keine |
+| `::: pick ja\|nein` | wahr/falsch-Reihe: jede Zeile mit der Auswahl „ja \| nein“ (ohne Wörter: „wahr \| falsch“); ohne Zahl alle Zeilen, gemischt |
+| `::: match` | Zeilen `Definition -> Term`; `-> Term`: ein Term, der zu nichts passt. ILIAS mischt die Terme; `::: match all`: beide Seiten |
+| `::: choice` | `+ richtige Antwort`, `- falsche`; genau eine richtige |
+
+- **Zuordnung n:n:** Gehört ein Term zu zwei Definitionen (oder eine Definition zu zwei Termen), ist das eine Warnung: ILIAS braucht dann Minuspunkte für falsche Paare. Zwei gleich aussehende Terme (`}` zweimal) sind für ILIAS derselbe.
+- **Code:** ```` ```eleu ```` wird farbig (die Wörter aus der Eleu-Erweiterung für VS Code), auch in ILIAS. `{{…}}` geht auch in Code-Blöcken.
+- **Zahlen in Code:** `{{…}}` schreibt Zahlen deutsch (2,75). Für Code gehören sie in Anführungszeichen: `alt "3.14" | "2.75"` – dann bleiben sie Text, auch mit führender Null (`"0532"`).
+- **Bilder:** Formeln, Abbildungen aus Skripten und Bilddateien kommen als Bilder in die Frage.
+- **Kontrolle:** In der Vorschau stehen die Fragen immer mit ihren Antworten und den Punkten jeder Lücke; **Export** (oder `geoanim sheet lek.geo.md`) schreibt ZIPs und HTML neben die Datei. Danach in ILIAS importieren und die Fragen dort durchsehen.
+- Text vor der ersten Frage (Hilfsmittel …) steht nur in der Kontrolle.
 
 ## Beispiel
 

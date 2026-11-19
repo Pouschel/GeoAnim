@@ -263,6 +263,7 @@ internal static class Daemon
             // a test or worksheet: the preview offers to export its sheets, and to show each group's, with or without
             // the solutions
             json.WriteBoolean("sheet", page.Document != null);
+            json.WriteBoolean("ilias", page.Document?.IsIlias == true);
             if (page.Document is { } sheet)
             {
                 json.WriteStartArray("groups");

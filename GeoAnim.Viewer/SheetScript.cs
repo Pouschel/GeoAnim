@@ -20,11 +20,13 @@ internal sealed partial class SheetScript
     private readonly Dictionary<string, Value> values = new(StringComparer.Ordinal);
     private readonly string? groupName;
     private readonly IReadOnlyList<string> generators;
+    private readonly SheetOptions options;
     private List<Assembly>? assemblies;
     private readonly List<MarkdownProblem> errors;
 
-    private SheetScript(int seed, int group, string? groupName, IReadOnlyList<string> generators, List<MarkdownProblem> errors)
+    private SheetScript(int seed, int group, string? groupName, IReadOnlyList<string> generators, List<MarkdownProblem> errors, SheetOptions options)
     {
+        this.options = options;
         // every group its own chance; the same group always the same
         random = new Random(unchecked(seed * 7919 + group * 104729 + 17));
         this.group = group;
@@ -41,9 +43,11 @@ internal sealed partial class SheetScript
     /// "{{…}}" worked out. <paramref name="seed"/>: the head's (the same seed, the same sheets); <paramref name="generators"/>:
     /// the C# projects whose classes it may use (their full paths).
     /// </summary>
-    public static string Expand(string text, int seed, int group, List<MarkdownProblem> errors, string? groupName = null, IReadOnlyList<string>? generators = null)
+    public static string Expand(string text, int seed, int group, List<MarkdownProblem> errors, string? groupName = null, IReadOnlyList<string>? generators = null,
+        SheetOptions? options = null)
     {
-        var script = new SheetScript(seed, group, groupName, generators ?? [], errors);
+        options ??= new SheetOptions();
+        var script = new SheetScript(seed, group, groupName, generators ?? [], errors, options);
         string[] lines = text.Split('\n');
         var result = new List<string>(lines.Length);
         int start = 0;
@@ -58,6 +62,7 @@ internal sealed partial class SheetScript
             }
         }
         bool fenced = false;
+        bool skipping = false;
         for (int i = start; i < lines.Length; i++)
         {
             string line = lines[i].TrimEnd('\r');
@@ -65,10 +70,27 @@ internal sealed partial class SheetScript
             {
                 fenced = !fenced;
             }
+            // a task only for some groups ("## Struktogramm {8} @A N"): for the others left out, to the next heading
+            if (!fenced && Regex.IsMatch(line, @"^#{1,2}\s"))
+            {
+                skipping = false;
+                if (TaskGroups().Match(line) is { Success: true } only)
+                {
+                    skipping = !script.IsFor(only.Groups[2].Value, i + 1);
+                    line = only.Groups[1].Value;
+                }
+            }
+            if (skipping)
+            {
+                result.Add("");
+                continue;
+            }
             Match block = fenced ? Match.Empty : BlockStart().Match(line);
             if (!block.Success)
             {
-                result.Add(fenced ? lines[i] : script.Interpolate(line, i + 1));
+                // in code too ("{{…}}" in a program), but its fences as they are
+                result.Add(fenced && !line.TrimStart().StartsWith("```", StringComparison.Ordinal) ? script.Interpolate(line, i + 1)
+                    : fenced ? lines[i] : script.Choices(script.Interpolate(line, i + 1)));
                 continue;
             }
             // to its ":::" (or the end)
@@ -78,9 +100,13 @@ internal sealed partial class SheetScript
                 close++;
             }
             string[] body = lines[(i + 1)..Math.Min(close, lines.Length)].Select(l => l.TrimEnd('\r')).ToArray();
-            List<string> made = block.Groups[1].Value == "let"
-                ? script.Let(body, i + 2)
-                : script.Pick(block.Groups[2].Value, body, i + 1);
+            List<string> made = block.Groups[1].Value switch
+            {
+                "let" => script.Let(body, i + 2),
+                "pick" => script.Pick(block.Groups[2].Value, body, i + 1).Select(script.Choices).ToList(),
+                "match" => script.MatchBlock(block.Groups[2].Value, body, i + 1),
+                _ => script.Choice(block.Groups[2].Value, body, i + 1),
+            };
             int taken = Math.Min(close, lines.Length - 1) - i + 1;
             // as many lines as before: what is left over empty
             for (int k = 0; k < taken; k++)
@@ -97,8 +123,163 @@ internal sealed partial class SheetScript
         return string.Join("\n", result);
     }
 
-    [GeneratedRegex(@"^\s*:::\s*(let|pick)\b\s*(.*?)\s*$")]
+    [GeneratedRegex(@"^\s*:::\s*(let|pick|match|choice)\b\s*(.*?)\s*$")]
     private static partial Regex BlockStart();
+
+    // "## Titel {3} @A N": the heading and the groups it is for ("@-": none, put aside)
+    [GeneratedRegex(@"^(#{1,2}\s.*?)\s+@((?:[\p{L}\p{N}_-]+[\s,]*)+)$")]
+    private static partial Regex TaskGroups();
+
+    // whether a task "@A N" is for this sheet's group
+    private bool IsFor(string list, int line)
+    {
+        string[] names = list.Split([' ', ','], StringSplitOptions.RemoveEmptyEntries);
+        if (names.Contains("-"))
+        {
+            return false;
+        }
+        foreach (string name in names.Where(n => !options.Groups.Contains(n)))
+        {
+            Error(line, options.Groups.Count == 0
+                ? $"@{name}: the head has no groups (groups: [U, A, N])."
+                : $"@{name}: there is no group \"{name}\" (groups: {string.Join(", ", options.Groups)}).");
+        }
+        return groupName == null || names.Contains(groupName);
+    }
+
+    // ------------------------------------------------------------------ choices in blanks
+
+    // a blank with choices, the right ones with "*" ("[[*Number | String | kein gültiger Datentyp]]"): its choices
+    // mixed by the group's chance, unless "{ordered}" follows
+    [GeneratedRegex(@"\[\[((?:[^\]\n]|\](?!\]))*?)\]\](\{[^}\n]*\})?")]
+    private static partial Regex BlankPattern();
+
+    private string Choices(string line) => BlankPattern().Replace(line, m =>
+    {
+        List<string> parts = SplitChoices(m.Groups[1].Value);
+        if (!parts.Any(p => p.TrimStart().StartsWith('*')) || m.Groups[2].Value.Contains("ordered", StringComparison.Ordinal))
+        {
+            return m.Value;
+        }
+        return "[[" + string.Join(" | ", Shuffled(parts.Select(p => Value.Of(p.Trim())).ToList()).Select(v => v.Text)) + "]]" + m.Groups[2].Value;
+    });
+
+    /// <summary>The parts of a blank between "|" (not "\|").</summary>
+    internal static List<string> SplitChoices(string content)
+    {
+        var parts = new List<string>();
+        int start = 0;
+        for (int i = 0; i < content.Length; i++)
+        {
+            if (content[i] == '\\' && i + 1 < content.Length)
+            {
+                i++;
+            }
+            else if (content[i] == '|')
+            {
+                parts.Add(content[start..i]);
+                start = i + 1;
+            }
+        }
+        parts.Add(content[start..]);
+        return parts;
+    }
+
+    // ------------------------------------------------------------------ ::: match, ::: choice
+
+    // "::: match" (or "::: match all": both sides mixed in ILIAS; else only the right one): lines "Definition -> Term";
+    // "-> Term" one that fits nothing. As a table in a block (data-pairs: how many pairs, for the points); for the
+    // students the right column empty and the terms below, mixed
+    private List<string> MatchBlock(string arguments, string[] body, int line)
+    {
+        if (arguments is not ("" or "all"))
+        {
+            Error(line, "Expected \"::: match\" (in ILIAS only the terms mixed) or \"::: match all\" (both sides).");
+        }
+        var rows = new List<(string Left, string Right)>();
+        for (int k = 0; k < body.Length; k++)
+        {
+            string text = body[k].Trim();
+            if (text.Length == 0 || text.StartsWith('#'))
+            {
+                continue;
+            }
+            int arrow = text.IndexOf("->", StringComparison.Ordinal);
+            if (arrow < 0 || text[(arrow + 2)..].Trim().Length == 0)
+            {
+                Error(line + 1 + k, $"Expected \"Definition -> Term\" (or \"-> Term\": one that fits nothing), not \"{text}\".");
+                continue;
+            }
+            rows.Add((Interpolate(text[..arrow].Trim(), line + 1 + k), Interpolate(text[(arrow + 2)..].Trim(), line + 1 + k)));
+        }
+        List<(string Left, string Right)> pairs = rows.Where(r => r.Left.Length > 0).ToList();
+        if (pairs.Count == 0)
+        {
+            Error(line, "::: match needs pairs \"Definition -> Term\".");
+        }
+        // n:n: a definition with two terms, or a term for two definitions (in ILIAS with minus points)
+        foreach (var twice in pairs.GroupBy(p => p.Left).Where(g => g.Count() > 1))
+        {
+            options.Warnings?.Add(new MarkdownProblem(line, 1, $"\"{twice.Key}\" has {twice.Count()} terms: an n:n matching (wrong pairs give minus points in ILIAS)."));
+        }
+        foreach (var twice in pairs.GroupBy(p => p.Right).Where(g => g.Count() > 1))
+        {
+            options.Warnings?.Add(new MarkdownProblem(line, 1, $"\"{twice.Key}\" is the term of {twice.Count()} definitions: an n:n matching (wrong pairs give minus points in ILIAS)."));
+        }
+        var made = new List<string>
+        {
+            $"<div class=\"match\" data-shuffle=\"{(arguments == "all" ? "all" : "terms")}\" data-pairs=\"{pairs.Count}\">",
+            "",
+            "| Definition | Term |",
+            "|:---|:---|",
+        };
+        made.AddRange(rows.Select(r => "| " + r.Left + " | " + (options.Solution ? r.Right : "") + " |"));
+        made.Add("");
+        made.Add("</div>");
+        if (!options.Solution)
+        {
+            made.Add("");
+            made.Add("Zur Auswahl: " + string.Join(" · ", Shuffled(rows.Select(r => Value.Of(r.Right)).DistinctBy(v => v.Text).ToList()).Select(v => v.Text)));
+        }
+        return made;
+    }
+
+    // "::: choice": "+ …" the right answer, "- …" wrong ones (single choice); a list, mixed, the right one marked with the
+    // solutions
+    private List<string> Choice(string arguments, string[] body, int line)
+    {
+        if (arguments.Length > 0)
+        {
+            Error(line, "Expected \"::: choice\" (and \"+ …\"/\"- …\" lines).");
+        }
+        var items = new List<(bool Right, string Text)>();
+        for (int k = 0; k < body.Length; k++)
+        {
+            string text = body[k].Trim();
+            if (text.Length == 0)
+            {
+                continue;
+            }
+            if (!(text.StartsWith("+ ", StringComparison.Ordinal) || text.StartsWith("- ", StringComparison.Ordinal)))
+            {
+                Error(line + 1 + k, $"Expected \"+ right answer\" or \"- wrong answer\" in ::: choice, not \"{text}\".");
+                continue;
+            }
+            items.Add((text[0] == '+', Interpolate(text[2..].Trim(), line + 1 + k)));
+        }
+        int right = items.Count(i => i.Right);
+        if (right != 1 || items.Count < 2)
+        {
+            Error(line, right == 1 ? "::: choice needs wrong answers too (\"- …\")." : $"::: choice needs exactly one right answer (\"+ …\"), not {right}.");
+        }
+        var order = Shuffled(Enumerable.Range(0, items.Count).Select(k => Value.Of(k)).ToList()).Select(v => (int)v.Number!.Value).ToList();
+        var made = new List<string> { "<div class=\"single-choice\">", "" };
+        made.AddRange(order.Select(k => "- " + (!options.Solution ? "<span class=\"choice-box\"></span>"
+            : items[k].Right ? "<span class=\"choice-right\"></span>" : "<span class=\"choice-wrong\"></span>") + items[k].Text));
+        made.Add("");
+        made.Add("</div>");
+        return made;
+    }
 
     private void Error(int line, string message) => errors.Add(new MarkdownProblem(line, 1, message));
 
@@ -297,23 +478,33 @@ internal sealed partial class SheetScript
     private Value Alternative(string text)
     {
         List<string> choices = SplitTop(text, '|').Select(c => c.Trim()).ToList();
-        return Item(choices[group % choices.Count]);
+        string choice = choices[group % choices.Count];
+        // a value, else the text as it is (code: "turn("left");")
+        try
+        {
+            return Evaluate(choice);
+        }
+        catch (FormatException)
+        {
+            return Value.Of(choice);
+        }
     }
 
     // ------------------------------------------------------------------ ::: pick
 
-    // "::: pick 3" (or "::: pick 3 wf"): 3 of the lines, by chance, mixed; "+ …" true, "- …" false statements: each with
-    // the answer as a blank ("wahr"/"falsch", with wf "w"/"f"), at least one of each where there can be
+    // "::: pick 3" (or "::: pick 3 wf", "::: pick 3 ja|nein"; without a number: all): 3 of the lines, by chance, mixed;
+    // "+ …" true, "- …" false statements: each with the answer as a blank ("wahr"/"falsch", with wf "w"/"f"; for ILIAS a
+    // choice of the two), at least one of each where there can be
     private List<string> Pick(string arguments, string[] body, int line)
     {
-        Match parts = Regex.Match(arguments, @"^(\d+)(?:\s+(wf))?$");
+        Match parts = Regex.Match(arguments, @"^(\d+)?\s*(wf|[^|\s]+\s*\|\s*[^|\s]+)?$");
         var items = body.Select(l => l.Trim()).Where(l => l.Length > 0).ToList();
         if (!parts.Success)
         {
-            Error(line, "Expected \"::: pick 3\" (how many of the lines; \"::: pick 3 wf\": answers w/f).");
+            Error(line, "Expected \"::: pick 3\" (how many of the lines, without: all; \"::: pick 3 wf\": answers w/f; \"::: pick 3 ja|nein\": these).");
             return [];
         }
-        int count = int.Parse(parts.Groups[1].Value, CultureInfo.InvariantCulture);
+        int count = parts.Groups[1].Success ? int.Parse(parts.Groups[1].Value, CultureInfo.InvariantCulture) : items.Count;
         bool judged = items.Count > 0 && items.All(l => l.StartsWith("+ ", StringComparison.Ordinal) || l.StartsWith("- ", StringComparison.Ordinal));
         if (count > items.Count)
         {
@@ -333,9 +524,13 @@ internal sealed partial class SheetScript
         {
             chosen = TakeRandom(items, count);
         }
-        string yes = parts.Groups[2].Success ? "w" : "wahr", no = parts.Groups[2].Success ? "f" : "falsch";
+        string[] words = !parts.Groups[2].Success ? ["wahr", "falsch"] : parts.Groups[2].Value == "wf" ? ["w", "f"]
+            : parts.Groups[2].Value.Split('|').Select(w => w.Trim()).ToArray();
+        string yes = words[0], no = words[1];
+        // for ILIAS a choice of the two (in their order), on paper a line for the answer
+        string Answer(bool right) => options.Ilias ? (right ? $"[[*{yes} | {no}]]{{ordered}}" : $"[[{yes} | *{no}]]{{ordered}}") : "[[" + (right ? yes : no) + "]]";
         return chosen.Select(item => judged
-            ? "- " + Interpolate(item[2..], line) + " [[" + (item[0] == '+' ? yes : no) + "]]"
+            ? "- " + Interpolate(item[2..], line) + " " + Answer(item[0] == '+')
             : "- " + Interpolate(item.StartsWith("- ", StringComparison.Ordinal) || item.StartsWith("* ", StringComparison.Ordinal) ? item[2..] : item, line)).ToList();
     }
 
@@ -661,4 +856,19 @@ internal sealed partial class SheetScript
 
         private static long Gcd(long x, long y) => y == 0 ? Math.Abs(x) : Gcd(y, x % y);
     }
+}
+
+/// <summary>
+/// How a sheet is made beyond its group: the head's groups (for "@A N" at tasks), with the solutions or for the
+/// students, for ILIAS (true/false as a choice), where warnings go.
+/// </summary>
+internal sealed record SheetOptions
+{
+    public IReadOnlyList<string> Groups { get; init; } = [];
+
+    public bool Solution { get; init; } = true;
+
+    public bool Ilias { get; init; }
+
+    public List<MarkdownProblem>? Warnings { get; init; }
 }

@@ -58,6 +58,8 @@ internal static partial class Program
               A test or worksheet ("type: test" or "worksheet" in its head) as sheets: for every group the students'
               (file-A.html, no solutions in it) and one with the solutions of all groups (file-Lsg.html); with -pdf also
               as PDF (file-A.pdf …, file-Lsg.pdf) through a Typst project (file-typst). Default folder: the file's.
+              With "type: ilias": for every group the questions to import into ILIAS (file-U__qti_1.zip) and an
+              HTML file to check them (file-U.html).
           geoanim daemon
               Compiles for an editor (the VS Code extension): JSON requests on standard input, answers on standard output.
         """;

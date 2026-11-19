@@ -570,3 +570,24 @@ a.keyword:hover {
     break-after: page;
   }
 }
+
+/* code in colour ("```eleu") */
+.tk-kw { color: #a626a4; }
+.tk-fn { color: #4078f2; }
+.tk-api { color: #0184bc; }
+.tk-const, .tk-num { color: #986801; }
+.tk-str { color: #50a14f; }
+.tk-com { color: #8a8f98; font-style: italic; }
+
+/* tests and ILIAS: a choice in a blank ("[[*a | b]]"), the right ones red with the solutions; a matching; a single
+   choice; the points of a blank for ILIAS */
+.choice { white-space: normal; }
+.choice-bar { color: #8a8f98; }
+.choice-right { color: #c62828; font-weight: 600; }
+.single-choice ul { list-style: none; padding-left: 0.4em; }
+.single-choice .choice-right::before { content: "✔ "; }
+.single-choice .choice-wrong::before { content: "✗ "; color: #8a8f98; }
+.single-choice .choice-box::before { content: "☐ "; }
+.match table { min-width: 60%; }
+.match td:nth-child(2) { color: #c62828; }
+.gap-points { color: #8a8f98; font-size: 0.85em; }
