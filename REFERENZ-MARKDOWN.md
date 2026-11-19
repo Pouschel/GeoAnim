@@ -416,7 +416,7 @@ Nenne einen Marsmond: [[Phobos]]
 | `[[40]]` | eine Linie, so breit, wie die Antwort braucht (mindestens 4em) | die Antwort rot auf der Linie |
 | `[[40\|6em]]` | Linie mit fester Breite (em, cm, mm) | ebenso |
 | `[[zwei \| *drei \| vier]]` | eine Auswahl zum Unterstreichen (je Gruppe gemischt, `{ordered}` dahinter: wie geschrieben) | die richtigen rot |
-| `## Titel {3} @A` | die Aufgabe nur auf den Blättern dieser Gruppen (`@-`: auf keinem) | ebenso |
+| `## Titel {3} @A` | die Aufgabe nur auf den Blättern dieser Gruppen (`@-B`: auf allen außer B; `@-`: auf keinem) | ebenso |
 | `[[$8$]]` | Antworten dürfen Formeln und Markdown enthalten | |
 | `[[sol: …]]` | nichts | nur die Lösung, rot, ohne Linie (z. B. zu einer Zeichnung) |
 | `\space 3cm` | Platz zum Schreiben (Absatz für sich) | ebenso |
@@ -597,7 +597,7 @@ Jede Überschrift `##` ist eine Frage. Ihre Art ergibt sich aus dem, was darin s
 | `[[take();]]` | Freitextlücke; `[[Binärzahl \| Dualzahl]]`: beides richtig |
 | `[[…]]{2 chars=16}` | 2 Punkte; höchstens 16 Zeichen (ohne: die längste Antwort und 5 dazu) |
 | `## Titel {cs}` | wie ILIAS geschriebene Antworten wertet: `ci` (Groß-/Kleinschreibung egal), `cs` (genau), `l1`, `l2` (1 oder 2 Buchstaben dürfen abweichen; Voreinstellung `l2`) |
-| `## Titel @A N` | die Frage nur für diese Gruppen (geht auch auf Tests und Arbeitsblättern); `@-`: beiseitegelegt, für keine |
+| `## Titel @A N` | die Frage nur für diese Gruppen (geht auch auf Tests und Arbeitsblättern); `@-U`: für alle außer U (auch `@-U -B`); `@-`: beiseitegelegt, für keine |
 | `::: pick ja\|nein` | wahr/falsch-Reihe: jede Zeile mit der Auswahl „ja \| nein“ (ohne Wörter: „wahr \| falsch“); ohne Zahl alle Zeilen, gemischt |
 | `::: match` | Zeilen `Definition -> Term`; `-> Term`: ein Term, der zu nichts passt. ILIAS mischt die Terme; `::: match all`: beide Seiten |
 | `::: choice` | `+ richtige Antwort`, `- falsche`; genau eine richtige |

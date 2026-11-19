@@ -51,6 +51,10 @@ public sealed class IliasTests : IDisposable
 
         Ein Byte hat [[zwei | vier | *acht]]{ordered} Bits, ein Kibibyte [[1024]]{2 chars=6} Byte.
 
+        ## Ohne Übung @-U
+
+        [[*a | b]]
+
         ## Operatoren {5}
 
         ::: match
@@ -78,9 +82,10 @@ public sealed class IliasTests : IDisposable
         // always with the answers; a question only for some groups, one put aside
         Assert.Contains("<span class=\"choice-right\"></span>", u.Html);
         Assert.Equal(["Passwort", "Datentypen", "Operatoren"], u.Tasks.Select(t => t.Title));
+        Assert.Contains("Ohne Übung", MarkdownPage.Parse(Questions, variant: new SheetVariant("N", Solution: true)).Tasks.Select(t => t.Title));
         Assert.Equal([1.0, 4, 5], u.Tasks.Select(t => t.Points));
         MarkdownPage a = MarkdownPage.Parse(Questions, variant: new SheetVariant("A", Solution: true));
-        Assert.Equal(["Passwort", "Ausgabe", "Datentypen", "Operatoren"], a.Tasks.Select(t => t.Title));
+        Assert.Equal(["Passwort", "Ausgabe", "Datentypen", "Ohne Übung", "Operatoren"], a.Tasks.Select(t => t.Title));
         Assert.Contains(">2. Ausgabe (3 P)</h2>", a.Html);
         // values in code too, in colour
         Assert.Contains("<span class=\"tk-fn\">print</span>(<span class=\"tk-num\">4321</span>); <span class=\"tk-com\">// Ausgabe</span>", a.Html);
@@ -95,9 +100,9 @@ public sealed class IliasTests : IDisposable
         string overview = Cells(MarkdownPage.PointsOverview(Questions, null, null, a, "A"));
         Assert.Contains("Ausgabe Lückentext – 3 3", overview);
         Assert.Contains("Operatoren Zuordnung 5 5 5", overview);
-        Assert.Contains("Summe 10 13 13", overview);
-        Assert.Contains("davon Lückentext 4 7 7", overview);
-        Assert.Contains("Die Summen sind verschieden: U 10, A 13, N 13.", overview);
+        Assert.Contains("Summe 10 14 14", overview);
+        Assert.Contains("davon Lückentext 4 8 8", overview);
+        Assert.Contains("Die Summen sind verschieden: U 10, A 14, N 14.", overview);
     }
 
     [Fact]
@@ -180,9 +185,9 @@ public sealed class IliasTests : IDisposable
         Assert.Equal("lek-A__qti_1/lek-A__qti_1.xml", Assert.Single(zip.Entries).FullName);
         XDocument pool = XDocument.Load(zip.Entries[0].Open());
         List<XElement> items = pool.Root!.Elements("item").ToList();
-        Assert.Equal(["Passwort", "Ausgabe", "Datentypen", "Operatoren"], items.Select(i => (string)i.Attribute("title")!));
+        Assert.Equal(["Passwort", "Ausgabe", "Datentypen", "Ohne Übung", "Operatoren"], items.Select(i => (string)i.Attribute("title")!));
         string Kind(XElement item) => item.Descendants("qtimetadatafield").First(f => (string)f.Element("fieldlabel")! == "QUESTIONTYPE").Element("fieldentry")!.Value;
-        Assert.Equal(["SINGLE CHOICE QUESTION", "CLOZE QUESTION", "CLOZE QUESTION", "MATCHING QUESTION"], items.Select(Kind));
+        Assert.Equal(["SINGLE CHOICE QUESTION", "CLOZE QUESTION", "CLOZE QUESTION", "CLOZE QUESTION", "MATCHING QUESTION"], items.Select(Kind));
         // single choice: the right one with the point
         XElement single = items[0];
         Assert.Equal(1, single.Descendants("respcondition").Where(c => c.Element("conditionvar")!.Element("varequal") != null).Sum(c => (double)c.Element("setvar")!));
@@ -195,7 +200,7 @@ public sealed class IliasTests : IDisposable
         Assert.Contains(cloze.Descendants("respcondition"), c => c.Descendants("varequal").Single().Value == "kein gültiger Datentyp" && (string)c.Element("setvar")! == "1");
         Assert.Equal("cs", cloze.Descendants("qtimetadatafield").First(f => f.Element("fieldlabel")!.Value == "textgaprating").Element("fieldentry")!.Value);
         // matching: 5 points for 2 pairs (3 + 2), the term that fits nothing among them, 1:1
-        XElement matching = items[3];
+        XElement matching = items[4];
         Assert.Equal([3, 2], matching.Descendants("respcondition").Select(c => (int)c.Element("setvar")!));
         Assert.Equal(5, matching.Descendants("response_label").Count());
         Assert.Equal("1:1", matching.Descendants("qtimetadatafield").First(f => f.Element("fieldlabel")!.Value == "matching_mode").Element("fieldentry")!.Value);

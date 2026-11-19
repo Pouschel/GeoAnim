@@ -130,7 +130,7 @@ internal sealed partial class SheetScript
     [GeneratedRegex(@"^(#{1,2}\s.*?)\s+@((?:[\p{L}\p{N}_-]+[\s,]*)+)$")]
     private static partial Regex TaskGroups();
 
-    // whether a task "@A N" is for this sheet's group
+    // whether a task "@A N" is for this sheet's group; "@-U": for all but U; "@-": for none (put aside)
     private bool IsFor(string list, int line)
     {
         string[] names = list.Split([' ', ','], StringSplitOptions.RemoveEmptyEntries);
@@ -138,13 +138,19 @@ internal sealed partial class SheetScript
         {
             return false;
         }
-        foreach (string name in names.Where(n => !options.Groups.Contains(n)))
+        var only = names.Where(n => !n.StartsWith('-')).ToList();
+        var except = names.Where(n => n.StartsWith('-')).Select(n => n[1..]).ToList();
+        foreach (string name in only.Concat(except).Where(n => !options.Groups.Contains(n)))
         {
             Error(line, options.Groups.Count == 0
                 ? $"@{name}: the head has no groups (groups: [U, A, N])."
                 : $"@{name}: there is no group \"{name}\" (groups: {string.Join(", ", options.Groups)}).");
         }
-        return groupName == null || names.Contains(groupName);
+        if (groupName == null)
+        {
+            return true;
+        }
+        return (only.Count == 0 || only.Contains(groupName)) && !except.Contains(groupName);
     }
 
     // ------------------------------------------------------------------ choices in blanks
