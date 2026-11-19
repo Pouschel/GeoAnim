@@ -369,6 +369,10 @@ internal static partial class Program
                     return Table(element, context) + label;
                 case "figure" when element.ClassList.Contains("geo-figure"):
                     return Figure(element, context);
+                // a structure diagram: its SVG, as wide in em as in the page
+                case "figure" when element.ClassList.Contains("nassi") && element.QuerySelector("svg") is { } diagram:
+                    return "#block(above: 1.2em, below: 1.2em, width: 100%, align(center, image(\"../" + Picture("figures", Encoding.UTF8.GetBytes(diagram.OuterHtml)) + "\", width: "
+                        + (element.GetAttribute("data-width") ?? "10") + "em)))";
                 case "div" when element.ClassList.Contains("statement"):
                     {
                         string kind = element.ClassList.FirstOrDefault(c => c.StartsWith("statement-", StringComparison.Ordinal))?["statement-".Length..] ?? "box";

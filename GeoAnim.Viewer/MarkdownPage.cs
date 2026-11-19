@@ -202,6 +202,16 @@ public sealed partial class MarkdownPage
             }
         }
 
+        // structure diagrams as pictures
+        string drawn = DrawNassi(text, variant?.Solution ?? true, errors);
+        if (drawn != text)
+        {
+            text = drawn;
+            document = Markdown.Parse(text, Pipeline);
+            locate = Locator(text);
+            document.Descendants<YamlFrontMatterBlock>().FirstOrDefault()?.Parent?.Remove(document.Descendants<YamlFrontMatterBlock>().First());
+        }
+
         RescueAttributes(document, text);
         AttachFormulaMarks(document);
         string? heading = document.Descendants<HeadingBlock>().FirstOrDefault(h => h.Level == 1) is { } first
@@ -1178,6 +1188,74 @@ public sealed partial class MarkdownPage
             }
             renderer.WriteLine("</div>");
         }
+    }
+
+    // ------------------------------------------------------------------ structure diagrams
+
+    [GeneratedRegex(@"^\s*:::\s*nassi\b\s*(.*?)\s*$")]
+    private static partial Regex NassiStart();
+
+    /// <summary>
+    /// "::: nassi" … ":::" (a structure diagram in lines like pseudocode; "::: nassi numbered": its boxes numbered,
+    /// "::: nassi ja|nein": these words at the branches instead of true/false) as a picture: an SVG in a figure, on the
+    /// block's first line (the others empty, so that the lines stay where they were). The SVG is as wide in em as it is
+    /// in points by its text's size, so that it grows with the text.
+    /// </summary>
+    private static string DrawNassi(string text, bool solution, List<MarkdownProblem> errors)
+    {
+        string[] lines = text.Split('\n');
+        bool fenced = false, changed = false;
+        for (int i = 0; i < lines.Length; i++)
+        {
+            string line = lines[i].TrimEnd('\r');
+            if (line.TrimStart().StartsWith("```", StringComparison.Ordinal))
+            {
+                fenced = !fenced;
+            }
+            if (fenced || NassiStart().Match(line) is not { Success: true } start)
+            {
+                continue;
+            }
+            int close = i + 1;
+            while (close < lines.Length && lines[close].Trim() != ":::")
+            {
+                close++;
+            }
+            var options = new GeoAnim.Figures.NassiOptions { Solution = solution };
+            foreach (string option in start.Groups[1].Value.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (option == "numbered")
+                {
+                    options = options with { Numbered = true };
+                }
+                else if (option.Split('|') is [{ Length: > 0 } yes, { Length: > 0 } no])
+                {
+                    options = options with { True = yes, False = no };
+                }
+                else
+                {
+                    errors.Add(new MarkdownProblem(i + 1, 1, $"\"{option}\" after ::: nassi: \"numbered\" (numbers in the boxes) or the words at the branches (ja|nein)."));
+                }
+            }
+            var problems = new List<(int Line, string Message)>();
+            GeoAnim.Figures.NassiImage image = GeoAnim.Figures.NassiDiagram.Render(
+                lines[(i + 1)..Math.Min(close, lines.Length)].Select(l => l.TrimEnd('\r')).ToList(), options, problems, i + 2);
+            foreach ((int at, string message) in problems)
+            {
+                errors.Add(new MarkdownProblem(at, 1, message));
+            }
+            string width = (Math.Round(image.Width / options.Size, 3) + 0.0).ToString("0.###", CultureInfo.InvariantCulture);
+            // (its width on the figure: the SVG stays as it is for other uses – PNG, Typst)
+            string svg = image.Svg.Replace("<svg ", "<svg class=\"nassi-picture\" ", StringComparison.Ordinal);
+            lines[i] = $"<figure class=\"nassi\" data-width=\"{width}\" style=\"--width: {width}em\">{svg}</figure>";
+            for (int k = i + 1; k <= Math.Min(close, lines.Length - 1); k++)
+            {
+                lines[k] = "";
+            }
+            i = Math.Min(close, lines.Length - 1);
+            changed = true;
+        }
+        return changed ? string.Join("\n", lines) : text;
     }
 
     // ------------------------------------------------------------------ figures

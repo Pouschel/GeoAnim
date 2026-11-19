@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\GeoAnim.Core\GeoAnim.Core.csproj" />
+    <ProjectReference Include="..\GeoAnim.Figures\GeoAnim.Figures.csproj" />
   </ItemGroup>
 
   <ItemGroup>

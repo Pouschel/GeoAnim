@@ -176,6 +176,25 @@ internal static partial class Program
             {
                 figure.Replace(Figure(document, figure, figures));
             }
+            // structure diagrams: their SVG as a picture (PNG for readers without SVG)
+            foreach (IElement diagram in body.QuerySelectorAll("figure.nassi").ToList())
+            {
+                if (diagram.QuerySelector("svg") is not { } picture)
+                {
+                    continue;
+                }
+                string source = picture.OuterHtml;
+                double width = PictureSize(picture.GetAttribute("width")), height = PictureSize(picture.GetAttribute("height"));
+                string href = svg ? Picture("n", Encoding.UTF8.GetBytes(source), ".svg") : Picture("n", FigurePng.Render(source, width, height, FigureDpi), ".png");
+                IElement image = document.CreateElement("img");
+                image.SetAttribute("src", "../" + href);
+                image.SetAttribute("alt", "Struktogramm");
+                image.SetAttribute("style", "width: " + (diagram.GetAttribute("data-width") ?? "10") + "em; max-width: 100%");
+                IElement block = document.CreateElement("div");
+                block.SetAttribute("class", "figure");
+                block.AppendChild(image);
+                diagram.Replace(block);
+            }
             // the number of a formula first: it floats to the right of the line
             foreach (IElement number in body.QuerySelectorAll(".formula-numbered > .formula-number").ToList())
             {
@@ -313,6 +332,10 @@ internal static partial class Program
             }
             return block;
         }
+
+        // "123.4pt" in points
+        private static double PictureSize(string? value) =>
+            double.TryParse((value ?? "").Replace("pt", ""), System.Globalization.NumberStyles.Float, CultureInfo.InvariantCulture, out double points) ? points : 100;
 
         // the text of an element with the formulas' sources (for the alternative text of a picture)
         private static string TextOf(INode node) => node switch

@@ -604,3 +604,7 @@ a.keyword:hover {
 .points-overview .points-sum td { font-weight: 700; border-top: 2px solid #8a8f98; }
 .points-overview .points-kind td { color: #5f6670; font-size: 0.9em; }
 .points-differ { color: #c62828; font-weight: 600; }
+
+/* a structure diagram ("::: nassi"): its picture as wide in em as drawn, smaller in a narrow column */
+.nassi { margin: 1em 0 1.2em; text-align: center; }
+.nassi-picture { width: var(--width); max-width: 100%; height: auto; }

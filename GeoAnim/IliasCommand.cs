@@ -397,6 +397,23 @@ internal static partial class Program
                 image.SetAttribute("alt", source);
                 formula.Replace(image);
             }
+            // structure diagrams: as pictures (PNG), as wide as for text of 16 pixels
+            foreach (IElement diagram in new[] { root }.Concat(root.QuerySelectorAll("figure.nassi")).Where(e => e.ClassList.Contains("nassi")).ToList())
+            {
+                if (diagram.QuerySelector("svg") is not { } picture)
+                {
+                    continue;
+                }
+                double width = Points(picture.GetAttribute("width")), height = Points(picture.GetAttribute("height"));
+                IElement row = document.CreateElement("p");
+                IElement image = document.CreateElement("img");
+                image.SetAttribute("src", "data:image/png;base64," + Convert.ToBase64String(FigurePng.Render(picture.OuterHtml, width, height)));
+                image.SetAttribute("alt", "Struktogramm");
+                double em = double.TryParse(diagram.GetAttribute("data-width"), NumberStyles.Float, CultureInfo.InvariantCulture, out double given) ? given : width / 11;
+                image.SetAttribute("style", $"width: {Math.Round(em * 16)}px; height: auto");
+                row.AppendChild(image);
+                diagram.Replace(row);
+            }
             // figures: their pictures as in print; a row of pictures of one height
             foreach (IElement figure in new[] { root }.Concat(root.QuerySelectorAll("figure.geo-figure")).Where(e => e.ClassList.Contains("geo-figure")).ToList())
             {
@@ -460,6 +477,9 @@ internal static partial class Program
                 }
             }
         }
+
+        private static double Points(string? value) =>
+            double.TryParse((value ?? "").Replace("pt", ""), NumberStyles.Float, CultureInfo.InvariantCulture, out double points) ? points : 100;
 
         private string Em(double points) => (Math.Round(points / print.TextSize, 3) + 0.0).ToString("0.###", CultureInfo.InvariantCulture) + "em";
     }

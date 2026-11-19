@@ -13,6 +13,7 @@ Skriptsprache der `.geo`-Dateien steht in der [Referenz](REFERENZ.md), der Über
 - [Abbildungen](#abbildungen): Verweise, Schritte, eigenes Skript
 - [Buch und Web](#buch-und-web): Bildfolge, Zuschnitt
 - [Attribute](#attribute): `crop`, `float`, `width`
+- [Struktogramme](#struktogramme): `::: nassi`, Schleifen, Verzweigungen, nummerierte Kästen
 - [Aussagen](#aussagen): Axiom, Definition, Satz, Beweis …
 - [Marken und Verweise](#marken-und-verweise): `{#name}`, `§name`
 - [Nummerierung](#nummerierung): Kapitel, Abschnitte, Zähler, `numbering:`
@@ -170,6 +171,40 @@ ein fester Anteil der Bildbreite sind. Wie die Abbildung im Druck aussieht, zeig
 (Druckersymbol) und die Buchansicht der Seitenvorschau. Beschriftungen an Objekten halten ihren Abstand in pt; ein
 freier Text bleibt mit `labeldir`/`labelgap` ebenso auf Abstand (REFERENZ.md, `text`), ein Text nur mit `at x y` rückt
 bei kleineren Abbildungen näher an die Linien.
+
+## Struktogramme
+
+Ein Struktogramm (Nassi-Shneiderman-Diagramm) schreibt man in Zeilen wie Pseudocode; GeoAnim zeichnet es (SVG, im PDF, E-Book und in ILIAS als Bild):
+
+```markdown
+::: nassi
+print("Merle");
+repeat (4)
+    print("Puschel");
+if (x > y)
+    print(x);
+else if (x == y)
+    print("gleich");
+else
+    print(y);
+:::
+```
+
+| Zeile | Kasten |
+|---|---|
+| beliebiger Text | eine Anweisung |
+| beginnt mit `repeat`, `while`, `for` (oder `wiederhole`, `solange`, `für`) | eine Kopfschleife: die Zeile als Kopf, die darunter eingerückten Zeilen als Körper |
+| beginnt mit `if` (`wenn`) | eine Verzweigung: die Bedingung (ohne `if` und äußere Klammern) im Dreieck, die eingerückten Zeilen links |
+| `else` (`sonst`) direkt unter dem `if`, gleich weit eingerückt | die rechte Seite; `else if …`: eine weitere Verzweigung darin |
+
+- Nach dem Schlüsselwort steht beliebiger Text: `repeat (4)`, `repeat ([[4]])` (eine Lücke), `solange Q nicht auf dem Kreis liegt`.
+- **Code** – eine Zeile, die auf `;`, `{` oder `}` endet, mit `//` beginnt oder ein Wort mit Klammern ist (`print(x)`, `repeat (4)`) – steht in Festbreitenschrift, anderer Text in der Buchschrift; `` `…` `` macht einen Teil zu Code.
+- **Lücken** `[[4]]`: auf dem Schülerblatt eine Linie, mit der Lösung die Antwort rot darauf.
+- `::: nassi numbered`: statt der Texte Nummern in den Kästen (in Lesereihenfolge: Schleifenkopf vor dem Körper, Bedingung vor den Seiten) – das leere Struktogramm für „Ordne die Programmteile den Kästchen zu“ (dazu ein `::: match`).
+- An den Seiten einer Verzweigung steht `true`/`false`; `::: nassi ja|nein` (oder andere zwei Wörter) ändert das.
+- Die Größe folgt der Schrift des Texts; ist die Spalte zu schmal, wird das Struktogramm kleiner.
+- `{{…}}`, `alt` und Gruppen gehen in den Zeilen wie überall auf Tests und ILIAS-Fragen.
+- Fehler mit Zeile: eine Zeile, die tiefer eingerückt ist, ohne unter `repeat`/`if`/… zu stehen; ein `else` ohne `if`.
 
 ## Aussagen
 
