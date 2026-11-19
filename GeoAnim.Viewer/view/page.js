@@ -430,6 +430,8 @@
       groupSelect.value = message.group
     }
     sheetSolution = message.solution !== false
+    // a document: close lines and headings, as on the board
+    document.body.classList.toggle('document', message.sheet === true && message.document === true)
     // questions for ILIAS: always with their answers
     solutionButton.hidden = !message.sheet || message.ilias === true || message.document === true
     exportButton.title = message.ilias ? 'Die Fragen jeder Gruppe für ILIAS (ZIP) und zur Kontrolle (HTML) neben die Datei schreiben'

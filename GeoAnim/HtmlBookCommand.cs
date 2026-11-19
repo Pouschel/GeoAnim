@@ -205,7 +205,7 @@ internal static partial class Program
                 {SheetStyleSheet}
                 </style>
                 </head>
-                <body>
+                <body{(head.IsDocument ? " class=\"document\"" : "")}>
                 <main id="page">
 
                 """);
@@ -237,24 +237,6 @@ internal static partial class Program
             .sheet p,
             .sheet li {
               line-height: 1.9;
-            }
-
-            /* a document: nothing to write in, as much as can be on a board */
-            .sheet.document p,
-            .sheet.document li {
-              line-height: 1.45;
-            }
-
-            .sheet.document p,
-            .sheet.document ul,
-            .sheet.document ol,
-            .sheet.document pre {
-              margin-top: 0.5em;
-              margin-bottom: 0.5em;
-            }
-
-            .sheet.document h2 {
-              margin-top: 1.2em;
             }
 
             .sheet-break {

@@ -7,9 +7,12 @@ md2geo: old Markdown pages (the Eleu documentation and worksheets) as GeoAnim do
 Each page becomes name.geo.md (next to it, or in the -o folder), with
 - a head: type: document, title from the first heading;
 - {{toc 2 3}} → \\toc 2-3;
-- ^^^ right 336 … ^^^ (a picture with its width, beside the text, maybe a caption) → ![caption](bild.jpg){width=9cm float=right};
+- ^^^ right 336 … ^^^ caption (a picture with its width, beside the text; the caption on the closing line or inside)
+  → ![caption](bild.jpg){width=9cm float=right}; {{defa name source}} in it: the mark {#abb-name}, the source after the
+  caption (links as links); {{refa name}} in the text → §abb-name ("Abb. 3");
 - ![](bild.jpg=336) → ![](bild.jpg){width=9cm} (pixels at 96 dpi, to half centimetres);
 - quotes ("> Anweisungen werden mit ; beendet.") → ::: merke … :::
+- 10^6^, x~1~ → <sup>, <sub>; ==Wo?== → <mark>; \\tab → spaces (&emsp;);
 \\clear stays (it ends the floating); code blocks stay as they are. What it does not know it reports.
 """
 
@@ -23,8 +26,8 @@ def centimetres(pixels):
     return f"{max(0.5, round(cm * 2) / 2):g}cm"
 
 
-def picture(alt, source, size, side):
-    attributes = []
+def picture(alt, source, size, side, mark=None):
+    attributes = ["#" + mark] if mark else []
     if size:
         attributes.append("width=" + centimetres(size))
     if side in ("left", "right"):
@@ -35,7 +38,7 @@ def picture(alt, source, size, side):
 IMAGE = re.compile(r"!\[([^\]]*)\]\(([^)=\s]+)(?:=([^)]*))?\)")
 
 
-def pictures(line, side=None, size=None, caption=None):
+def pictures(line, side=None, size=None, caption=None, mark=None):
     def replace(match):
         alt, source, options = match.group(1), match.group(2), match.group(3)
         own_size, own_side = size, side
@@ -45,8 +48,49 @@ def pictures(line, side=None, size=None, caption=None):
                 own_size = own_size or option
             elif option in ("left", "right"):
                 own_side = own_side or option
-        return picture(caption or alt, source, own_size, own_side)
+        return picture(caption or alt, source, own_size, own_side, mark)
     return IMAGE.sub(replace, line)
+
+
+def mark_name(name):
+    return "abb-" + re.sub(r"[^A-Za-z0-9]+", "-", name).strip("-")
+
+
+def source_text(source):
+    # "Sven Melchert, https://…" → "Sven Melchert, [sternfreunde.de](https://…)"
+    def link(match):
+        url = match.group(0).rstrip(".,;")
+        host = re.sub(r"^https?://(www\.)?", "", url).split("/")[0]
+        return f"[{host}]({url})"
+    return re.sub(r"https?://\S+", link, source.strip()).strip(" ,")
+
+
+def caption_of(text):
+    """The caption of a ^^^ block ("{{defa 11/2 Quelle}}: Text") → (caption, mark)."""
+    mark = None
+    defined = re.search(r"\{\{\s*defa\s+(\S+)\s*(.*?)\}\}\s*:?", text)
+    if defined:
+        mark = mark_name(defined.group(1))
+        source = source_text(defined.group(2))
+        text = (text[:defined.start()] + text[defined.end():]).strip()
+        if source:
+            text = (text + " " if text else "") + "(Quelle: " + source + ")"
+    return inline(text.strip()) or None, mark
+
+
+def inline(line):
+    """What the old pages had in the text: {{refa name}}, x^2^, x~1~, ==Wo?==, \\tab."""
+    parts = re.split(r"(`[^`]*`|\$[^$]*\$)", line)
+    for k in range(0, len(parts), 2):
+        part = parts[k]
+        part = re.sub(r"\{\{\s*refa\s+(\S+?)\s*\}\}", lambda m: "§" + mark_name(m.group(1)), part)
+        part = re.sub(r"\^([^\^\s]+)\^", r"<sup>\1</sup>", part)
+        part = re.sub(r"(?<!~)~([^~\s]+)~(?!~)", r"<sub>\1</sub>", part)
+        part = re.sub(r"==([^=]+)==", r"<mark>\1</mark>", part)
+        part = re.sub(r"\s*\\tab\b\s*", "&emsp;&emsp;", part)
+        parts[k] = part
+    result = "".join(parts)
+    return "" if re.fullmatch(r"(&emsp;)*", result.strip()) else result
 
 
 def convert(text, notes):
@@ -93,27 +137,38 @@ def convert(text, notes):
             continue
         box = re.match(r"^\s*\^\^\^\s*(left|right)?\s*(\d+)?\s*$", line)
         if box:
-            # a picture with its width (and side), the other lines its caption
+            # a picture with its width (and side); its caption on the closing line ("^^^ {{defa …}}: Text") or inside
             side, size = box.group(1), box.group(2)
             j = i + 1
             inner = []
-            while j < len(lines) and not re.match(r"^\s*\^\^\^\s*$", lines[j]):
+            while j < len(lines) and not re.match(r"^\s*\^\^\^", lines[j]):
                 inner.append(lines[j].rstrip())
                 j += 1
+            closing = re.sub(r"^\s*\^\^\^", "", lines[j]).strip() if j < len(lines) else ""
             images = [l for l in inner if IMAGE.search(l)]
-            caption = " ".join(l.strip() for l in inner if l.strip() and not IMAGE.search(l)) or None
+            others = [l for l in inner if l.strip() and not IMAGE.search(l)]
             if images:
+                caption, mark = caption_of(" ".join([closing] if closing else [l.strip() for l in others]))
+                if closing and others:
+                    notes.append(f"^^^ (Zeile {i + 1}): Text neben dem Bild übernommen: {' '.join(others)[:60]}")
                 out.append("")
-                out.append(" ".join(pictures(l.strip(), side, size, caption) for l in images))
+                out.append(" ".join(pictures(l.strip(), side, size, caption, mark) for l in images))
                 out.append("")
-            elif caption:
-                notes.append(f"^^^ ohne Bild (Zeile {i + 1}): {caption}")
-                out.append(caption)
+                if closing and others:
+                    out += [inline(l) for l in others] + [""]
+            else:
+                # no picture (a table beside the text): as it is, not floating
+                notes.append(f"^^^ ohne Bild (Zeile {i + 1}): steht jetzt im Text (umflossen werden nur Bilder)")
+                out.append("")
+                out += [inline(l) for l in inner]
+                out.append("")
+                if closing:
+                    out.append(caption_of(closing)[0] or "")
             i = j + 1
             continue
-        if "{{" in line:
+        if "{{" in line and not re.search(r"\{\{\s*refa\b", line):
             notes.append(f"unbekannt (Zeile {i + 1}): {line.strip()}")
-        out.append(pictures(line))
+        out.append(inline(pictures(line)))
         i += 1
     flush_quote()
     body = re.sub(r"\n{3,}", "\n\n", "\n".join(out)).strip() + "\n"
