@@ -33,6 +33,9 @@ public sealed record DocumentHead(string Type)
     /// <summary>The start of the groups' chance (for later: numbers drawn by chance).</summary>
     public int? Seed { get; init; }
 
+    /// <summary>The C# projects whose classes the sheet uses (full paths; "generators:" in the head).</summary>
+    public IReadOnlyList<string> Generators { get; init; } = [];
+
     public bool IsTest => Type == "test";
 }
 

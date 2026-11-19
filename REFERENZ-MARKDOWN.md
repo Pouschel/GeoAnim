@@ -358,6 +358,8 @@ title: LEK Binärzahlen
 subject: Informatik 10   # vor dem Titel
 time: 20 min
 groups: [A, B, C]        # ohne: ein Blatt ohne Gruppe
+seed: 1                  # der Zufall (anderer seed: neue Blätter)
+generators: Gen.csproj   # C#-Projekte (siehe unten)
 ---
 
 ## Bits und Bytes {3}
@@ -453,6 +455,56 @@ Ein unbekannter Name, ein Fehler im Ausdruck oder `::: pick` mit zu wenigen Zeil
 dann „??“. Das alte `{{sol …}}` meldet, wie es jetzt heißt.
 
 In der Vorschau wählt man oben rechts die Gruppe und schaltet zwischen „Lösung“ und „Schüler“ um.
+
+### Generatoren in C#
+
+Was `let` nicht kann, schreibt man in C#: in einem gewöhnlichen Projekt (eine Klassenbibliothek, net8 bis net10), das
+alles benutzen darf – NuGet-Pakete, andere Projekte, DLLs. Der Kopf nennt es (relativ zur Datei; mehrere als Liste):
+
+```markdown
+---
+type: test
+groups: [A, B, C]
+generators: ../MintTemplates/MintTemplates.csproj
+---
+
+::: let
+bc = Info10.BinDec        # ein Objekt der Klasse, für die Gruppe
+bc.Bits = 5               # Eigenschaften und Felder setzen
+:::
+
+a) {{bc.Query}}  = [[{{bc.Answer}}]]
+{{bc.GetTask("b", 4)}}    ← darf Markdown liefern, auch Lücken [[…]] und mehrere Zeilen
+{{Info10.BinDec.Max(3, 4)}}   ← statische Methoden der Klasse
+```
+
+```csharp
+namespace Info10;
+
+public class BinDec(Random random, int group, string name)
+{
+    public int Bits = 4;
+    public string Query => …;
+    public string GetTask(string label, int bits) => $"{label}) … [[{…}]]";
+}
+```
+
+- **Das Objekt** macht GeoAnim mit dem öffentlichen Konstruktor, dessen Parameter von den Typen `Random` (der Zufall der
+  Gruppe), `int` (die Nummer der Gruppe ab 0: A 0, B 1 …; ohne Gruppen 0) und `string` (ihr Name, „A“) sind – in
+  beliebiger Reihenfolge, jeder davon oder keiner. Jedes Objekt hat seinen eigenen Zufall aus dem der Gruppe: dieselbe
+  Gruppe bekommt dieselben Werte, auf dem Schülerblatt und in der Lösung.
+- **Benutzen:** öffentliche Eigenschaften, Felder und Methoden (`bc.Query`, `bc.GetTask("b", 4)`, auch hintereinander);
+  `BinDec` ohne Namensraum, wenn nur eine Klasse so heißt. Argumente: Zahlen, Texte, `wahr`/`falsch`, Listen (für
+  Arrays und `List<…>`), Werte aus `let`; optionale Parameter und `params` gehen.
+- **Ergebnis:** Texte so, wie sie sind (also auch Markdown und Lücken `[[…]]` – statt des alten `MakeSol(x)` gibt man
+  `[[x]]` zurück), Zahlen deutsch, `bool` als „wahr“/„falsch“, Listen als Listen; andere Objekte bleiben Objekte, deren
+  Member man wieder benutzen kann.
+- **Bauen:** GeoAnim baut das Projekt (`dotnet build`), wenn seine Quellen – oder die der Projekte, die es benutzt – neuer
+  sind als das Gebaute, und lädt eine Kopie: das Projekt lässt sich in Visual Studio weiter bauen, die Vorschau nimmt
+  dann den neuen Stand. Der erste Aufruf dauert ein paar Sekunden.
+- **Fehler:** Baufehler (`BinDec.cs(12): CS1002: ; erwartet`), eine unbekannte Klasse oder ein unbekanntes Member (mit der
+  Liste der vorhandenen) und Ausnahmen aus dem C#-Code (`BinDec.GetTask: IndexOutOfRangeException: …`) sind Fehler an der
+  Zeile, die sie benutzt.
 
 ## Beispiel
 

@@ -191,4 +191,93 @@ public sealed class SheetTests : IDisposable
         Assert.Contains(page.Errors, e => e.Line == 10 && e.Message.Contains("[[sol: …]]"));
         Assert.Contains(page.Errors, e => e.Line == 12 && e.Message.Contains("only 1 lines"));
     }
+    [Fact]
+    public void GeneratorsAreCSharpProjectsWithWhatTheyUse()
+    {
+        // a project with a class for the sheet, which uses another project
+        Directory.CreateDirectory(Path.Combine(folder, "Lib"));
+        Directory.CreateDirectory(Path.Combine(folder, "Gen"));
+        File.WriteAllText(Path.Combine(folder, "Lib", "Lib.csproj"), """
+            <Project Sdk="Microsoft.NET.Sdk">
+              <PropertyGroup><TargetFramework>net10.0</TargetFramework></PropertyGroup>
+            </Project>
+            """);
+        File.WriteAllText(Path.Combine(folder, "Lib", "Words.cs"), """
+            namespace Lib;
+            public static class Words
+            {
+                public static string Planet(int i) => new[] { "Mars", "Saturn" }[i];
+            }
+            """);
+        File.WriteAllText(Path.Combine(folder, "Gen", "Gen.csproj"), """
+            <Project Sdk="Microsoft.NET.Sdk">
+              <PropertyGroup><TargetFramework>net10.0</TargetFramework><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings></PropertyGroup>
+              <ItemGroup><ProjectReference Include="..\Lib\Lib.csproj" /></ItemGroup>
+            </Project>
+            """);
+        string source = Path.Combine(folder, "Gen", "BinDec.cs");
+        File.WriteAllText(source, """
+            namespace Info10;
+            public class BinDec(Random random, int group, string name)
+            {
+                public int N = random.Next(3, 7);
+                public string Group => name + group;
+                public string Planet => Lib.Words.Planet(group);
+                public string[] Items => ["a", "b"];
+                public static int Twice(int x) => 2 * x;
+                public string Task(string label, int bits)
+                {
+                    int value = random.Next(1 << (bits - 1), 1 << bits);
+                    return $"{label}) ({Convert.ToString(value, 2)})₂ = [[{value}]]";
+                }
+                public string Boom() => throw new InvalidOperationException("kaputt");
+            }
+            """);
+        string sheet = """
+            ---
+            type: test
+            groups: [A, B]
+            generators: Gen/Gen.csproj
+            ---
+
+            ::: let
+            bc = Info10.BinDec
+            bc.N = 9
+            :::
+
+            {{bc.Group}} {{bc.N}} {{bc.Planet}} {{BinDec.Twice(21)}} {{join(bc.Items, "+")}}
+
+            {{bc.Task("a", 4)}}
+
+            {{bc.Boom()}} {{bc.Nix}}
+            """;
+        string file = Path.Combine(folder, "lek.geo.md");
+        File.WriteAllText(file, sheet);
+        List<MarkdownProblem> Errors(string group) => MarkdownPage.Parse(sheet, file, variant: new SheetVariant(group, true)).Errors.ToList();
+        string Expanded(string group)
+        {
+            var errors = new List<MarkdownProblem>();
+            string text = SheetScript.Expand(sheet, 1, group == "A" ? 0 : 1, errors, group, [Path.Combine(folder, "Gen", "Gen.csproj")]);
+            return text;
+        }
+        // its group's number (from 0) and name, the other project, statics, lists; the group's own chance, always the same
+        Assert.Contains("B1 9 Saturn 42 a+b", Expanded("B"));
+        Assert.Contains("A0 9 Mars 42 a+b", Expanded("A"));
+        var task = System.Text.RegularExpressions.Regex.Match(Expanded("B"), @"a\) \(([01]{4})\)₂ = \[\[(\d+)\]\]");
+        Assert.True(task.Success, Expanded("B"));
+        Assert.Equal(System.Convert.ToInt32(task.Groups[1].Value, 2), int.Parse(task.Groups[2].Value));
+        Assert.Equal(Expanded("B"), Expanded("B"));
+        // the generator's mistakes: errors of the sheet, at their lines
+        List<MarkdownProblem> errors = Errors("A");
+        Assert.Contains(errors, e => e.Line == 16 && e.Message.Contains("BinDec.Boom: InvalidOperationException: kaputt"));
+        Assert.Contains(errors, e => e.Line == 16 && e.Message.Contains("no public member \"Nix\" (Boom, Group, Items, N, Planet, Task, Twice)"));
+        // changed: built and loaded again
+        File.WriteAllText(source, File.ReadAllText(source).Replace("name + group", "\"Gruppe \" + name"));
+        File.SetLastWriteTimeUtc(source, DateTime.UtcNow.AddSeconds(2));
+        Assert.Contains("Gruppe B 9 Saturn", Expanded("B"));
+        // does not build: its errors
+        File.WriteAllText(source, File.ReadAllText(source).Replace("public int N", "public int N N"));
+        File.SetLastWriteTimeUtc(source, DateTime.UtcNow.AddSeconds(4));
+        Assert.Contains(Errors("A"), e => e.Line == 8 && e.Message.Contains("Gen.csproj does not build: BinDec.cs(4): CS"));
+    }
 }

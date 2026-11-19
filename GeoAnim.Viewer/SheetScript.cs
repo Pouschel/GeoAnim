@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -17,23 +18,32 @@ internal sealed partial class SheetScript
     private readonly Random random;
     private readonly int group;
     private readonly Dictionary<string, Value> values = new(StringComparer.Ordinal);
+    private readonly string? groupName;
+    private readonly IReadOnlyList<string> generators;
+    private List<Assembly>? assemblies;
     private readonly List<MarkdownProblem> errors;
 
-    private SheetScript(int seed, int group, List<MarkdownProblem> errors)
+    private SheetScript(int seed, int group, string? groupName, IReadOnlyList<string> generators, List<MarkdownProblem> errors)
     {
         // every group its own chance; the same group always the same
         random = new Random(unchecked(seed * 7919 + group * 104729 + 17));
         this.group = group;
+        this.groupName = groupName;
+        this.generators = generators;
         this.errors = errors;
     }
 
+    // the generators' assemblies (built and loaded when first used)
+    private List<Assembly> Assemblies => assemblies ??= generators.Select(SheetGenerators.Load).ToList();
+
     /// <summary>
     /// The page for the group with the number <paramref name="group"/> (from 0): its "::: let" and "::: pick" blocks and
-    /// "{{…}}" worked out. <paramref name="seed"/>: the head's (the same seed, the same sheets).
+    /// "{{…}}" worked out. <paramref name="seed"/>: the head's (the same seed, the same sheets); <paramref name="generators"/>:
+    /// the C# projects whose classes it may use (their full paths).
     /// </summary>
-    public static string Expand(string text, int seed, int group, List<MarkdownProblem> errors)
+    public static string Expand(string text, int seed, int group, List<MarkdownProblem> errors, string? groupName = null, IReadOnlyList<string>? generators = null)
     {
-        var script = new SheetScript(seed, group, errors);
+        var script = new SheetScript(seed, group, groupName, generators ?? [], errors);
         string[] lines = text.Split('\n');
         var result = new List<string>(lines.Length);
         int start = 0;
@@ -92,10 +102,13 @@ internal sealed partial class SheetScript
 
     private void Error(int line, string message) => errors.Add(new MarkdownProblem(line, 1, message));
 
+    // an object of a generator's class for the group, with its own chance (from the group's)
+    private object Create(Type type) => SheetGenerators.Create(type, new Random(random.Next()), group, groupName);
+
     // ------------------------------------------------------------------ values
 
-    /// <summary>A number, a text or a list of them.</summary>
-    internal sealed record Value(double? Number, string? Text, IReadOnlyList<Value>? List)
+    /// <summary>A number, a text or a list of them – or an object of a generator.</summary>
+    internal sealed record Value(double? Number, string? Text, IReadOnlyList<Value>? List, object? Object = null)
     {
         public static Value Of(double number) => new(number, null, null);
 
@@ -109,7 +122,7 @@ internal sealed partial class SheetScript
         public IReadOnlyList<Value> AsList() => List ?? [this];
 
         // numbers as in German: 2,5; whole ones without a comma; lists with ", "
-        public override string ToString() => Number is double n ? Format(n) : Text ?? string.Join(", ", List!.Select(v => v.ToString()));
+        public override string ToString() => Number is double n ? Format(n) : Text ?? (List != null ? string.Join(", ", List.Select(v => v.ToString())) : Object?.ToString() ?? "");
 
         public static string Format(double n) =>
             Math.Abs(n - Math.Round(n)) < 1e-9 ? Math.Round(n).ToString("0", CultureInfo.InvariantCulture) : n.ToString("0.##########", CultureInfo.GetCultureInfo("de-DE"));
@@ -128,7 +141,7 @@ internal sealed partial class SheetScript
             {
                 continue;
             }
-            Match definition = Regex.Match(line, @"^([\p{L}_][\p{L}\p{N}_]*)\s*=\s*(.+)$");
+            Match definition = Regex.Match(line, @"^([\p{L}_][\p{L}\p{N}_]*(?:\.[\p{L}_][\p{L}\p{N}_]*)*)\s*=\s*(.+)$");
             if (!definition.Success)
             {
                 Error(firstLine + i, $"Expected \"name = …\" in ::: let, not \"{line}\".");
@@ -136,7 +149,19 @@ internal sealed partial class SheetScript
             }
             try
             {
-                values[definition.Groups[1].Value] = Define(definition.Groups[2].Value.Trim());
+                string name = definition.Groups[1].Value;
+                int dot = name.LastIndexOf('.');
+                if (dot < 0)
+                {
+                    values[name] = Define(definition.Groups[2].Value.Trim());
+                }
+                else
+                {
+                    // "bc.Count = 5": a property or field of a generator's object
+                    Value target = Evaluate(name[..dot]);
+                    SheetGenerators.Set(target.Object?.GetType() ?? throw new FormatException($"{name[..dot]} is no object of a generator."),
+                        target.Object, name[(dot + 1)..], Define(definition.Groups[2].Value.Trim()));
+                }
             }
             catch (FormatException e)
             {
@@ -243,7 +268,7 @@ internal sealed partial class SheetScript
         {
             return Evaluate(text);
         }
-        catch (FormatException) when (!Regex.IsMatch(text, @"[\^*/()\[\]]"))
+        catch (FormatException) when (!Regex.IsMatch(text, @"[\^*/()\[\]]") && !Regex.IsMatch(text, @"^[\p{L}_][\p{L}\p{N}_]*(\.[\p{L}_][\p{L}\p{N}_]*)+$"))
         {
             return Value.Of(text);
         }
@@ -479,39 +504,120 @@ internal sealed partial class SheetScript
                     position++;
                 }
                 string name = text[start..position];
-                if (Take('('))
+                if (Peek() == '(')
                 {
-                    var arguments = new List<Value>();
-                    if (!Take(')'))
-                    {
-                        do
-                        {
-                            arguments.Add(Expression());
-                        }
-                        while (Take(','));
-                        Expect(')');
-                    }
-                    value = Call(name, arguments);
+                    value = Call(name, Arguments()!);
+                }
+                else if (script.values.TryGetValue(name, out Value? known))
+                {
+                    value = known;
                 }
                 else
                 {
-                    value = script.values.TryGetValue(name, out Value? known) ? known
-                        : throw new FormatException($"There is no value \"{name}\" (set it in a ::: let block).");
+                    value = Generator(name, start);
                 }
             }
             else
             {
                 throw new FormatException(c == '\0' ? "The expression ends too early." : $"Unexpected \"{c}\".");
             }
-            // list[1]: the first
-            while (Take('['))
+            while (true)
             {
-                int index = (int)Expression().AsNumber();
-                Expect(']');
-                IReadOnlyList<Value> list = value.AsList();
-                value = index >= 1 && index <= list.Count ? list[index - 1] : throw new FormatException($"[{index}]: the list has {list.Count} items.");
+                if (Take('['))
+                {
+                    // list[1]: the first
+                    int index = (int)Expression().AsNumber();
+                    Expect(']');
+                    IReadOnlyList<Value> list = value.AsList();
+                    value = index >= 1 && index <= list.Count ? list[index - 1] : throw new FormatException($"[{index}]: the list has {list.Count} items.");
+                }
+                else if (Name() is { } member)
+                {
+                    // bc.Query, bc.GetBin("a1", 4): a member of a generator's object
+                    value = value.Object is { } target
+                        ? SheetGenerators.ValueOf(SheetGenerators.Member(target.GetType(), target, member, Arguments()))
+                        : throw new FormatException($"\"{value}\" is no object of a generator: it has no .{member}.");
+                }
+                else
+                {
+                    return value;
+                }
             }
-            return value;
+        }
+
+        // ".name" (after a value), else null and nothing read
+        private string? Name()
+        {
+            if (Peek() != '.' || position + 1 >= text.Length || !(char.IsLetter(text[position + 1]) || text[position + 1] == '_'))
+            {
+                return null;
+            }
+            int start = ++position;
+            while (position < text.Length && (char.IsLetterOrDigit(text[position]) || text[position] == '_'))
+            {
+                position++;
+            }
+            return text[start..position];
+        }
+
+        // "(a, b)", else null (no parentheses)
+        private List<Value>? Arguments()
+        {
+            if (!Take('('))
+            {
+                return null;
+            }
+            var arguments = new List<Value>();
+            if (!Take(')'))
+            {
+                do
+                {
+                    arguments.Add(Expression());
+                }
+                while (Take(','));
+                Expect(')');
+            }
+            return arguments;
+        }
+
+        // "Info10.BinDec" (a new object of the class, for the group), "Info10.BinDec.Query" (a static member, else that
+        // of a new object), "BinDec" (when only one class has the name)
+        private Value Generator(string first, int start)
+        {
+            var names = new List<string> { first };
+            var ends = new List<int> { position };
+            while (Name() is { } next)
+            {
+                names.Add(next);
+                ends.Add(position);
+            }
+            if (script.generators.Count == 0)
+            {
+                throw new FormatException(names.Count > 1
+                    ? $"There is no value \"{first}\" – and no generators for \"{string.Join(".", names)}\" (generators: in the head)."
+                    : $"There is no value \"{first}\" (set it in a ::: let block).");
+            }
+            // the longest start that is a class
+            for (int k = names.Count; k >= 1; k--)
+            {
+                if (SheetGenerators.FindType(script.Assemblies, string.Join(".", names.Take(k))) is not { } type)
+                {
+                    continue;
+                }
+                // the rest again, as members
+                position = ends[k - 1];
+                if (Name() is not { } member)
+                {
+                    return new Value(null, null, null, script.Create(type));
+                }
+                List<Value>? arguments = Arguments();
+                bool isStatic = type.GetMember(member, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.FlattenHierarchy).Length > 0;
+                return SheetGenerators.ValueOf(SheetGenerators.Member(type, isStatic ? null : script.Create(type), member, arguments));
+            }
+            position = ends[^1];
+            throw new FormatException(names.Count == 1
+                ? $"There is no value \"{first}\" (set it in a ::: let block) and no class of the generators of that name."
+                : $"There is no class \"{string.Join(".", names.Take(names.Count - 1))}\" (or \"{string.Join(".", names)}\") in the generators.");
         }
 
         private void Expect(char c)

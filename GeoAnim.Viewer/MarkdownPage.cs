@@ -75,7 +75,7 @@ public sealed partial class MarkdownPage
         .Use<BlankExtension>()
         .Build();
 
-    private static readonly string[] FrontMatterKeys = ["title", "description", "keywords", "type", "subject", "time", "groups", "seed"];
+    private static readonly string[] FrontMatterKeys = ["title", "description", "keywords", "type", "subject", "time", "groups", "seed", "generators"];
 
     private MarkdownPage(string html)
     {
@@ -177,13 +177,16 @@ public sealed partial class MarkdownPage
             Time = head.GetValueOrDefault("time") as string,
             Groups = head.GetValueOrDefault("groups") as List<string> ?? [],
             Seed = head.GetValueOrDefault("seed") as int?,
+            Generators = head.GetValueOrDefault("generators") is List<string> projects
+                ? projects.Select(p => Path.GetFullPath(p, file != null ? Path.GetDirectoryName(Path.GetFullPath(file))! : Directory.GetCurrentDirectory())).ToList()
+                : [],
         } : null;
         // its groups' differences ("::: let", "::: pick", "{{…}}") worked out for the sheet's group, then read again
         if (sheet != null)
         {
             variant ??= new SheetVariant(sheet.Groups.FirstOrDefault(), Solution: true);
             int groupIndex = variant.Group != null ? Math.Max(0, sheet.Groups.ToList().IndexOf(variant.Group)) : 0;
-            string expanded = SheetScript.Expand(text, sheet.Seed ?? 1, groupIndex, errors);
+            string expanded = SheetScript.Expand(text, sheet.Seed ?? 1, groupIndex, errors, variant.Group, sheet.Generators);
             if (expanded != text)
             {
                 text = expanded;
@@ -436,6 +439,21 @@ public sealed partial class MarkdownPage
                         else
                         {
                             head["groups"] = groups;
+                        }
+                    }
+                    break;
+                case "generators":
+                    // C# projects: one, or a list ([a.csproj, b.csproj] or one per line with "-")
+                    {
+                        IEnumerable<YamlNode> names = value is YamlSequenceNode list ? list.Children : [value];
+                        var projects = names.OfType<YamlScalarNode>().Select(n => (n.Value ?? "").Trim()).Where(n => n.Length > 0).ToList();
+                        if (projects.Count == 0 || projects.Any(p => !p.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase)))
+                        {
+                            errors.Add(new MarkdownProblem(line, column, "\"generators\" are C# projects: generators: ../MintTemplates/MintTemplates.csproj."));
+                        }
+                        else
+                        {
+                            head["generators"] = projects;
                         }
                     }
                     break;
