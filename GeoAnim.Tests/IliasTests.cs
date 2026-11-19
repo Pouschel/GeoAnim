@@ -101,6 +101,33 @@ public sealed class IliasTests : IDisposable
     }
 
     [Fact]
+    public void LinesWithBlanksMixedByPick()
+    {
+        const string text = """
+            ---
+            type: ilias
+            groups: [U, A, N]
+            ---
+
+            ## Datentypen
+
+            ::: pick
+            `1`: [[*Number | String]]{ordered}
+            `"2"`: [[Number | *String]]{ordered}
+            `3.5`: [[*Number | String]]{ordered}
+            `"x"`: [[Number | *String]]{ordered}
+            :::
+            """;
+        List<string> Order(string group) => System.Text.RegularExpressions.Regex.Matches(
+            MarkdownPage.Parse(text, variant: new SheetVariant(group, true)).Html, "<p data-line=\"\\d+\"><code>([^<]+)</code>").Select(m => m.Groups[1].Value).ToList();
+        // each a paragraph, all of them, mixed: not as written, and differently in the groups
+        Assert.Equal(4, Order("A").Count);
+        Assert.NotEqual(["1", "&quot;2&quot;", "3.5", "&quot;x&quot;"], Order("A"));
+        Assert.True(new[] { "U", "N" }.Any(g => !Order(g).SequenceEqual(Order("A"))));
+        Assert.DoesNotContain("<li", MarkdownPage.Parse(text, variant: new SheetVariant("A", true)).Html);
+    }
+
+    [Fact]
     public void MistakesInQuestionsForIlias()
     {
         MarkdownPage page = MarkdownPage.Parse("""

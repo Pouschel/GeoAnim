@@ -529,12 +529,15 @@ internal sealed partial class SheetScript
         string yes = words[0], no = words[1];
         // for ILIAS a choice of the two (in their order), on paper a line for the answer
         string Answer(bool right) => options.Ilias ? (right ? $"[[*{yes} | {no}]]{{ordered}}" : $"[[{yes} | *{no}]]{{ordered}}") : "[[" + (right ? yes : no) + "]]";
-        // true or false: each statement a paragraph ("+"/"-" only say which it is, no list); other lines a list
+        // true or false: each statement a paragraph ("+"/"-" only say which it is, no list); other lines: as they are
+        // written, a paragraph each (with "* …" a list)
         if (judged)
         {
             return chosen.SelectMany((item, k) => (k > 0 ? new[] { "" } : []).Append(Interpolate(item[2..], line) + " " + Answer(item[0] == '+'))).ToList();
         }
-        return chosen.Select(item => "- " + Interpolate(item.StartsWith("- ", StringComparison.Ordinal) || item.StartsWith("* ", StringComparison.Ordinal) ? item[2..] : item, line)).ToList();
+        bool list = chosen.All(item => item.StartsWith("* ", StringComparison.Ordinal));
+        return list ? chosen.Select(item => Interpolate(item, line)).ToList()
+            : chosen.SelectMany((item, k) => (k > 0 ? new[] { "" } : []).Append(Interpolate(item, line))).ToList();
     }
 
     private List<string> TakeRandom(List<string> list, int count) =>
