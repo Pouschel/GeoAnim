@@ -216,9 +216,28 @@ public sealed partial class MarkdownPage
             var references = new List<GeoReference>();
             var shown = new List<FigureItem>();
             var figureOptions = new Dictionary<string, string>(StringComparer.Ordinal);
+            // a row of pictures of one height: with pictures from files or "{height=…}"
+            bool row = images.Any(i => PictureRow.IsPicture(i.Url) || i.TryGetAttributes()?.Properties?.Any(p => p.Key == "height") == true);
             foreach (LinkInline image in images)
             {
-                GeoReference? reference = ReferenceOf(text, file, image, locate, errors, warnings, figureOptions);
+                if (PictureRow.IsPicture(image.Url))
+                {
+                    PageImage? picture = PictureOf(folder, image, locate, errors, warnings, figureOptions);
+                    shown.Add(new FigureItem(image, image.Url!, null, null, Faulty: picture == null)
+                    {
+                        Picture = picture,
+                        Caption = image.FirstChild == null ? "" : CaptionOf(text, image),
+                    });
+                    continue;
+                }
+                GeoReference? reference = ReferenceOf(text, file, image, locate, errors, warnings, figureOptions, row);
+                if (reference != null && row && reference.From != reference.To)
+                {
+                    errors.Add(new MarkdownProblem(reference.Line, reference.Column,
+                        $"\"{reference.Source}\": a row of pictures takes one picture of a script (#2, or the whole: its last one), not a range of steps."));
+                    shown.Add(new FigureItem(image, image.Url!, reference, null, Faulty: true));
+                    continue;
+                }
                 if (reference == null)
                 {
                     shown.Add(new FigureItem(image, image.Url!, null, null, Faulty: true));
@@ -255,11 +274,14 @@ public sealed partial class MarkdownPage
             ContainerBlock parent = paragraph.Parent!;
             int index = parent.IndexOf(paragraph);
             parent.RemoveAt(index);
-            var block = new GeoFigureBlock(shown) { Line = paragraph.Line, Column = paragraph.Column, Span = paragraph.Span };
-            // float and width (for the web and e-books later; in print the figure stays centred)
+            var block = new GeoFigureBlock(shown) { Line = paragraph.Line, Column = paragraph.Column, Span = paragraph.Span, Row = row };
+            // float and width (for the web and e-books later; in print the figure stays centred); a row's height
             foreach ((string key, string value) in figureOptions)
             {
-                block.GetAttributes().AddProperty("data-" + key, value);
+                if (key != "row-width")
+                {
+                    block.GetAttributes().AddProperty("data-" + key, value);
+                }
             }
             parent.Insert(index, block);
         }
@@ -269,6 +291,17 @@ public sealed partial class MarkdownPage
 
         // numbers and marks of figures, statements and sections; then the references to them
         List<PageMark> marks = Number(text, document, locate, errors, numbering, out Dictionary<string, int> counts, out PageMark? section);
+        // a test or worksheet: "Abb. 1" only at a figure with a caption or a mark (it is spoken of as "the picture on the right")
+        if (sheet != null)
+        {
+            foreach (GeoFigureBlock figure in document.Descendants<GeoFigureBlock>())
+            {
+                if (figure.Items.All(i => (i.Reference?.Caption ?? i.Caption).Length == 0 && i.Image.TryGetAttributes()?.Id == null))
+                {
+                    figure.Label = "";
+                }
+            }
+        }
         string? page = file == null ? null : Path.GetFullPath(file);
         List<PageReference> pageReferences = ResolveReferences(document, locate, marks, section, page, bookMarks, errors);
         if (!render)
@@ -504,7 +537,7 @@ public sealed partial class MarkdownPage
     [GeneratedRegex(@"^#+\s*|\s+#+$")]
     private static partial Regex HeadingMarks();
 
-    // the images of a paragraph that has nothing else (besides spaces and line breaks), if they are all scripts
+    // the images of a paragraph that has nothing else (besides spaces and line breaks), if they are all scripts or picture files
     private static List<LinkInline>? FiguresOf(ParagraphBlock paragraph)
     {
         if (paragraph.Inline == null)
@@ -516,7 +549,7 @@ public sealed partial class MarkdownPage
         {
             switch (inline)
             {
-                case LinkInline { IsImage: true } image when IsScript(image.Url):
+                case LinkInline { IsImage: true } image when IsScript(image.Url) || PictureRow.IsPicture(image.Url):
                     images.Add(image);
                     break;
                 case LineBreakInline:
@@ -534,12 +567,13 @@ public sealed partial class MarkdownPage
         url != null && (url.StartsWith('#') || Regex.IsMatch(url.Split('#')[0], @"\.geo$", RegexOptions.IgnoreCase));
 
     // the attributes of a figure: "{crop=no}" for the image, "{float=right width=40%}" for the whole figure
-    private static readonly string[] FigureAttributes = ["crop", "float", "width", "scale", "nowarn"];
+    private static readonly string[] FigureAttributes = ["crop", "float", "width", "height", "scale", "nowarn"];
 
     // "file.geo", "file.geo#2", "file.geo#3..4" (also "3-4"), "file.geo#name", "file.geo#from..to"; "#…" the page's own
     // script
+    // (row: in a row of pictures of one height – its width is its own, the script keeps the book's scale)
     private static GeoReference? ReferenceOf(string text, string? page, LinkInline image, Func<int, (int, int)> locate,
-        List<MarkdownProblem> errors, List<MarkdownProblem> warnings, Dictionary<string, string> figureOptions)
+        List<MarkdownProblem> errors, List<MarkdownProblem> warnings, Dictionary<string, string> figureOptions, bool row)
     {
         string url = image.Url!;
         (int line, int column) = locate(image.Span.Start);
@@ -557,6 +591,12 @@ public sealed partial class MarkdownPage
                     break;
                 case "nowarn" when value.Length == 0:
                     noWarn = true;
+                    break;
+                case "width" or "height" when row:
+                    RowSize(key, value, line, column, errors, figureOptions);
+                    break;
+                case "height":
+                    errors.Add(new MarkdownProblem(line, column, $"\"height={value}\": write the row's height like height=4cm (mm, cm, pt, in)."));
                     break;
                 case "float" when value is "left" or "right":
                 case "width" when WidthPattern().IsMatch(value):
@@ -624,6 +664,85 @@ public sealed partial class MarkdownPage
 
     [GeneratedRegex(@"^\d+(\.\d+)?(%|mm|cm|pt|in)$")]
     private static partial Regex WidthPattern();
+
+    // in a row of pictures: "height=4cm" (the row's, the same at all its pictures) or "width=5cm" (one picture's: the row
+    // follows it); one of them
+    private static void RowSize(string key, string value, int line, int column, List<MarkdownProblem> errors, Dictionary<string, string> figureOptions)
+    {
+        if (PictureRow.Points(value) == null)
+        {
+            errors.Add(new MarkdownProblem(line, column, $"\"{key}={value}\": in a row of pictures write a length like {key}=4cm (mm, cm, pt, in)."));
+            return;
+        }
+        if (key == "height" && figureOptions.TryGetValue("height", out string? other) && other != value)
+        {
+            errors.Add(new MarkdownProblem(line, column, $"The images of this figure have different values for \"height\" ({other}, {value})."));
+            return;
+        }
+        string otherKey = key == "height" ? "row-width" : "height";
+        if (figureOptions.ContainsKey(otherKey) || key == "width" && figureOptions.ContainsKey("row-width"))
+        {
+            errors.Add(new MarkdownProblem(line, column,
+                "A row of pictures has one size: the row's height (height=4cm) or the width of one of its pictures (width=5cm) – the others follow."));
+            return;
+        }
+        figureOptions[key == "height" ? "height" : "row-width"] = value;
+    }
+
+    // a picture from a file: its size and kind; its width (in the row), the figure's height and float; null if it is missing
+    private static PageImage? PictureOf(string? folder, LinkInline image, Func<int, (int, int)> locate,
+        List<MarkdownProblem> errors, List<MarkdownProblem> warnings, Dictionary<string, string> figureOptions)
+    {
+        (int line, int column) = locate(image.Span.Start);
+        string? width = null;
+        foreach ((string key, string? raw) in image.TryGetAttributes()?.Properties ?? [])
+        {
+            string value = (raw ?? "").Trim();
+            switch (key)
+            {
+                case "width" or "height":
+                    int before = errors.Count;
+                    RowSize(key, value, line, column, errors, figureOptions);
+                    if (key == "width" && errors.Count == before)
+                    {
+                        width = value;
+                    }
+                    break;
+                case "float" when value is "left" or "right":
+                    figureOptions["float"] = value;
+                    break;
+                case "float":
+                    errors.Add(new MarkdownProblem(line, column, $"\"float={value}\": write float=left or float=right."));
+                    break;
+                case "crop" or "scale" or "nowarn":
+                    warnings.Add(new MarkdownProblem(line, column, $"\"{key}\" is for figures from scripts, not for a picture from a file."));
+                    break;
+                default:
+                    warnings.Add(new MarkdownProblem(line, column,
+                        $"Unknown attribute \"{key}\" of a picture (known: width, height, float)."));
+                    break;
+            }
+        }
+        string url = Uri.UnescapeDataString(image.Url!.Split('#', '?')[0]);
+        if (folder == null)
+        {
+            errors.Add(new MarkdownProblem(line, column, $"\"{url}\": the page must be saved first (the picture is found next to it)."));
+            return null;
+        }
+        string path = Path.GetFullPath(Path.Combine(folder, url.Replace('/', Path.DirectorySeparatorChar)));
+        if (!File.Exists(path))
+        {
+            errors.Add(new MarkdownProblem(line, column, $"The picture \"{url}\" does not exist."));
+            return null;
+        }
+        string mediaType = PictureRow.MediaTypeOf(path);
+        if (PictureRow.RatioOf(File.ReadAllBytes(path), mediaType) is not double ratio)
+        {
+            errors.Add(new MarkdownProblem(line, column, $"\"{url}\": its size cannot be read (is it a {Path.GetExtension(path).TrimStart('.').ToUpperInvariant()} at all?)."));
+            return null;
+        }
+        return new PageImage(path, mediaType, ratio, width);
+    }
 
     // "3..4", "3-4" (numbers only: names have hyphens), "verschieden..gleich", "2", "gleich"
     [GeneratedRegex(@"^(?:(\d+)-(\d+)|([\p{L}\p{N}_-]+)(?:\.\.([\p{L}\p{N}_-]+))?)$")]
@@ -1054,7 +1173,17 @@ public sealed partial class MarkdownPage
 
     // the figures of a paragraph; a faulty address has no reference
     // a figure of a paragraph: its address, its reference (null: a faulty address) and its animation (null: none loaded)
-    private sealed record FigureItem(LinkInline Image, string Source, GeoReference? Reference, PageFigure? Figure, bool Faulty);
+    private sealed record FigureItem(LinkInline Image, string Source, GeoReference? Reference, PageFigure? Figure, bool Faulty)
+    {
+        /// <summary>A picture from a file (null: a script's).</summary>
+        public PageImage? Picture { get; init; }
+
+        /// <summary>A picture's caption ("![…](halo.jpg)"; a script's is its reference's).</summary>
+        public string Caption { get; init; } = "";
+
+        /// <summary>Its width in a row of pictures ("{width=5cm}"), or null.</summary>
+        public string? RowWidth => Picture?.Width ?? (Image.TryGetAttributes()?.Properties?.FirstOrDefault(p => p.Key == "width").Value?.Trim() is { } width && PictureRow.Points(width) != null ? width : null);
+    }
 
     // the figures of a paragraph
     private sealed class GeoFigureBlock(List<FigureItem> items) : LeafBlock(null)
@@ -1063,6 +1192,9 @@ public sealed partial class MarkdownPage
 
         /// <summary>"Abb. 3"</summary>
         public string Label { get; set; } = "";
+
+        /// <summary>A row of pictures of one height (with pictures from files, or "{height=…}").</summary>
+        public bool Row { get; init; }
     }
 
     // the figures side by side, each an element for the player (data-figure: its key; --ratio: the picture's width by its
@@ -1071,16 +1203,30 @@ public sealed partial class MarkdownPage
     {
         protected override void Write(HtmlRenderer renderer, GeoFigureBlock figure)
         {
-            renderer.Write("<figure class=\"geo-figure\"").WriteAttributes(figure).WriteLine('>');
+            renderer.Write("<figure class=\"geo-figure").Write(figure.Row ? " geo-pictures" : "").Write('"').WriteAttributes(figure).WriteLine('>');
             renderer.WriteLine("<div class=\"geo-row\">");
             var captions = new StringBuilder();
             foreach (FigureItem item in figure.Items)
             {
+                // in a row: a picture's own width
+                string width = figure.Row && item.RowWidth is { } own ? " data-width=\"" + own + "\"" : "";
+                if (item.Picture is { } picture)
+                {
+                    renderer.Write("<div class=\"geo-item geo-image\"").Write(width).Write(" style=\"--ratio: ")
+                        .Write(picture.Ratio.ToString("0.####", CultureInfo.InvariantCulture)).Write("\"><img src=\"").Write(picture.DataUri)
+                        .Write("\" alt=\"").WriteEscape(item.Caption.Length > 0 ? HtmlExporter.PlainText(item.Caption) : "Bild")
+                        .Write("\" data-source=\"").WriteEscape(picture.Path).WriteLine("\"></div>");
+                    if (item.Caption.Length > 0)
+                    {
+                        captions.Append(captions.Length > 0 ? " · " : "").Append(item.Caption);
+                    }
+                    continue;
+                }
                 if (item.Figure is { } loaded)
                 {
                     renderer.Write("<div class=\"geo-item ").Write(loaded.Still ? "geo-still" : "geo-player")
-                        .Write("\" data-figure=\"").Write(loaded.Key)
-                        .Write("\" style=\"--ratio: ").Write(loaded.Ratio.ToString("0.####", CultureInfo.InvariantCulture)).WriteLine("\"></div>");
+                        .Write("\" data-figure=\"").Write(loaded.Key).Write('"').Write(width)
+                        .Write(" style=\"--ratio: ").Write(loaded.Ratio.ToString("0.####", CultureInfo.InvariantCulture)).WriteLine("\"></div>");
                 }
                 else
                 {
@@ -1094,17 +1240,21 @@ public sealed partial class MarkdownPage
             }
             renderer.WriteLine("</div>");
             // without a caption of its own: a still's step description from the script
-            if (captions.Length == 0 && figure.Items is [{ Figure.StepCaption: { Length: > 0 } stepCaption }])
+            if (captions.Length == 0 && figure.Label.Length > 0 && figure.Items is [{ Figure.StepCaption: { Length: > 0 } stepCaption }])
             {
                 captions.Append(stepCaption);
             }
-            renderer.Write("<figcaption><span class=\"figure-label\">").WriteEscape(figure.Label).Write("</span>");
-            if (captions.Length > 0)
+            // (on a test or worksheet a figure has a number only with a caption or a mark)
+            if (figure.Label.Length > 0 || captions.Length > 0)
             {
-                // the caption is Markdown too (formulas, emphasis)
-                renderer.Write(" ").Write(InlineHtml(captions.ToString()));
+                renderer.Write("<figcaption><span class=\"figure-label\">").WriteEscape(figure.Label).Write("</span>");
+                if (captions.Length > 0)
+                {
+                    // the caption is Markdown too (formulas, emphasis)
+                    renderer.Write(figure.Label.Length > 0 ? " " : "").Write(InlineHtml(captions.ToString()));
+                }
+                renderer.WriteLine("</figcaption>");
             }
-            renderer.WriteLine("</figcaption>");
             renderer.WriteLine("</figure>");
         }
     }

@@ -185,6 +185,25 @@ svg.formula {
   outline: 1px solid #e3e6eb;
 }
 
+/* a row of pictures of one height (pictures from files, or "{height=…}"): each as wide as its share (its width by its
+   height), the row as wide as its height asks (set by page.js and the book) */
+.geo-pictures .geo-row {
+  margin: 0 auto;
+}
+
+.geo-pictures .geo-item {
+  flex: var(--ratio) 1 0;
+}
+
+.geo-image img,
+.geo-pictures .geo-item > img,
+.geo-pictures .geo-print-picture,
+.geo-pictures .geo-print-picture img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
 /* in the book: the steps of a figure as a row of stills (at most three side by side; each as wide as its content) */
 .geo-steps {
   display: flex;

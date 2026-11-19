@@ -556,6 +556,10 @@ internal static partial class Program
         {
             var pictures = new List<string>();
             Dictionary<string, PageFigure> known = context.Markdown.PageFigures.DistinctBy(f => f.Key).ToDictionary(f => f.Key);
+            if (figure.ClassList.Contains("geo-pictures"))
+            {
+                return Row(figure, context, known);
+            }
             foreach (IElement item in figure.QuerySelectorAll(".geo-item, .geo-placeholder"))
             {
                 if (item.GetAttribute("data-figure") is { } key && known.TryGetValue(key, out PageFigure? shown))
@@ -580,6 +584,50 @@ internal static partial class Program
             return "#geo-figure(" + string.Join(", ", pictures) + captionMarkup + ")" + label;
         }
 
+        // a row of pictures of one height (pictures from files, or "{height=…}"): each picture with its width by its height
+        // (the picture made here: Typst finds files from where image() stands);
+        // the height as given, from a picture's width, or so that the row fills the width (at most 8 cm)
+        private string Row(IElement figure, PageContext context, Dictionary<string, PageFigure> known)
+        {
+            var items = new List<string>();
+            var ratios = new List<double>();
+            var widths = new List<string?>();
+            foreach (IElement item in figure.QuerySelectorAll(".geo-row > .geo-item, .geo-row > .geo-placeholder"))
+            {
+                widths.Add(item.GetAttribute("data-width"));
+                if (item.ClassList.Contains("geo-image") && item.QuerySelector("img")?.GetAttribute("src") is { } source && source.StartsWith("data:", StringComparison.Ordinal))
+                {
+                    string mediaType = source[5..source.IndexOf(';')];
+                    string path = Picture("pictures", System.Convert.FromBase64String(source[(source.IndexOf(',') + 1)..]), PictureRow.ExtensionOf(mediaType));
+                    double ratio = HtmlBookWriterRatio(item);
+                    ratios.Add(ratio);
+                    items.Add($"(ratio: {Number(ratio)}, picture: h => image(\"../{path}\", height: h))");
+                }
+                else if (item.GetAttribute("data-figure") is { } key && known.TryGetValue(key, out PageFigure? shown) && Pictures(shown).Images is [var image])
+                {
+                    string path = Picture("figures", Encoding.UTF8.GetBytes(image.Svg));
+                    ratios.Add(image.Width / image.Height);
+                    items.Add($"(ratio: {Number(image.Width / image.Height)}, picture: h => image(\"../{path}\", height: h))");
+                }
+                else
+                {
+                    ratios.Add(2);
+                    items.Add("(ratio: 2, missing: " + String(item.TextContent.Trim()) + ")");
+                }
+            }
+            double? height = PictureRow.Height(ratios, figure.GetAttribute("data-height"), widths);
+            IElement? caption = figure.QuerySelector("figcaption");
+            string captionMarkup = caption != null ? ", caption: [" + Inlines(caption.ChildNodes, context).Trim() + "]" : "";
+            string label = figure.Id is { Length: > 0 } id ? " <" + LabelOf(context.Page, id) + ">" : "";
+            return "#geo-row(" + string.Join(", ", items) + (height is double h ? ", height: " + Number(h) + "pt" : "") + captionMarkup + ")" + label;
+
+            static string Number(double value) => Math.Round(value, 4).ToString("0.####", CultureInfo.InvariantCulture);
+        }
+
+        private static double HtmlBookWriterRatio(IElement item) =>
+            Regex.Match(item.GetAttribute("style") ?? "", @"--ratio:\s*([\d.]+)") is { Success: true } match
+                ? double.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture) : 1.6;
+
         // the nodes of a piece of HTML
         private static INodeList Fragment(string html) =>
             new HtmlParser().ParseDocument("<!DOCTYPE html><html><body>" + html + "</body></html>").Body!.ChildNodes;
@@ -597,9 +645,9 @@ internal static partial class Program
         }
 
         // a picture in the project, once for the same content: its path ("figures/1f2e….svg")
-        private string Picture(string folder, byte[] content)
+        private string Picture(string folder, byte[] content, string extension = ".svg")
         {
-            string name = folder + "/" + System.Convert.ToHexString(SHA256.HashData(content))[..12].ToLowerInvariant() + ".svg";
+            string name = folder + "/" + System.Convert.ToHexString(SHA256.HashData(content))[..12].ToLowerInvariant() + extension;
             files.TryAdd(name, content);
             return name;
         }
@@ -642,7 +690,7 @@ internal static partial class Program
         private void WriteFiles(string output, Dictionary<string, string> pages, string styleFolder)
         {
             // what an earlier export left (pages, pictures): made anew
-            foreach (string folder in new[] { "pages", "figures", "formulas" })
+            foreach (string folder in new[] { "pages", "figures", "formulas", "pictures" })
             {
                 string path = Path.Combine(output, folder);
                 if (Directory.Exists(path))

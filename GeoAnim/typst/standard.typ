@@ -268,6 +268,30 @@
   }
 })
 
+// a row of pictures of one height (pictures from files, or "{height=…}"): items (ratio: width by height, picture: h => image(…, height: h)) or
+// (ratio: …, missing: "address"); height: the row's, else it fills the width, at most max-height; never wider than the
+// text
+#let geo-row(height: none, max-height: 8cm, gap: 0.6em, caption: none, ..items) = block(width: 100%, above: 1.4em, below: 1.4em, breakable: false, {
+  let items = items.pos()
+  layout(size => {
+    let gap = gap.to-absolute()
+    let total = items.map(item => item.ratio).sum()
+    let room = size.width - gap * (items.len() - 1)
+    let fitting = room / total
+    let wanted = if height != none { height.to-absolute() } else { calc.min(max-height.to-absolute(), fitting) }
+    let h = calc.min(wanted, fitting)
+    align(center, stack(dir: ltr, spacing: gap, ..items.map(item => if "picture" in item {
+      (item.picture)(h)
+    } else {
+      box(width: item.ratio * h, height: h, stroke: 0.6pt + red, inset: 0.5em, text(fill: red, raw(item.missing)))
+    })))
+  })
+  if caption != none {
+    v(0.3em)
+    align(center, text(size: 0.9em, caption))
+  }
+})
+
 // a still in a row of stills: its step's description below, as wide as the picture
 #let geo-still(picture, caption: none) = context {
   let width = measure(picture).width

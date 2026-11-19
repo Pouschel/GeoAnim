@@ -280,4 +280,40 @@ public sealed class SheetTests : IDisposable
         File.SetLastWriteTimeUtc(source, DateTime.UtcNow.AddSeconds(4));
         Assert.Contains(Errors("A"), e => e.Line == 8 && e.Message.Contains("Gen.csproj does not build: BinDec.cs(4): CS"));
     }
+    [Fact]
+    public void PicturesFromFilesStandInARowOfOneHeight()
+    {
+        // a PNG 400 × 200 (only its head counts), an SVG 100 × 200
+        byte[] png = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52, 0, 0, 1, 0x90, 0, 0, 0, 0xC8, 8, 2, 0, 0, 0];
+        File.WriteAllBytes(Path.Combine(folder, "breit.png"), png);
+        File.WriteAllText(Path.Combine(folder, "hoch.svg"), "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 200\"></svg>");
+        string file = Path.Combine(folder, "blatt.geo.md");
+        MarkdownPage page = MarkdownPage.Parse("""
+            ---
+            type: worksheet
+            ---
+
+            ![](breit.png){width=4cm} ![](hoch.svg)
+
+            ![Rechts](hoch.svg)
+
+            ![](breit.png){width=4cm} ![](hoch.svg){height=3cm}
+
+            ![](fehlt.jpg) ![](x.geo#2..3)
+            """, file);
+        Assert.Contains("<figure class=\"geo-figure geo-pictures\"", page.Html);
+        Assert.Contains("<div class=\"geo-item geo-image\" data-width=\"4cm\" style=\"--ratio: 2\"><img src=\"data:image/png;base64,", page.Html);
+        Assert.Contains("style=\"--ratio: 0.5\"><img src=\"data:image/svg+xml;base64,", page.Html);
+        // on a sheet a number only with a caption
+        Assert.Single(System.Text.RegularExpressions.Regex.Matches(page.Html, "<figcaption>"));
+        Assert.Contains("<figcaption><span class=\"figure-label\">Abb. 2</span> Rechts</figcaption>", page.Html);
+        Assert.Contains(page.Errors, e => e.Line == 9 && e.Message.Contains("one size"));
+        Assert.Contains(page.Errors, e => e.Line == 11 && e.Message.Contains("\"fehlt.jpg\" does not exist"));
+        Assert.Contains(page.Errors, e => e.Line == 11 && e.Message.Contains("not a range of steps"));
+        // the height: given, from a picture's width, or none (it fills the width, at most 8 cm)
+        Assert.Equal(3 / 2.54 * 72, PictureRow.Height([2, 0.5], "3cm", [null, null])!.Value, 6);
+        Assert.Equal(2 / 2.54 * 72, PictureRow.Height([2, 0.5], null, ["4cm", null])!.Value, 6);
+        Assert.Null(PictureRow.Height([2, 0.5], null, [null, null]));
+        Assert.Equal("min(100%, 12.411em)", PictureRow.CssWidth([2, 0.5], null, ["4cm", null], 12));
+    }
 }

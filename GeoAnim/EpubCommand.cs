@@ -246,9 +246,24 @@ internal static partial class Program
             IElement row = document.CreateElement("div");
             row.SetAttribute("class", "figure-row");
             var pictures = new List<IElement>();
+            // a row of pictures of one height: each as wide as its share of the page (its width by its height)
+            var ratios = new List<double>();
             foreach (IElement item in figure.QuerySelectorAll(".geo-item, .geo-placeholder"))
             {
-                if (item.GetAttribute("data-figure") is { } key && figures.TryGetValue(key, out PageFigure? shown))
+                if (item.ClassList.Contains("geo-image") && item.QuerySelector("img") is { } file
+                    && file.GetAttribute("src") is { } source && source.StartsWith("data:", StringComparison.Ordinal))
+                {
+                    int comma = source.IndexOf(',');
+                    string mediaType = source[5..source.IndexOf(';')];
+                    string href = Picture("p", System.Convert.FromBase64String(source[(comma + 1)..]), PictureRow.ExtensionOf(mediaType));
+                    IElement picture = document.CreateElement("img");
+                    picture.SetAttribute("src", "../" + href);
+                    picture.SetAttribute("alt", file.GetAttribute("alt") ?? alt);
+                    pictures.Add(picture);
+                    ratios.Add(HtmlBookWriter.RatioOf(item));
+                    row.AppendChild(picture);
+                }
+                else if (item.GetAttribute("data-figure") is { } key && figures.TryGetValue(key, out PageFigure? shown))
                 {
                     foreach (FigureImage image in Pictures(shown))
                     {
@@ -257,6 +272,7 @@ internal static partial class Program
                         picture.SetAttribute("src", "../" + href);
                         picture.SetAttribute("alt", alt);
                         pictures.Add(picture);
+                        ratios.Add(image.Width / image.Height);
                         row.AppendChild(picture);
                     }
                 }
@@ -276,9 +292,13 @@ internal static partial class Program
                 2 => "width: 49%",
                 _ => "width: 32%",
             };
-            foreach (IElement picture in pictures)
+            bool inRow = figure.ClassList.Contains("geo-pictures") && ratios.Count == pictures.Count;
+            for (int i = 0; i < pictures.Count; i++)
             {
-                picture.SetAttribute("style", style);
+                pictures[i].SetAttribute("style", inRow
+                    ? "width: " + (Math.Floor(ratios[i] / ratios.Sum() * (100 - 2 * (pictures.Count - 1)) * 10) / 10).ToString("0.#", CultureInfo.InvariantCulture) + "%"
+                        + (pictures.Count == 1 ? "; margin-left: 0; margin-right: 0" : "")
+                    : style);
             }
             block.AppendChild(row);
             if (caption != null)
@@ -629,7 +649,14 @@ internal static partial class Program
             foreach (string name in images.Keys)
             {
                 number++;
-                string type = name.EndsWith(".svg", StringComparison.Ordinal) ? "image/svg+xml" : "image/png";
+                string type = Path.GetExtension(name) switch
+                {
+                    ".svg" => "image/svg+xml",
+                    ".jpg" => "image/jpeg",
+                    ".gif" => "image/gif",
+                    ".webp" => "image/webp",
+                    _ => "image/png",
+                };
                 manifest.Append($"    <item id=\"image{number}\" href=\"{name}\" media-type=\"{type}\"/>\n");
             }
             // the table of contents is a page too (as Kindle wants it), after the title

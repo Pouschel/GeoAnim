@@ -261,7 +261,8 @@
       image.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(picture.svg)
       image.width = Math.round(picture.width * pixelsPerPoint)
       image.alt = 'Abbildung'
-      cell.style.width = image.width + 'px'
+      // in a row of pictures as wide as its share
+      cell.style.width = item.closest('.geo-pictures') ? '' : image.width + 'px'
       cell.appendChild(image)
       if (picture.caption) {
         const caption = document.createElement('div')
@@ -274,8 +275,46 @@
     item.appendChild(row)
   }
 
+  // a length in pt ("4cm", "40mm", "120pt", "2in"), or null
+  function points (length) {
+    const match = /^(\d+(?:\.\d+)?)(cm|mm|pt|in)$/.exec((length || '').trim())
+    if (!match) {
+      return null
+    }
+    const value = parseFloat(match[1])
+    return { cm: value / 2.54 * 72, mm: value / 25.4 * 72, in: value * 72, pt: value }[match[2]]
+  }
+
+  // a row of pictures of one height: the height from "height" at the figure, else from the first picture with a width,
+  // else it fills the column, at most 8 cm; the pictures share the row by their width by height (--ratio) – as
+  // PictureRow in GeoAnim
+  function layoutRows () {
+    const textSize = Object.values(figures).map(f => f.textSize).find(t => t) || 11
+    const pixelsPerPoint = parseFloat(getComputedStyle(page).fontSize) / textSize
+    for (const figure of page.querySelectorAll('.geo-pictures')) {
+      const items = Array.from(figure.querySelectorAll('.geo-row > .geo-item, .geo-row > .geo-placeholder'))
+      const ratios = items.map(item => parseFloat(getComputedStyle(item).getPropertyValue('--ratio')) || 1.6)
+      let height = points(figure.dataset.height)
+      if (height === null) {
+        const index = items.findIndex(item => points(item.dataset.width) !== null)
+        height = index >= 0 ? points(items[index].dataset.width) / ratios[index] : 8 / 2.54 * 72
+      }
+      const gap = parseFloat(getComputedStyle(page).fontSize) * 0.6
+      const width = ratios.reduce((a, b) => a + b, 0) * height * pixelsPerPoint + gap * (items.length - 1)
+      figure.querySelector('.geo-row').style.width = 'min(100%, ' + Math.round(width) + 'px)'
+    }
+  }
+
   // a frame with the player for every figure that has none yet (in the book: the printed pictures)
   function startFigures () {
+    // in a row of pictures: a script's picture as wide as it is in print
+    for (const item of page.querySelectorAll('.geo-pictures .geo-item[data-figure]')) {
+      const data = figures[item.dataset.figure]
+      if (mode === 'book' && data && data.pictures && data.pictures.length === 1) {
+        item.style.setProperty('--ratio', String(data.pictures[0].width / data.pictures[0].height))
+      }
+    }
+    layoutRows()
     for (const item of page.querySelectorAll('.geo-item[data-figure]')) {
       if (item.querySelector('iframe, .geo-print')) {
         continue

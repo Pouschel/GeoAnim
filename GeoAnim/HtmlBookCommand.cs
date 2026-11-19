@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Net;
 using System.Text;
+using System.Text.RegularExpressions;
 using AngleSharp.Dom;
 using AngleSharp.Html.Dom;
 using AngleSharp.Html.Parser;
@@ -264,8 +265,16 @@ internal static partial class Program
             {
                 if (figures.TryGetValue(item.GetAttribute("data-figure")!, out PageFigure? figure))
                 {
-                    item.InnerHtml = Stills(figure);
+                    item.InnerHtml = Stills(figure, item.Closest(".geo-pictures") != null ? item : null);
                 }
+            }
+            // rows of pictures of one height: as wide as their height asks
+            foreach (IElement row in body.QuerySelectorAll(".geo-pictures").ToList())
+            {
+                List<IElement> items = row.QuerySelectorAll(".geo-row > .geo-item, .geo-row > .geo-placeholder").ToList();
+                List<double> ratios = items.Select(RatioOf).ToList();
+                string width = PictureRow.CssWidth(ratios, row.GetAttribute("data-height"), items.Select(i => i.GetAttribute("data-width")).ToList(), textSize);
+                row.QuerySelector(".geo-row")?.SetAttribute("style", "width: " + width);
             }
             foreach (IElement element in body.QuerySelectorAll("[id]"))
             {
@@ -295,7 +304,8 @@ internal static partial class Program
 
         // the pictures of a figure as in print, in proportion to the text (a point of the book's text is 1/textSize em), in a
         // row of stills each with its step's description – as the preview's book view shows them
-        private string Stills(PageFigure figure)
+        // (inRow: the item of a row of pictures of one height, which gets the picture's width by height)
+        private string Stills(PageFigure figure, IElement? inRow = null)
         {
             if (!animations.TryGetValue(figure.Key, out FigureAnimation? animation))
             {
@@ -303,6 +313,12 @@ internal static partial class Program
             }
             List<FigureImage> images = BookPictures.Of(figure, animation, style);
             List<string?> captions = BookPictures.Captions(figure, animation, images.Count);
+            if (inRow != null && images.Count == 1)
+            {
+                pictures++;
+                inRow.SetAttribute("style", "--ratio: " + (images[0].Width / images[0].Height).ToString("0.####", CultureInfo.InvariantCulture));
+                return "<img src=\"data:image/svg+xml;base64," + System.Convert.ToBase64String(Encoding.UTF8.GetBytes(images[0].Svg)) + "\" alt=\"Abbildung\">";
+            }
             var html = new StringBuilder("<div class=\"geo-print\">");
             for (int i = 0; i < images.Count; i++)
             {
@@ -320,6 +336,11 @@ internal static partial class Program
             }
             return html.Append("</div>").ToString();
         }
+
+        // the width by the height of an item of a row (its "--ratio")
+        internal static double RatioOf(IElement item) =>
+            Regex.Match(item.GetAttribute("style") ?? "", @"--ratio:\s*([\d.]+)") is { Success: true } match
+                ? double.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture) : 1.6;
 
         // a link into the book: to its place in the file; to a script without a page: to the web (with "url") or none;
         // others stay as they are

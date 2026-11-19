@@ -76,8 +76,9 @@ Ein `$`, das keine Formel beginnt (kein schließendes, oder ein Leerzeichen dahi
 
 ## Abbildungen
 
-Ein **Bild** auf ein Skript, **allein im Absatz**; mehrere solche Bilder in einem Absatz bilden eine Abbildung und
-stehen nebeneinander. Ein Bild mitten im Text bleibt ein gewöhnliches Bild.
+Ein **Bild** auf ein Skript oder eine Bilddatei (PNG, JPEG, GIF, WebP, SVG neben der Seite), **allein im Absatz**;
+mehrere solche Bilder in einem Absatz bilden eine Abbildung und stehen nebeneinander. Ein Bild mitten im Text bleibt ein
+gewöhnliches Bild.
 
 **Unterschrift und Nummer:** Abbildungen werden nummeriert („Abb. 2.1“, „Abb. 2.2“ … im Kapitel 2, siehe
 [Nummerierung](#nummerierung)); die Nummer steht vor der Unterschrift. Die Unterschrift ist der Text in den eckigen Klammern (Markdown und Formeln erlaubt; bei mehreren Bildern
@@ -122,6 +123,28 @@ oder ein Standbild. Spielt ein Player, halten die anderen der Seite an.
 
 Die Vorschau in VS Code zeigt beides; oben rechts schaltet „Buch“/„Web“ um (Voreinstellung: Buch).
 
+### Bilder aus Dateien: eine Reihe gleicher Höhe
+
+```markdown
+![](bilder/halo.jpg) ![](halo.geo#3) ![](skizze.png)          ← füllt die Textbreite, höchstens 8 cm hoch
+![](bilder/halo.jpg) ![](skizze.png){height=4cm}              ← die Reihe 4 cm hoch
+![](bilder/halo.jpg){width=5cm} ![](halo.geo#3)               ← das Foto 5 cm breit, das andere gleich hoch
+```
+
+Eine Abbildung mit Bilddateien (oder mit `{height=…}`) ist eine **Reihe gleicher Höhe**: jedes Bild so breit, wie sein
+Seitenverhältnis bei dieser Höhe verlangt. Die Höhe kommt aus `height` an der Abbildung, sonst aus `width` an einem ihrer
+Bilder (die anderen richten sich danach), sonst füllt die Reihe die Breite des Texts, höchstens 8 cm hoch. Eine Reihe
+ist nie breiter als der Text – sonst wird sie kleiner. Die Auflösung (DPI) einer Datei zählt nicht, nur ihr
+Seitenverhältnis.
+
+- Skripte in einer Reihe zeigen ein Bild (`#2` oder das ganze: sein letztes Bild), keine Bildfolge; sie werden auf die
+  Höhe der Reihe gebracht, Linien und Texte also mit ihnen größer oder kleiner.
+- Fotos werden nicht zugeschnitten (`crop` gilt nur für Skripte).
+- Die Unterschrift ist eine Zeile unter der Reihe (die Texte der Bilder mit `·` verbunden).
+- Auf einem **Test oder Arbeitsblatt** hat eine Abbildung nur dann „Abb. …“, wenn sie eine Unterschrift oder eine Marke
+  hat – ohne steht nur das Bild da („die Zeichnung rechts“).
+- Ins Buch kommen die Dateien mit: im HTML eingebettet, im E-Book und im Typst-Projekt (`pictures/`) als Dateien.
+
 ## Attribute
 
 In geschweiften Klammern direkt hinter dem Bild, mehrere mit Leerzeichen: `![](#2){float=right width=40%}`; dort
@@ -133,10 +156,12 @@ steht auch die Marke: `![](#2){#abb-strahl crop=no}`.
 | `float` | `left` · `right` | der folgende Text fließt um die Abbildung – **festgelegt, noch nicht umgesetzt**: im Web und im E-Book später, im gedruckten Buch bleiben Abbildungen zentriert |
 | `width` | `8cm` · `60mm` · `200pt` · `3in` · `40%` | im Buch die Breite der Abbildung nach dem Zuschnitt (bei einer Bildfolge der ganzen Reihe); der Maßstab ergibt sich daraus. Prozent: Breite zu `float` im Web – **festgelegt, noch nicht umgesetzt** |
 | `scale` | `6mm` · `0.5cm` · `14pt` | im Buch die Länge einer Einheit für diese Abbildung |
+| `height` | `4cm` · `40mm` · `120pt` · `2in` | die Höhe einer Reihe gleicher Höhe (macht die Abbildung zu einer, siehe oben) |
+| `width` in einer Reihe | `5cm` · `50mm` … | die Breite dieses einen Bildes; die Reihe bekommt die Höhe, die es dabei hat – entweder `height` oder ein `width` |
 | `nowarn` | (ohne Wert) | *wirkungslos*: schaltete eine Warnung zur Größe der Texte im Druck ab, die es nicht mehr gibt; bleibt erlaubt |
 
 `float`, `width` und `scale` gelten für die ganze Abbildung; haben zwei ihrer Bilder verschiedene Werte, ist das ein
-Fehler.
+Fehler. In einer Reihe gleicher Höhe gilt `width` dagegen für das eine Bild.
 
 **Größe im Buch:** Es gilt die genaueste Angabe – `width` oder `scale` an der Abbildung, sonst `print width`/`print scale`
 im Skript (REFERENZ.md), sonst `print: scale` der `index.yaml`. Die Beschriftungen bleiben dabei so groß, wie die
