@@ -50,10 +50,12 @@ a {
   color: #1565c0;
 }
 
+/* code in the colour of its text (in a solution red): VS Code would give it its theme's (light brown) */
 code {
   padding: 0 0.2em;
   border-radius: 3px;
   background: #eef0f3;
+  color: inherit;
   font-family: Consolas, 'Cascadia Mono', monospace;
   font-size: 0.85em;
 }
@@ -63,6 +65,7 @@ pre {
   padding: 0.6em 0.9em;
   border-radius: 4px;
   background: #eef0f3;
+  color: #24292f;
   line-height: 1.35;
 }
 
