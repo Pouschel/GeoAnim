@@ -180,8 +180,13 @@ internal static partial class Program
             {
                 Problems.Add($"\"{title}\" has no blanks.");
             }
-            string[] pieces = Html(content).Split('\u0001');
-            flow.Add(Material(pieces[0]));
+            // ILIAS: the first text is the question (above), the rest the cloze text: so the question is all before the
+            // first block with a blank; in the cloze text a list's items paragraphs
+            int first = content.FindIndex(e => e.TextContent.Contains('\u0001'));
+            first = first < 0 ? content.Count : first;
+            flow.Add(Material(Html(content[..first])));
+            string[] pieces = ("\u0002" + Html([Lines(content[first..])], inner: true)).Split('\u0001');
+            flow.Add(Material(pieces[0][1..]));
             for (int k = 1; k < pieces.Length; k++)
             {
                 int close = pieces[k].IndexOf('\u0002');
@@ -189,6 +194,34 @@ internal static partial class Program
                 Gap(flow, processing, gaps[index], "gap_" + index, rating);
                 flow.Add(Material(pieces[k][(close + 1)..]));
             }
+        }
+
+        // the blocks in one element, a list's items each a paragraph (ILIAS keeps the paragraphs of a cloze text, but not
+        // a list that the blanks cut into pieces)
+        private static IElement Lines(List<IElement> blocks)
+        {
+            IDocument document = blocks.Count > 0 ? blocks[0].Owner! : new HtmlParser().ParseDocument("");
+            IElement lines = document.CreateElement("div");
+            foreach (IElement block in blocks)
+            {
+                if (block.LocalName is "ul" or "ol")
+                {
+                    foreach (IElement item in block.Children.Where(c => c.LocalName == "li").ToList())
+                    {
+                        IElement paragraph = document.CreateElement("p");
+                        foreach (INode node in item.ChildNodes.ToList())
+                        {
+                            paragraph.AppendChild(node);
+                        }
+                        lines.AppendChild(paragraph);
+                    }
+                }
+                else
+                {
+                    lines.AppendChild(block);
+                }
+            }
+            return lines;
         }
 
         private static void Gap(XElement flow, XElement processing, JsonElement gap, string ident, string rating)
@@ -325,7 +358,8 @@ internal static partial class Program
                 Prepare(wrapper);
                 html.Append(inner ? wrapper.FirstElementChild?.InnerHtml ?? "" : wrapper.InnerHtml).Append('\n');
             }
-            string text = CodeHighlighting.InlineStyles(html.ToString());
+            // XHTML, as ILIAS wants it
+            string text = VoidElement().Replace(CodeHighlighting.InlineStyles(html.ToString()), "<$1$2 />");
             var result = new StringBuilder(text.Length);
             foreach (char c in text)
             {
@@ -340,6 +374,9 @@ internal static partial class Program
             }
             return result.ToString();
         }
+
+        [GeneratedRegex(@"<(br|img|hr)\b([^>]*?)\s*/?>")]
+        private static partial Regex VoidElement();
 
         private void Prepare(IElement root)
         {

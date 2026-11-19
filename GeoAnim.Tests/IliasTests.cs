@@ -172,6 +172,12 @@ public sealed class IliasTests : IDisposable
         Assert.Equal([3, 2], matching.Descendants("respcondition").Select(c => (int)c.Element("setvar")!));
         Assert.Equal(5, matching.Descendants("response_label").Count());
         Assert.Equal("1:1", matching.Descendants("qtimetadatafield").First(f => f.Element("fieldlabel")!.Value == "matching_mode").Element("fieldentry")!.Value);
+        // the question above (all before the first blank's paragraph), the cloze text below: a paragraph for every item
+        // (ILIAS keeps no list there that the blanks cut into pieces)
+        List<string> texts = items[1].Element("presentation")!.Element("flow")!.Elements("material").Select(m => m.Element("mattext")!.Value).ToList();
+        Assert.DoesNotContain("<li>", texts[0]);
+        Assert.StartsWith("<p><code>print(", texts[1]);
+        Assert.Contains("(1 P)</em></p><p><code>print(", texts[2]);
         // code in colour (ILIAS has no style sheet of ours)
         Assert.Contains("<span style=\"color: #4078f2\">print</span>", items[1].Descendants("mattext").First().Value);
     }
