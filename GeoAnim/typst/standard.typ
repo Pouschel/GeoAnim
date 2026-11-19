@@ -309,13 +309,14 @@
 // a sheet: A4, no running head, the page number at the bottom only with more than one page ("1 / 2"); several sheets
 // in one file (the solutions of all groups): each counts its pages from 1, numbering: "1"
 // text-size 12pt and wide lines: students write larger than print
-#let sheet(text-size: 12pt, language: "de", margin: (x: 1.8cm, top: 1.6cm, bottom: 1.8cm), font: text-font, numbering: "1 / 1", body) = {
+// (dense: a document – no room to write between the lines)
+#let sheet(text-size: 12pt, language: "de", margin: (x: 1.8cm, top: 1.6cm, bottom: 1.8cm), font: text-font, numbering: "1 / 1", dense: false, body) = {
   set page(paper: "a4", margin: margin, footer: context {
     let total = counter(page).final().first()
     if total > 1 { align(center, text(size: 0.85em, counter(page).display(numbering, both: numbering.contains("/")))) }
   })
   set text(font: font, size: text-size, lang: language)
-  set par(justify: false, leading: 1em, spacing: 1.3em)
+  set par(justify: false, leading: if dense { 0.65em } else { 1em }, spacing: if dense { 1em } else { 1.3em })
   show heading: set text(weight: "bold")
   show heading.where(level: 2): it => block(above: 1.6em, below: 0.9em, sticky: true, text(size: 1.15em, it.body))
   show heading.where(level: 3): it => block(above: 1.2em, below: 0.6em, sticky: true, it.body)

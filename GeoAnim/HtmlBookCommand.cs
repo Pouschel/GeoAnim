@@ -215,7 +215,7 @@ internal static partial class Program
                 {
                     html.Append("<div class=\"page-break sheet-break\"></div>\n");
                 }
-                html.Append("<section class=\"sheet\">\n").Append(sheets[i]).Append("\n</section>\n");
+                html.Append(head.IsDocument ? "<section class=\"sheet document\">\n" : "<section class=\"sheet\">\n").Append(sheets[i]).Append("\n</section>\n");
             }
             return html.Append("</main>\n<script>\n").Append(HtmlExporter.CopyScript).Append("</script>\n</body>\n</html>\n").ToString();
         }
@@ -237,6 +237,24 @@ internal static partial class Program
             .sheet p,
             .sheet li {
               line-height: 1.9;
+            }
+
+            /* a document: nothing to write in, as much as can be on a board */
+            .sheet.document p,
+            .sheet.document li {
+              line-height: 1.45;
+            }
+
+            .sheet.document p,
+            .sheet.document ul,
+            .sheet.document ol,
+            .sheet.document pre {
+              margin-top: 0.5em;
+              margin-bottom: 0.5em;
+            }
+
+            .sheet.document h2 {
+              margin-top: 1.2em;
             }
 
             .sheet-break {

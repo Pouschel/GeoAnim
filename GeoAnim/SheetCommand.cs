@@ -151,8 +151,8 @@ internal static partial class Program
 
             // the sheets one after another, each on new pages
             // (several: each sheet counts its pages from 1)
-            static string Main(List<string> sheets, bool several = false) =>
-                "#import \"style.typ\": *\n\n#show: sheet" + (several ? ".with(numbering: \"1\")" : "") + "\n\n"
+            string Main(List<string> sheets, bool several = false) =>
+                "#import \"style.typ\": *\n\n#show: sheet" + (several ? ".with(numbering: \"1\")" : head.IsDocument ? ".with(dense: true)" : "") + "\n\n"
                 + string.Join("\n#pagebreak()\n", sheets.Select(s => (several ? "#counter(page).update(1)\n" : "") + "#include \"pages/" + s + "\"\n")) + "\n";
         }
     }
