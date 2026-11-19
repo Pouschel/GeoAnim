@@ -178,12 +178,15 @@ internal static partial class Program
             return errors;
         }
 
-        /// <summary>The questions of a group for ILIAS with their answers and points, to check them (an HTML file).</summary>
-        public void WriteControl(string file, MarkdownPage page, DocumentHead head, string path)
+        /// <summary>
+        /// The questions of a group for ILIAS with their answers and points, to check them (an HTML file); at the end the
+        /// points of all groups (<paramref name="overview"/>).
+        /// </summary>
+        public void WriteControl(string file, MarkdownPage page, DocumentHead head, string path, string overview = "")
         {
             textSize = 12;
             var entry = new BookPage(Path.GetFileName(file), file, "s1");
-            File.WriteAllText(path, SheetDocument(head, [Convert(page, entry, [entry])]), new UTF8Encoding(false));
+            File.WriteAllText(path, SheetDocument(head, [Convert(page, entry, [entry]) + overview]), new UTF8Encoding(false));
         }
 
         // the sheets in one file: to read on a screen or a board (the text grows with the window) and to print, each

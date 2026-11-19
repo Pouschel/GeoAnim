@@ -46,7 +46,11 @@ public sealed record DocumentHead(string Type)
 public sealed record SheetVariant(string? Group, bool Solution);
 
 /// <summary>A task of a test: its number (null: an extra task, not in the sum), title and points.</summary>
-public sealed record TestTask(int? Number, string Title, double Points);
+public sealed record TestTask(int? Number, string Title, double Points)
+{
+    /// <summary>A question for ILIAS: "Lückentext", "Zuordnung" or "Single Choice".</summary>
+    public string? Kind { get; init; }
+}
 
 public sealed partial class MarkdownPage
 {
@@ -457,7 +461,10 @@ public sealed partial class MarkdownPage
             {
                 points = given ?? 1;
             }
-            tasks.Add(new TestTask(tasks.Count + 1, title, points));
+            tasks.Add(new TestTask(tasks.Count + 1, title, points)
+            {
+                Kind = kinds != 1 ? null : gaps.Count > 0 ? "Lückentext" : match.Success ? "Zuordnung" : "Single Choice",
+            });
             heading.Inline?.FirstChild?.InsertBefore(new LiteralInline(tasks.Count.ToString(CultureInfo.InvariantCulture) + ". "));
             heading.Inline?.AppendChild(new LiteralInline($" ({Points(points)} P)"));
             heading.GetAttributes().AddProperty("data-question", title);
@@ -484,6 +491,78 @@ public sealed partial class MarkdownPage
             block = parent;
         }
         return null;
+    }
+
+    /// <summary>
+    /// The points of the questions for ILIAS in all groups, to compare them (the work and the one written later should
+    /// be worth the same): a row for every question (by its title; "–" where a group does not have it), its kind, the
+    /// sums, the sums by kind. <paramref name="page"/> is the page of <paramref name="group"/>; the others are made.
+    /// </summary>
+    public static string PointsOverview(string text, string? file, Func<string, AnimationData>? loadScript, MarkdownPage page, string? group)
+    {
+        if (page.Document is not { IsIlias: true } head || head.Groups.Count == 0)
+        {
+            return "";
+        }
+        var groups = head.Groups.Select(g => (Group: g, Tasks: g == group ? page.Tasks
+            : Parse(text, file, loadScript, variant: new SheetVariant(g, true)).Tasks)).ToList();
+        // the questions in their order, each once (a question of only some groups after the one before it)
+        var titles = new List<string>();
+        foreach ((_, IReadOnlyList<TestTask> tasks) in groups)
+        {
+            int after = -1;
+            foreach (TestTask task in tasks)
+            {
+                int known = titles.IndexOf(task.Title);
+                if (known < 0)
+                {
+                    titles.Insert(after + 1, task.Title);
+                    known = after + 1;
+                }
+                after = known;
+            }
+        }
+        string Cell(double? points) => points is double p ? Points(p) : "–";
+        var html = new StringBuilder("<section class=\"points-overview\">\n<h2>Punkte der Gruppen</h2>\n<table>\n<thead><tr><th>Frage</th><th>Art</th>");
+        foreach ((string name, _) in groups)
+        {
+            html.Append("<th>").Append(WebUtility.HtmlEncode(name)).Append("</th>");
+        }
+        html.Append("</tr></thead>\n<tbody>\n");
+        foreach (string title in titles)
+        {
+            var found = groups.Select(g => g.Tasks.FirstOrDefault(t => t.Title == title)).ToList();
+            string kinds = string.Join(", ", found.Where(t => t?.Kind != null).Select(t => t!.Kind).Distinct());
+            html.Append("<tr><td>").Append(InlineHtml(title)).Append("</td><td>").Append(kinds).Append("</td>");
+            foreach (TestTask? task in found)
+            {
+                html.Append("<td>").Append(Cell(task?.Points)).Append("</td>");
+            }
+            html.Append("</tr>\n");
+        }
+        var sums = groups.Select(g => g.Tasks.Sum(t => t.Points)).ToList();
+        html.Append("<tr class=\"points-sum\"><td>Summe</td><td></td>");
+        foreach (double sum in sums)
+        {
+            html.Append("<td>").Append(Points(sum)).Append("</td>");
+        }
+        html.Append("</tr>\n");
+        foreach (string kind in groups.SelectMany(g => g.Tasks).Select(t => t.Kind).OfType<string>().Distinct())
+        {
+            html.Append("<tr class=\"points-kind\"><td>davon</td><td>").Append(kind).Append("</td>");
+            foreach ((_, IReadOnlyList<TestTask> tasks) in groups)
+            {
+                html.Append("<td>").Append(Points(tasks.Where(t => t.Kind == kind).Sum(t => t.Points))).Append("</td>");
+            }
+            html.Append("</tr>\n");
+        }
+        html.Append("</tbody>\n</table>\n");
+        if (sums.Distinct().Count() > 1)
+        {
+            html.Append("<p class=\"points-differ\">Die Summen sind verschieden: ")
+                .Append(string.Join(", ", groups.Select((g, i) => WebUtility.HtmlEncode(g.Group) + " " + Points(sums[i])))).Append(".</p>\n");
+        }
+        return html.Append("</section>\n").ToString();
     }
 
     // the grades by the share of the points (percent from which a grade is given): plain and with "+"

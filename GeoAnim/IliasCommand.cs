@@ -27,6 +27,7 @@ internal static partial class Program
         var html = new HtmlBookWriter(Path.GetDirectoryName(file)!);
         int errors = 0;
         var reported = new HashSet<string>(StringComparer.Ordinal);
+        string? overview = null;
         foreach (string? group in groups)
         {
             progress.Step("ILIAS: " + (group != null ? "Gruppe " + group : "Fragen"));
@@ -42,7 +43,9 @@ internal static partial class Program
                 progress.Warning($"{Path.GetFileName(file)}:{problem.Line}:{problem.Column}: {problem.Message}");
             }
             string name = stem + (group != null ? "-" + group : "");
-            html.WriteControl(file, page, head, Path.Combine(folder, name + ".html"));
+            // the points of all groups (the same in every file)
+            overview ??= MarkdownPage.PointsOverview(text, file, Daemon.LoadScript, page, group);
+            html.WriteControl(file, page, head, Path.Combine(folder, name + ".html"), overview);
             progress.Step("ILIAS: " + name + "__qti_1.zip");
             var writer = new IliasWriter(file, page);
             WritePool(writer.Pool(), Path.Combine(folder, name + "__qti_1.zip"));

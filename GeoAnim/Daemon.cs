@@ -258,7 +258,10 @@ internal static class Daemon
         }
         return Answer(id, json =>
         {
-            json.WriteString("html", page.Html);
+            // questions for ILIAS: at the end the points of all groups
+            json.WriteString("html", page.Document?.IsIlias == true
+                ? page.Html + MarkdownPage.PointsOverview(text, path, LoadScript, page, variant?.Group ?? page.Document.Groups.FirstOrDefault())
+                : page.Html);
             json.WriteString("title", page.Title);
             // a test or worksheet: the preview offers to export its sheets, and to show each group's, with or without
             // the solutions

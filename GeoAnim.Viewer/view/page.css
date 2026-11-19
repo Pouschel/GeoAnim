@@ -597,3 +597,10 @@ a.keyword:hover {
 .match table { min-width: 60%; }
 .match td:nth-child(2) { color: #c62828; }
 .gap-points { color: #8a8f98; font-size: 0.85em; }
+
+/* questions for ILIAS: the points of all groups at the end */
+.points-overview { margin-top: 2.5em; padding-top: 0.6em; border-top: 2px solid #c7ccd4; }
+.points-overview td:nth-child(n+3), .points-overview th:nth-child(n+3) { text-align: right; min-width: 3em; }
+.points-overview .points-sum td { font-weight: 700; border-top: 2px solid #8a8f98; }
+.points-overview .points-kind td { color: #5f6670; font-size: 0.9em; }
+.points-differ { color: #c62828; font-weight: 600; }

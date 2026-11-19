@@ -66,6 +66,10 @@ public sealed class IliasTests : IDisposable
 
     private static string Text(string html) => System.Net.WebUtility.HtmlDecode(System.Text.RegularExpressions.Regex.Replace(html, "<[^>]+>", ""));
 
+    // a table's cells with a space between them
+    private static string Cells(string html) => System.Text.RegularExpressions.Regex.Replace(
+        System.Net.WebUtility.HtmlDecode(System.Text.RegularExpressions.Regex.Replace(html, "<[^>]+>", " ")), @"\s+", " ");
+
     [Fact]
     public void QuestionsForIliasHaveTheirKindsPointsAndGroups()
     {
@@ -87,6 +91,13 @@ public sealed class IliasTests : IDisposable
         Assert.Contains("zwei | vier | acht (1 P) Bits", Text(a.Html));
         Assert.Contains("1024 (2 P) Byte", Text(a.Html));
         Assert.Contains("<div class=\"match\" data-shuffle=\"terms\" data-pairs=\"2\">", a.Html);
+        // the points of all groups: each question, its kind, the sums (U without "Ausgabe")
+        string overview = Cells(MarkdownPage.PointsOverview(Questions, null, null, a, "A"));
+        Assert.Contains("Ausgabe Lückentext – 3 3", overview);
+        Assert.Contains("Operatoren Zuordnung 5 5 5", overview);
+        Assert.Contains("Summe 10 13 13", overview);
+        Assert.Contains("davon Lückentext 4 7 7", overview);
+        Assert.Contains("Die Summen sind verschieden: U 10, A 13, N 13.", overview);
     }
 
     [Fact]

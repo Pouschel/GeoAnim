@@ -608,6 +608,7 @@ Jede Überschrift `##` ist eine Frage. Ihre Art ergibt sich aus dem, was darin s
 - **Bilder:** Formeln, Abbildungen aus Skripten und Bilddateien kommen als Bilder in die Frage.
 - **Kontrolle:** In der Vorschau stehen die Fragen immer mit ihren Antworten und den Punkten jeder Lücke; **Export** (oder `geoanim sheet lek.geo.md`) schreibt ZIPs und HTML neben die Datei. Danach in ILIAS importieren und die Fragen dort durchsehen.
 - Text vor der ersten Frage (Hilfsmittel …) steht nur in der Kontrolle.
+- **Punkte der Gruppen:** Am Ende der Vorschau und jeder Kontrolldatei steht eine Tabelle: jede Frage mit ihrer Art und ihren Punkten in jeder Gruppe („–“: nicht in dieser Gruppe), die Summen und die Punkte je Art. Sind die Summen verschieden, steht das rot darunter.
 
 ## Beispiel
 
