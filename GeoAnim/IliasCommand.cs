@@ -315,8 +315,12 @@ internal static partial class Program
             var html = new StringBuilder();
             foreach (IElement element in elements)
             {
-                Prepare(element);
-                html.Append(inner ? element.InnerHtml : element.OuterHtml).Append('\n');
+                // in a wrapper: what replaces the element itself (a figure by its pictures) stays in it
+                IElement wrapper = element.Owner!.CreateElement("div");
+                element.Parent?.ReplaceChild(wrapper, element);
+                wrapper.AppendChild(element);
+                Prepare(wrapper);
+                html.Append(inner ? wrapper.FirstElementChild?.InnerHtml ?? "" : wrapper.InnerHtml).Append('\n');
             }
             string text = CodeHighlighting.InlineStyles(html.ToString());
             var result = new StringBuilder(text.Length);

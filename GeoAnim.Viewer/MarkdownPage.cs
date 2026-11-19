@@ -745,8 +745,9 @@ public sealed partial class MarkdownPage
             errors.Add(new MarkdownProblem(line, column, $"The picture \"{url}\" does not exist."));
             return null;
         }
-        string mediaType = PictureRow.MediaTypeOf(path);
-        if (PictureRow.RatioOf(File.ReadAllBytes(path), mediaType) is not double ratio)
+        byte[] data = File.ReadAllBytes(path);
+        string mediaType = PictureRow.MediaTypeOf(path, data);
+        if (PictureRow.RatioOf(data, mediaType) is not double ratio)
         {
             errors.Add(new MarkdownProblem(line, column, $"\"{url}\": its size cannot be read (is it a {Path.GetExtension(path).TrimStart('.').ToUpperInvariant()} at all?)."));
             return null;

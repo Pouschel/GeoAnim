@@ -48,6 +48,31 @@ public static partial class PictureRow
 
     public static string MediaTypeOf(string file) => MediaTypes[System.IO.Path.GetExtension(file)];
 
+    /// <summary>
+    /// What a picture file is by its content (programs that save a PNG as ".jpg" are not rare), else by its name.
+    /// </summary>
+    public static string MediaTypeOf(string file, byte[] data)
+    {
+        ReadOnlySpan<byte> head = data.AsSpan(0, Math.Min(data.Length, 16));
+        if (head.StartsWith((ReadOnlySpan<byte>)[0x89, 0x50, 0x4E, 0x47]))
+        {
+            return "image/png";
+        }
+        if (head.StartsWith((ReadOnlySpan<byte>)[0xFF, 0xD8, 0xFF]))
+        {
+            return "image/jpeg";
+        }
+        if (head.StartsWith("GIF8"u8))
+        {
+            return "image/gif";
+        }
+        if (head.Length >= 12 && head[..4].SequenceEqual("RIFF"u8) && head[8..12].SequenceEqual("WEBP"u8))
+        {
+            return "image/webp";
+        }
+        return MediaTypeOf(file);
+    }
+
     public static string ExtensionOf(string mediaType) => mediaType switch
     {
         "image/png" => ".png",

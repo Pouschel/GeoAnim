@@ -286,6 +286,9 @@ public sealed class SheetTests : IDisposable
         // a PNG 400 × 200 (only its head counts), an SVG 100 × 200
         byte[] png = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52, 0, 0, 1, 0x90, 0, 0, 0, 0xC8, 8, 2, 0, 0, 0];
         File.WriteAllBytes(Path.Combine(folder, "breit.png"), png);
+        // a PNG named .jpg (as some programs save them): by its content
+        File.WriteAllBytes(Path.Combine(folder, "falsch.jpg"), png);
+        Assert.Contains("<img src=\"data:image/png;base64,", MarkdownPage.Parse("---\ntype: worksheet\n---\n\n![](falsch.jpg)\n", Path.Combine(folder, "x.geo.md")).Html);
         File.WriteAllText(Path.Combine(folder, "hoch.svg"), "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 200\"></svg>");
         string file = Path.Combine(folder, "blatt.geo.md");
         MarkdownPage page = MarkdownPage.Parse("""
