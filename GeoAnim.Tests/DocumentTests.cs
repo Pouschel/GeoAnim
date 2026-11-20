@@ -38,7 +38,15 @@ public sealed class DocumentTests
         Assert.Contains("</a></li></ul></li><li><a href=\"#kommentare\">Kommentare</a></li></ul></nav>", page.Html);
         Assert.Contains("<h2 id=\"kommentare\"", page.Html);
         Assert.Contains("class=\"statement statement-merke\"", page.Html);
-        Assert.Contains("Merke.", page.Html);
+        Assert.DoesNotContain("Merke.", page.Html);
         Assert.Contains("<div class=\"clear\"></div>", page.Html);
+    }
+
+    [Fact]
+    public void WichtigIsMerke()
+    {
+        MarkdownPage page = MarkdownPage.Parse("::: wichtig\nHeft mitbringen.\n:::\n");
+        Assert.Contains("<div class=\"statement statement-merke\"", page.Html);
+        Assert.Matches("<p[^>]*>Heft mitbringen.</p>", page.Html);
     }
 }

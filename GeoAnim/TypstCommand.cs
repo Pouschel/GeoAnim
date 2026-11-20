@@ -417,13 +417,33 @@ internal static partial class Program
             return $"#table({layout}, {string.Join(", ", cells.Where(c => c.Length > 0))})";
         }
 
-        private string Inlines(IEnumerable<INode> nodes, PageContext context) => string.Concat(nodes.Select(node => Inline(node, context)));
+        // the inline parts one after another; after code ("#linebreak()", "#sub[1]") a "(" or "[" would continue it (as
+        // its arguments) and ".x" would be a field: a ";" ends the code
+        private string Inlines(IEnumerable<INode> nodes, PageContext context)
+        {
+            var markup = new StringBuilder();
+            foreach (INode node in nodes)
+            {
+                string part = Inline(node, context);
+                if (part.Length > 0 && EndsInCode(markup) && (part[0] is '(' or '[' || (part.Length > 1 && part[0] == '.' && char.IsLetter(part[1]))))
+                {
+                    markup.Append(';');
+                }
+                markup.Append(part);
+            }
+            return markup.ToString();
+        }
+
+        // markup that ends with code ("… #sub[1]"): the last "#" before the end starts a call that is not closed by text
+        private static bool EndsInCode(StringBuilder markup) =>
+            markup.Length > 0 && markup[^1] is ')' or ']' && Regex.IsMatch(markup.ToString(), @"(?<!\\)#[A-Za-z][\w.-]*(\((?:[^()]|\([^()]*\))*\)|\[(?:[^\[\]]|\[[^\[\]]*\])*\])+$");
 
         private string Inline(INode node, PageContext context)
         {
             if (node is IText text)
             {
-                return Escape(Regex.Replace(text.Data, @"\s+", " "));
+                // (white space of the source as one space; em spaces "&emsp;" and no-break spaces stay)
+                return Escape(Regex.Replace(text.Data, @"[ \t\r\n]+", " "));
             }
             if (node is not IElement element)
             {
@@ -482,6 +502,12 @@ internal static partial class Program
                     return "#figure-label[" + Content() + "]";
                 case "img":
                     return Escape(element.GetAttribute("alt") ?? "");
+                case "sup":
+                    return "#super[" + Content() + "]";
+                case "sub":
+                    return "#sub[" + Content() + "]";
+                case "mark":
+                    return "#highlight(fill: rgb(\"#ffffdd\"))[" + Content() + "]";
                 default:
                     return Content() + label;
             }

@@ -229,7 +229,7 @@ Durch zwei verschiedene Punkte verläuft **genau eine Gerade**.
 | `proof` | Beweis | nein | ohne Kasten, endet mit ∎; gehört zur letzten Aussage davor (Satz, Lemma, Folgerung) auf der Seite – `::: proof §satz-x` für den Beweis einer anderen: „Beweis von Satz 3.2.“ |
 | `example` | Beispiel | ja | ohne Kasten |
 | `remark` | Bemerkung | nein | ohne Kasten |
-| `merke` (`note`) | Merke | nein | gelber Kasten (für Dokumente: was nicht überlesen werden darf) |
+| `merke` (`wichtig`, `note`) | – | nein | gelber Kasten mit Warnzeichen (für Dokumente: was nicht überlesen werden darf) |
 | `box` | – (nur ein Titel, wenn es einen gibt) | nein | neutraler grauer Kasten, nicht kursiv |
 
 - **Eröffnungszeile:** `::: art`, dann freiwillig die Marke `{#name}` und ein Titel (Markdown und Formeln erlaubt; er
@@ -437,7 +437,7 @@ Anweisungen werden mit einem Semikolon (`;`) beendet.
 | `\toc` (`\toc 2-3`, `\toc 2`) | das Inhaltsverzeichnis der Seite: ihre Überschriften dieser Ebenen (ohne Angabe 2 und 3), verlinkt – geht auf jeder Seite |
 | `{float=right}` (`left`) an einem Bild | im HTML rechts neben dem Text, höchstens halb so breit wie die Spalte; im PDF steht es mittig |
 | `\clear` | das Umfließen endet hier (alles danach unter dem Bild) |
-| `::: merke` … `:::` | ein gelber Kasten „Merke.“ für das, was nicht überlesen werden darf (ohne Nummer; auch auf anderen Seiten) |
+| `::: merke` … `:::` (oder `::: wichtig`) | ein gelber Kasten mit Warnzeichen (gelbes Dreieck) für das, was nicht überlesen werden darf: Merksätze, Anweisungen (ohne Nummer und ohne Namen; auch auf anderen Seiten) |
 
 Alte Markdown-Seiten (mit `{{toc 2 3}}`, `^^^ right 336`, `![](bild.jpg=336)`, Zitaten als Merksätzen) wandelt `tools/md2geo.py` um: `python md2geo.py ordner` schreibt neben jede `.md` eine `.geo.md`.
 

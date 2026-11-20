@@ -208,6 +208,14 @@
   sym.qed
 }
 
+// the warning sign of "::: merke" (the yellow triangle of ISO 7010 W001)
+#let warning-sign = box(width: 1.6em, height: 1.42em, {
+  place(polygon(fill: rgb("#ffd200"), stroke: (paint: rgb("#111111"), thickness: 1.2pt, join: "round"),
+    (0.8em, 0.1em), (1.52em, 1.36em), (0.08em, 1.36em)))
+  place(dx: 0.72em, dy: 0.5em, rect(width: 0.16em, height: 0.48em, fill: black, radius: 0.05em))
+  place(dx: 0.7em, dy: 1.07em, circle(radius: 0.1em, fill: black))
+})
+
 // axioms, definitions, theorems …: a line on the left; axioms and theorems in italics; proofs, examples and remarks
 // without a line; a box (box) grey
 #let statement(kind, body) = {
@@ -221,8 +229,9 @@
   } else if kind == "definition" {
     context block(width: 100%, above: 1.2em, below: 1.2em, inset: (left: 0.8em, y: 0.2em), stroke: (left: 1.5pt + color-of("rule-definition")), content)
   } else if kind == "merke" {
-    // what must not be overlooked: a yellow box with a bar
-    block(width: 100%, above: 1.2em, below: 1.2em, inset: (left: 0.8em, rest: 0.6em), fill: rgb("#fff6d6"), stroke: (left: 3pt + rgb("#e0a100")), content)
+    // what must not be overlooked: a yellow box with a bar, a warning sign on the left
+    block(width: 100%, above: 1.2em, below: 1.2em, inset: (left: 0.8em, rest: 0.6em), fill: rgb("#fff6d6"), stroke: (left: 3pt + rgb("#e0a100")),
+      grid(columns: (auto, 1fr), column-gutter: 0.8em, warning-sign, content))
   } else if kind == "box" {
     context block(width: 100%, above: 1.2em, below: 1.2em, inset: 0.7em, fill: color-of("fill-box"), radius: 2pt, content)
   } else {
