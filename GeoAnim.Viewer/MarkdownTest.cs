@@ -425,6 +425,17 @@ public sealed partial class MarkdownPage
             }
             heading.Inline.AppendChild(new LiteralInline($" ({Points(value)} P)"));
         }
+        ReadSheetCommands(text, document, locate, errors, tasks);
+        return tasks;
+    }
+
+    /// <summary>
+    /// The commands of a sheet: "\page" (a new page), "\space 3cm" (room) and, with the tasks of a test or worksheet,
+    /// "\points" (the table of the points); a document (no tasks) has the first two.
+    /// </summary>
+    private static void ReadSheetCommands(string text, MarkdownDocument document, Func<int, (int, int)> locate, List<MarkdownProblem> errors,
+        List<TestTask>? tasks)
+    {
         foreach (ParagraphBlock paragraph in document.Descendants<ParagraphBlock>().ToList())
         {
             string source = text.Substring(paragraph.Span.Start, paragraph.Span.Length).Trim();
@@ -435,7 +446,8 @@ public sealed partial class MarkdownPage
             string? html = command.Groups[1].Value switch
             {
                 "page" => "<div class=\"page-break\"></div>",
-                "points" when !command.Groups[2].Success || command.Groups[2].Value == "+" => GradeTable(tasks, plus: command.Groups[2].Success),
+                "points" when tasks != null && (!command.Groups[2].Success || command.Groups[2].Value == "+") => GradeTable(tasks, plus: command.Groups[2].Success),
+                "points" => "",
                 _ when command.Groups[2].Success && BlankWidth().Match(command.Groups[2].Value) is { Success: true } length =>
                     $"<div class=\"space\" style=\"height: {length.Groups[1].Value.Replace(',', '.')}{(length.Groups[2].Success ? length.Groups[2].Value : "em")}\"></div>",
                 _ => null,
@@ -446,6 +458,12 @@ public sealed partial class MarkdownPage
                 errors.Add(new MarkdownProblem(line, column, "\\space needs a height: \\space 3cm (or em, mm)."));
                 continue;
             }
+            if (html.Length == 0)
+            {
+                (int line, int column) = locate(paragraph.Span.Start);
+                errors.Add(new MarkdownProblem(line, column, "\\points needs tasks with points: only in a test or worksheet."));
+                continue;
+            }
             ContainerBlock parent = paragraph.Parent!;
             int index = parent.IndexOf(paragraph);
             parent.RemoveAt(index);
@@ -453,7 +471,6 @@ public sealed partial class MarkdownPage
             block.Lines = new StringLineGroup(html);
             parent.Insert(index, block);
         }
-        return tasks;
     }
 
     // "{7 cs}" at the end of a question's heading: its points, how ILIAS rates written answers (ci, cs, l1, l2)

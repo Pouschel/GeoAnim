@@ -49,4 +49,13 @@ public sealed class DocumentTests
         Assert.Contains("<div class=\"statement statement-merke\"", page.Html);
         Assert.Matches("<p[^>]*>Heft mitbringen.</p>", page.Html);
     }
+
+    [Fact]
+    public void SpaceAndPageInDocuments()
+    {
+        MarkdownPage page = MarkdownPage.Parse("---\ntype: document\n---\n\nText\n\n\\space 4cm\n\n\\page\n\n\\points\n");
+        Assert.Contains("<div class=\"space\" style=\"height: 4cm\"></div>", page.Html);
+        Assert.Contains("<div class=\"page-break\"></div>", page.Html);
+        Assert.Single(page.Errors);
+    }
 }

@@ -330,6 +330,10 @@ public sealed partial class MarkdownPage
         CheckMarks(marks, page, bookMarks, errors);
         LinkKeywords(document, keywordLinks ?? new Dictionary<string, KeywordLink>());
         List<TestTask> tasks = sheet == null || sheet.IsDocument ? [] : sheet.IsIlias ? ReadQuestions(text, document, locate, errors) : ReadTasks(text, document, locate, errors);
+        if (sheet?.IsDocument == true)
+        {
+            ReadSheetCommands(text, document, locate, errors, null);
+        }
         ReadPageCommands(text, document, locate);
         variant ??= sheet != null ? new SheetVariant(sheet.Groups.FirstOrDefault(), Solution: true) : null;
 
