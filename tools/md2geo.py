@@ -1,8 +1,11 @@
 """
 md2geo: old Markdown pages (the Eleu documentation and worksheets) as GeoAnim documents ("type: document").
 
-    python md2geo.py seite.md [weitere.md …] [-o ordner]
-    python md2geo.py ordner [-o ordner]           (all .md in it)
+    python md2geo.py seite.md [weitere.md …] [-o ordner] [-f]
+    python md2geo.py ordner [-o ordner] [-f]      (all .md in it and in its subfolders)
+
+A page whose name.geo.md is already there is skipped (it may have been edited): -f converts it again. In a folder
+.geo.md files themselves, hidden folders and the folders of an export ("…-typst", "…-epub") are left out.
 
 Each page becomes name.geo.md (next to it, or in the -o folder), with
 - a head: type: document, title from the first heading;
@@ -182,31 +185,71 @@ def main(arguments):
         k = arguments.index("-o")
         output = arguments[k + 1]
         arguments = arguments[:k] + arguments[k + 2:]
+    force = "-f" in arguments
+    arguments = [a for a in arguments if a != "-f"]
+    # (page, folder of its .geo.md)
     files = []
     for argument in arguments:
         if os.path.isdir(argument):
-            files += [os.path.join(argument, f) for f in sorted(os.listdir(argument)) if f.endswith(".md") and not f.endswith(".geo.md")]
+            for folder, folders, names in os.walk(argument):
+                folders[:] = sorted(f for f in folders if not f.startswith((".", "_site")) and not f.endswith(("-typst", "-epub")) and f != "node_modules")
+                target = os.path.normpath(os.path.join(output, os.path.relpath(folder, argument))) if output else folder
+                files += [(os.path.join(folder, f), target) for f in sorted(names) if f.lower().endswith(".md") and not f.lower().endswith(".geo.md")]
         else:
-            files.append(argument)
+            files.append((argument, output or os.path.dirname(argument)))
     if not files:
-        print(__doc__)
+        if output and not arguments:
+            # "md2geo.py -o ordner": the folder is where the pages go, not where they come from
+            print(f"Keine Seiten angegeben: -o {output} ist nur der Zielordner.\n"
+                  f"Die Seiten in dem Ordner umwandeln (die .geo.md daneben):\n    python md2geo.py {output}")
+        elif arguments:
+            print("Keine .md-Seiten in: " + ", ".join(arguments))
+        else:
+            print(__doc__)
         return 1
-    for file in files:
+    missing = [f for f, _ in files if not os.path.isfile(f)]
+    if missing:
+        print("Nicht gefunden: " + ", ".join(missing))
+        return 1
+    failed = skipped = 0
+    for file, folder in files:
         notes = []
-        with open(file, encoding="utf-8-sig") as source:
-            text = convert(source.read(), notes)
         stem = os.path.basename(file)
         stem = stem[:-len(".geo.md")] if stem.endswith(".geo.md") else os.path.splitext(stem)[0]
-        target = os.path.join(output or os.path.dirname(file), stem + ".geo.md")
+        target = os.path.join(folder, stem + ".geo.md")
         if os.path.abspath(target) == os.path.abspath(file):
-            target = os.path.join(output or os.path.dirname(file), stem + ".neu.geo.md")
+            target = os.path.join(folder, stem + ".neu.geo.md")
+        if os.path.exists(target) and not force:
+            print(f"{file}: übersprungen ({os.path.basename(target)} ist schon da; -f wandelt neu um)")
+            skipped += 1
+            continue
+        try:
+            with open(file, "rb") as source:
+                data = source.read()
+            try:
+                content = data.decode("utf-8-sig")
+            except UnicodeDecodeError:
+                # an older page: Windows-1252 (the result is UTF-8)
+                content = data.decode("cp1252", errors="replace")
+                notes.append("in Windows-1252 gelesen (die .geo.md ist UTF-8)")
+            text = convert(content, notes)
+        except Exception as error:
+            # one page that goes wrong: named, the others still converted
+            line = error.__traceback__
+            while line.tb_next:
+                line = line.tb_next
+            print(f"{file}: FEHLER {type(error).__name__}: {error} (md2geo.py Zeile {line.tb_lineno})")
+            failed += 1
+            continue
         os.makedirs(os.path.dirname(os.path.abspath(target)), exist_ok=True)
         with open(target, "w", encoding="utf-8") as result:
             result.write(text)
         print(f"{file} -> {target}")
         for note in notes:
             print("  " + note)
-    return 0
+    print(f"{len(files) - failed - skipped} umgewandelt" + (f", {skipped} übersprungen" if skipped else "")
+          + (f", {failed} mit Fehler" if failed else "") + ".")
+    return 1 if failed else 0
 
 
 if __name__ == "__main__":
