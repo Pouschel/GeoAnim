@@ -55,6 +55,9 @@ internal static partial class Program
         private BookSettings settings = BookSettings.None;
         private FigureStyle style = FigureStyle.Default;
         private double textSize = 11;
+
+        // the folder of the sheets (WriteSheets, WriteControl): a link to another file stays, as seen from there
+        private string? sheetFolder;
         private int pictures;
 
         // a page of the book: its source (relative to the book), its id in the file ("p3"), title, number ("2.1"), body
@@ -138,6 +141,7 @@ internal static partial class Program
         public int WriteSheets(string file, string text, DocumentHead head, string folder, string stem, Progress progress)
         {
             int errors = 0;
+            sheetFolder = Path.GetFullPath(folder);
             // the figures in proportion to the sheet's text (12pt, as in its PDF)
             textSize = 12;
             List<string?> groups = head.Groups.Count > 0 ? head.Groups.Cast<string?>().ToList() : [null];
@@ -185,6 +189,7 @@ internal static partial class Program
         public void WriteControl(string file, MarkdownPage page, DocumentHead head, string path, string overview = "")
         {
             textSize = 12;
+            sheetFolder = Path.GetDirectoryName(Path.GetFullPath(path));
             var entry = new BookPage(Path.GetFileName(file), file, "s1");
             File.WriteAllText(path, SheetDocument(head, [Convert(page, entry, [entry]) + overview]), new UTF8Encoding(false));
         }
@@ -395,6 +400,15 @@ internal static partial class Program
             if (relative.EndsWith(".geo", StringComparison.OrdinalIgnoreCase) && settings.AddressOf(PageName(relative)) is { } address)
             {
                 link.SetAttribute("href", address + (anchor != null ? "#" + anchor : ""));
+                return;
+            }
+            // a sheet or document: a link to another file ("_Repeat.html", "Aufgaben.pdf") as seen from the sheet's folder; a
+            // page in Markdown ("Repeat.geo.md") as its export (Repeat.html)
+            if (sheetFolder != null && path.Length > 0)
+            {
+                string file = Regex.Replace(target, @"(\.geo)?\.md$", ".html", RegexOptions.IgnoreCase);
+                string relativeHref = string.Join('/', Path.GetRelativePath(sheetFolder, file).Replace('\\', '/').Split('/').Select(Uri.EscapeDataString));
+                link.SetAttribute("href", relativeHref + (anchor != null ? "#" + anchor : ""));
                 return;
             }
             // no place for it: the text without the link
