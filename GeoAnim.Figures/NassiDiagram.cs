@@ -22,14 +22,19 @@ public sealed record NassiOptions
     public string False { get; init; } = "false";
 
     public bool Solution { get; init; } = true;
+
+    /// <summary>A title above the diagram (bold, on its left), or none.</summary>
+    public string? Title { get; init; }
 }
 
 /// <summary>
 /// Structure diagrams (Nassi–Shneiderman) from lines like pseudocode: a line is an instruction; one that starts with
-/// repeat, while, for (wiederhole, solange, für) a loop with the lines indented below it as its body; if (wenn) a
-/// decision with the lines below it, "else" (sonst) at the same indent the other branch ("else if": a decision in it).
-/// Code ("print(x);", "repeat (4)", `…`) in a font of fixed width, other text in the book's font; "[[4]]" a blank
-/// (with the solutions the answer, red).
+/// repeat, while or for a loop with the lines indented below it as its body; if a decision with the lines below it,
+/// "else" at the same indent the other branch ("else if": a decision in it); break and continue a jump out (the box of
+/// DIN 66261 with the arrow on its left). With "#" the word only says the kind of box, the text after it is what the box
+/// shows: "#repeat wiederhole 5-mal", "#if x kleiner als 3", "#break Schleife verlassen". Code ("print(x);", a line
+/// with repeat/if/break, `…`) in a font of fixed width, other text in the book's font; "[[4]]" a blank (with the
+/// solutions the answer, red). The boxes coloured by their kind (statements, loops, decisions, jumps, empty branches).
 /// </summary>
 public static partial class NassiDiagram
 {
@@ -37,13 +42,29 @@ public static partial class NassiDiagram
 
     private sealed record Statement(int Line, string Text) : Node(Line);
 
-    private sealed record Loop(int Line, string Header, List<Node> Body) : Node(Line);
+    private sealed record Loop(int Line, string Header, bool Code, List<Node> Body) : Node(Line);
 
     private sealed record Decision(int Line, string Condition, bool Code, List<Node> Then, List<Node> Else) : Node(Line);
 
-    private static readonly string[] LoopWords = ["repeat", "while", "for", "wiederhole", "solange", "für"];
-    private static readonly string[] IfWords = ["if", "wenn"];
-    private static readonly string[] ElseWords = ["else", "sonst"];
+    // break, continue: out of the loop / to its next round
+    private sealed record Jump(int Line, string Text, bool Code) : Node(Line);
+
+    private static readonly string[] LoopWords = ["repeat", "while", "for"];
+    private static readonly string[] JumpWords = ["break", "continue"];
+
+    // a line's kind ("#repeat …": only the kind, the box shows the rest) and what the box shows
+    private static (string Word, string Shown, bool Code) Kind(string text)
+    {
+        bool hidden = text.StartsWith('#');
+        string body = hidden ? text[1..].TrimStart() : text;
+        string word = FirstWord(body);
+        if (!hidden)
+        {
+            return (word, text, true);
+        }
+        string rest = body[word.Length..].Trim();
+        return (word, rest, IsCode(rest));
+    }
 
     /// <summary>
     /// The diagram of <paramref name="lines"/> (the block's lines; <paramref name="firstLine"/>: the number of the first in
@@ -103,6 +124,10 @@ public static partial class NassiDiagram
     [GeneratedRegex(@"^[\p{L}_]+")]
     private static partial Regex WordPattern();
 
+    // "break;", "continue", "break [[…]];"
+    [GeneratedRegex(@"^(break|continue)\b[^\w]*")]
+    private static partial Regex JumpLine();
+
     // the lines at this indent, each with what is indented below it
     private static List<Node> Sequence(List<(int Indent, string Text, int Line)> rows, ref int at, int indent, List<(int, string)> errors)
     {
@@ -117,19 +142,23 @@ public static partial class NassiDiagram
                 continue;
             }
             at++;
-            string word = FirstWord(text);
+            (string word, string shown, bool code) = Kind(text);
             if (LoopWords.Contains(word))
             {
-                nodes.Add(new Loop(line, text, Body(rows, ref at, indent, errors)));
+                nodes.Add(new Loop(line, shown, code, Body(rows, ref at, indent, errors)));
             }
-            else if (IfWords.Contains(word))
+            else if (word == "if")
             {
                 nodes.Add(Decide(rows, ref at, indent, text, line, errors));
             }
-            else if (ElseWords.Contains(word))
+            else if (word == "else")
             {
-                errors.Add((line, $"\"{word}\" belongs right below an if (at its indent)."));
+                errors.Add((line, "\"else\" belongs right below an if (at its indent)."));
                 Body(rows, ref at, indent, errors);
+            }
+            else if (JumpWords.Contains(word) && (text.StartsWith('#') || JumpLine().IsMatch(text)))
+            {
+                nodes.Add(new Jump(line, shown, code));
             }
             else
             {
@@ -143,39 +172,29 @@ public static partial class NassiDiagram
     private static List<Node> Body(List<(int Indent, string Text, int Line)> rows, ref int at, int indent, List<(int, string)> errors) =>
         at < rows.Count && rows[at].Indent > indent ? Sequence(rows, ref at, rows[at].Indent, errors) : [];
 
-    // "if (x > y)" with its lines, an "else" at its indent with its own ("else if …": a decision in it)
+    // "if (x > y)" with its lines, an "else" at its indent with its own ("else if …": a decision in it); in the triangle
+    // what follows "if", as written (with or without parentheses: sometimes they are the task); "#if Text": the text
     private static Decision Decide(List<(int Indent, string Text, int Line)> rows, ref int at, int indent, string text, int line, List<(int, string)> errors)
     {
-        string condition = text[FirstWord(text).Length..].Trim();
-        bool code = IsCode(condition) || condition.StartsWith('(');
-        if (condition.StartsWith('(') && condition.EndsWith(')') && Balanced(condition[1..^1]))
-        {
-            condition = condition[1..^1].Trim();
-        }
+        bool hidden = text.StartsWith('#');
+        string condition = (hidden ? text[1..].TrimStart() : text)[2..].Trim();
+        bool code = !hidden || IsCode(condition);
         List<Node> then = Body(rows, ref at, indent, errors);
         List<Node> otherwise = [];
-        if (at < rows.Count && rows[at].Indent == indent && ElseWords.Contains(FirstWord(rows[at].Text)))
+        if (at < rows.Count && rows[at].Indent == indent && Kind(rows[at].Text).Word == "else")
         {
             (_, string elseText, int elseLine) = rows[at];
             at++;
-            string rest = elseText[FirstWord(elseText).Length..].Trim();
-            otherwise = IfWords.Contains(FirstWord(rest)) ? [Decide(rows, ref at, indent, rest, elseLine, errors)] : Body(rows, ref at, indent, errors);
+            // "else if …", "else #if …", "#else if …"
+            bool hiddenElse = elseText.StartsWith('#');
+            string rest = (hiddenElse ? elseText[1..].TrimStart() : elseText)[4..].Trim();
+            if (hiddenElse && FirstWord(rest) == "if")
+            {
+                rest = "#" + rest;
+            }
+            otherwise = Kind(rest).Word == "if" ? [Decide(rows, ref at, indent, rest, elseLine, errors)] : Body(rows, ref at, indent, errors);
         }
         return new Decision(line, condition, code, then, otherwise);
-    }
-
-    private static bool Balanced(string text)
-    {
-        int depth = 0;
-        foreach (char c in text)
-        {
-            depth += c == '(' ? 1 : c == ')' ? -1 : 0;
-            if (depth < 0)
-            {
-                return false;
-            }
-        }
-        return depth == 0;
     }
 
     // the boxes numbered in reading order (a loop's head, then its body; a decision's condition, then yes, then no)
@@ -188,7 +207,10 @@ public static partial class NassiDiagram
             switch (node)
             {
                 case Loop loop:
-                    numbered.Add(new Loop(loop.Line, own, Number(loop.Body, ref number)));
+                    numbered.Add(new Loop(loop.Line, own, false, Number(loop.Body, ref number)));
+                    break;
+                case Jump jump:
+                    numbered.Add(new Jump(jump.Line, own, false));
                     break;
                 case Decision decision:
                     List<Node> then = Number(decision.Then, ref number);
@@ -203,6 +225,7 @@ public static partial class NassiDiagram
     }
 
     // code: ends with ";", "{" or "}", a comment ("// …"), or a word with parentheses ("print(x)", "repeat (4)")
+    // (a line with repeat/while/for/if/break is code anyway)
     private static bool IsCode(string text) => CodePattern().IsMatch(text);
 
     [GeneratedRegex(@"[;{}]\s*$|^\s*//|^[\p{L}_]\w*\s*\(.*\)\s*[;{]?\s*$")]
@@ -225,6 +248,23 @@ public static partial class NassiDiagram
         private double Mono => size * 0.92;
 
         private double Small => size * 0.8;
+
+        // the arrow of a jump (on its left)
+        private double Tip => size * 0.9;
+
+        // the title above the diagram
+        private double TitleSize => size * 1.05;
+
+        private double TitleRow => size * 1.9;
+
+        private string? Title => string.IsNullOrWhiteSpace(options.Title) ? null : options.Title.Trim();
+
+        // the colours of the boxes (light: the text stays readable, also printed)
+        private const string StatementFill = "#fdf1dd";
+        private const string LoopFill = "#e6f3ec";
+        private const string DecisionFill = "#fbe4df";
+        private const string JumpFill = "#e9e2f5";
+        private const string EmptyFill = "#fffdf2";
 
         // a piece of a line: text, code (fixed width) or a blank (its answer)
         private sealed record Piece(string Text, bool Code, bool Blank);
@@ -307,7 +347,8 @@ public static partial class NassiDiagram
         {
             // (numbered boxes stand for pieces of a program: room as for one)
             Statement statement => Math.Max(TextWidth(statement.Text, CodeOf(statement.Text)) + 2 * Pad, options.Numbered ? size * 6 : 0),
-            Loop loop => Math.Max(TextWidth(loop.Header, CodeOf(loop.Header)) + 2 * Pad, Bar + MinWidth(loop.Body)),
+            Jump jump => Math.Max(Tip + TextWidth(jump.Text, jump.Code) + 2 * Pad, options.Numbered ? size * 6 : 0),
+            Loop loop => Math.Max(TextWidth(loop.Header, loop.Code) + 2 * Pad, Bar + MinWidth(loop.Body)),
             Decision decision => Math.Max(
                 Math.Max(MinWidth(decision.Then), LabelWidth(options.True)) + Math.Max(MinWidth(decision.Else), LabelWidth(options.False)),
                 (TextWidth(decision.Condition, decision.Code) + 2 * Pad) / 0.6),
@@ -319,7 +360,8 @@ public static partial class NassiDiagram
 
         private double LabelSize(string label) => CodeLabel(label) ? Small * 0.92 : Small;
 
-        private double LabelWidth(string label) => FigureFonts.Width(label, LabelSize(label), false, false, CodeLabel(label)) + 2 * Pad;
+        // (a side at least so wide that the slope above passes the word in its corner)
+        private double LabelWidth(string label) => (FigureFonts.Width(label, LabelSize(label), false, false, CodeLabel(label)) + 2 * Pad) * 1.25;
 
         private void Label(string label, double x, double y, bool right)
         {
@@ -340,7 +382,16 @@ public static partial class NassiDiagram
         {
             double margin = 1;
             double width = MinWidth(nodes), height = Height(nodes);
-            Draw(nodes, margin, margin, width, height);
+            // a title: on the left above the diagram
+            double top = 0;
+            if (Title != null)
+            {
+                width = Math.Max(width, FigureFonts.Width(Title, TitleSize, true, false));
+                Path(FigureFonts.Outline(Title, margin, margin + TitleSize * 0.95, TitleSize, true, false), "#000");
+                top = TitleRow;
+            }
+            Draw(nodes, margin, margin + top, width, height);
+            height += top;
             string content = svg.ToString();
             double totalWidth = width + 2 * margin, totalHeight = height + 2 * margin;
             string picture = $"<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{N(totalWidth)}pt\" height=\"{N(totalHeight)}pt\" viewBox=\"0 0 {N(totalWidth)} {N(totalHeight)}\">"
@@ -349,12 +400,20 @@ public static partial class NassiDiagram
             return new NassiImage(picture, totalWidth, totalHeight);
         }
 
-        // a sequence in the box (x, y, w, h): its last one takes what is left
-        private void Draw(List<Node> nodes, double x, double y, double w, double h)
+        // a sequence in the box (x, y, w, h): its last one takes what is left; nothing: an empty box (a branch of a
+        // decision with nothing in it: ∅)
+        private void Draw(List<Node> nodes, double x, double y, double w, double h, bool branch = false)
         {
             if (nodes.Count == 0)
             {
-                Rectangle(x, y, w, h);
+                Rectangle(x, y, w, h, branch ? EmptyFill : StatementFill);
+                if (branch)
+                {
+                    // ∅ (drawn: no font needed)
+                    double r = size * 0.38, cx = x + w / 2, cy = y + Row / 2;
+                    svg.Append($"<circle cx=\"{N(cx)}\" cy=\"{N(cy)}\" r=\"{N(r)}\"/>");
+                    Line(cx - r * 1.25, cy + r * 1.25, cx + r * 1.25, cy - r * 1.25);
+                }
                 return;
             }
             for (int i = 0; i < nodes.Count; i++)
@@ -366,8 +425,8 @@ public static partial class NassiDiagram
             }
         }
 
-        private void Rectangle(double x, double y, double w, double h) =>
-            svg.Append($"<rect x=\"{N(x)}\" y=\"{N(y)}\" width=\"{N(w)}\" height=\"{N(h)}\"/>");
+        private void Rectangle(double x, double y, double w, double h, string fill) =>
+            svg.Append($"<rect x=\"{N(x)}\" y=\"{N(y)}\" width=\"{N(w)}\" height=\"{N(h)}\" fill=\"{fill}\"/>");
 
         // the baseline of a line of text in a row starting at y
         private double Baseline(double y) => y + Row / 2 + size * 0.33;
@@ -377,17 +436,26 @@ public static partial class NassiDiagram
             switch (node)
             {
                 case Statement statement:
-                    Rectangle(x, y, w, h);
+                    Rectangle(x, y, w, h, StatementFill);
                     Text(statement.Text, CodeOf(statement.Text), x + Pad, Baseline(y));
                     break;
+                case Jump jump:
+                    {
+                        // the box with an arrow pointing left (out): its tip in the middle of the box's left side
+                        double tip = Math.Min(Tip, h / 2);
+                        Rectangle(x, y, w, h, StatementFill);
+                        svg.Append($"<path d=\"M{N(x + tip)} {N(y)} H{N(x + w)} V{N(y + h)} H{N(x + tip)} L{N(x)} {N(y + h / 2)} Z\" fill=\"{JumpFill}\"/>");
+                        Text(jump.Text, jump.Code, x + tip + Pad, Baseline(y));
+                        break;
+                    }
                 case Loop loop:
-                    Rectangle(x, y, w, h);
-                    Text(loop.Header, CodeOf(loop.Header), x + Pad, Baseline(y));
+                    Rectangle(x, y, w, h, LoopFill);
+                    Text(loop.Header, loop.Code, x + Pad, Baseline(y));
                     Draw(loop.Body, x + Bar, y + Row, w - Bar, h - Row);
                     break;
                 case Decision decision:
                     {
-                        Rectangle(x, y, w, 2 * Row);
+                        Rectangle(x, y, w, 2 * Row, DecisionFill);
                         double left = Math.Max(MinWidth(decision.Then), LabelWidth(options.True));
                         double right = Math.Max(MinWidth(decision.Else), LabelWidth(options.False));
                         double split = left + (w - left - right) * left / (left + right);
@@ -400,8 +468,8 @@ public static partial class NassiDiagram
                         Text(decision.Condition, decision.Code, (from + to - conditionWidth) / 2, Baseline(y));
                         Label(options.True, x + Pad * 0.6, y + 2 * Row - size * 0.35, right: false);
                         Label(options.False, x + w - Pad * 0.6, y + 2 * Row - size * 0.35, right: true);
-                        Draw(decision.Then, x, y + 2 * Row, split, h - 2 * Row);
-                        Draw(decision.Else, x + split, y + 2 * Row, w - split, h - 2 * Row);
+                        Draw(decision.Then, x, y + 2 * Row, split, h - 2 * Row, branch: true);
+                        Draw(decision.Else, x + split, y + 2 * Row, w - split, h - 2 * Row, branch: true);
                         break;
                     }
             }

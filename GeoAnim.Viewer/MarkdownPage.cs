@@ -1228,7 +1228,25 @@ public sealed partial class MarkdownPage
                 close++;
             }
             var options = new GeoAnim.Figures.NassiOptions { Solution = solution };
-            foreach (string option in start.Groups[1].Value.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+            // "::: nassi {numbered ja|nein} Titel": the settings in braces, the rest the title; without braces only
+            // settings ("::: nassi numbered") or only a title
+            string head = start.Groups[1].Value, settings;
+            string? title;
+            if (Regex.Match(head, @"\{([^{}]*)\}") is { Success: true } braces)
+            {
+                settings = braces.Groups[1].Value;
+                title = head.Remove(braces.Index, braces.Length).Trim();
+            }
+            else if (head.Split(' ', StringSplitOptions.RemoveEmptyEntries).All(o => o == "numbered" || o.Split('|') is [{ Length: > 0 }, { Length: > 0 }]))
+            {
+                (settings, title) = (head, null);
+            }
+            else
+            {
+                (settings, title) = ("", head.Trim());
+            }
+            options = options with { Title = string.IsNullOrEmpty(title) ? null : title };
+            foreach (string option in settings.Split(' ', StringSplitOptions.RemoveEmptyEntries))
             {
                 if (option == "numbered")
                 {
@@ -1240,7 +1258,7 @@ public sealed partial class MarkdownPage
                 }
                 else
                 {
-                    errors.Add(new MarkdownProblem(i + 1, 1, $"\"{option}\" after ::: nassi: \"numbered\" (numbers in the boxes) or the words at the branches (ja|nein)."));
+                    errors.Add(new MarkdownProblem(i + 1, 1, $"\"{option}\" in the braces after ::: nassi: \"numbered\" (numbers in the boxes) or the words at the branches (ja|nein)."));
                 }
             }
             var problems = new List<(int Line, string Message)>();

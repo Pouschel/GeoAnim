@@ -178,34 +178,37 @@ bei kleineren Abbildungen näher an die Linien.
 Ein Struktogramm (Nassi-Shneiderman-Diagramm) schreibt man in Zeilen wie Pseudocode; GeoAnim zeichnet es (SVG, im PDF, E-Book und in ILIAS als Bild):
 
 ```markdown
-::: nassi
-print("Merle");
-repeat (4)
-    print("Puschel");
-if (x > y)
-    print(x);
-else if (x == y)
-    print("gleich");
-else
-    print(y);
+::: nassi Summe der positiven Zahlen
+var summe = 0;
+#repeat wiederhole für i von 1 bis 10
+    zahl = lies();
+    if (zahl < 0)
+        break;
+    summe = summe + zahl;
+print(summe);
 :::
 ```
 
 | Zeile | Kasten |
 |---|---|
 | beliebiger Text | eine Anweisung |
-| beginnt mit `repeat`, `while`, `for` (oder `wiederhole`, `solange`, `für`) | eine Kopfschleife: die Zeile als Kopf, die darunter eingerückten Zeilen als Körper |
-| beginnt mit `if` (`wenn`) | eine Verzweigung: die Bedingung (ohne `if` und äußere Klammern) im Dreieck, die eingerückten Zeilen links |
-| `else` (`sonst`) direkt unter dem `if`, gleich weit eingerückt | die rechte Seite; `else if …`: eine weitere Verzweigung darin |
+| beginnt mit `repeat`, `while` oder `for` | eine Kopfschleife: die Zeile als Kopf, die darunter eingerückten Zeilen als Körper |
+| beginnt mit `if` | eine Verzweigung: im Dreieck alles hinter `if`, wie geschrieben (mit oder ohne Klammern), die eingerückten Zeilen links |
+| `else` direkt unter dem `if`, gleich weit eingerückt | die rechte Seite; `else if …`: eine weitere Verzweigung darin; eine leere Seite zeigt ∅ |
+| `break;`, `continue;` | ein Aussprung (Kasten mit Pfeil nach links, nach DIN 66261) |
+| `#repeat Text`, `#while Text`, `#for Text`, `#if Text`, `#break Text`, `#continue Text` (auch `#else if Text`) | der Kasten dieser Art, darin nur der Text: `#repeat wiederhole 5-mal`, `#if x kleiner als 3`, `#break Schleife verlassen` |
 
-- Nach dem Schlüsselwort steht beliebiger Text: `repeat (4)`, `repeat ([[4]])` (eine Lücke), `solange Q nicht auf dem Kreis liegt`.
-- **Code** – eine Zeile, die auf `;`, `{` oder `}` endet, mit `//` beginnt oder ein Wort mit Klammern ist (`print(x)`, `repeat (4)`) – steht in Festbreitenschrift, anderer Text in der Buchschrift; `` `…` `` macht einen Teil zu Code.
+- Nach dem Schlüsselwort steht beliebiger Text: `repeat (4)`, `repeat ([[4]])` (eine Lücke), `#repeat solange Q nicht auf dem Kreis liegt`.
+- **Code** – eine Zeile mit `repeat`/`while`/`for`/`if`/`break`/`continue`, eine Zeile, die auf `;`, `{` oder `}` endet, mit `//` beginnt oder ein Wort mit Klammern ist (`print(x)`) – steht in Festbreitenschrift, anderer Text (auch hinter `#repeat` usw.) in der Buchschrift; `` `…` `` macht einen Teil zu Code.
+- **Farben:** Anweisungen hellorange, Schleifen hellgrün, Verzweigungen hellrot, Aussprünge hellviolett, leere Seiten hellgelb.
 - **Lücken** `[[4]]`: auf dem Schülerblatt eine Linie, mit der Lösung die Antwort rot darauf.
-- `::: nassi numbered`: statt der Texte Nummern in den Kästen (in Lesereihenfolge: Schleifenkopf vor dem Körper, Bedingung vor den Seiten) – das leere Struktogramm für „Ordne die Programmteile den Kästchen zu“ (dazu ein `::: match`).
-- An den Seiten einer Verzweigung steht `true`/`false`; `::: nassi ja|nein` (oder andere zwei Wörter) ändert das.
+- **Überschrift und Einstellungen:** `::: nassi Titel` setzt den Titel fett über das Struktogramm (er gehört zum Bild, steht also auch im PDF und in ILIAS darüber). Einstellungen stehen in geschweiften Klammern: `::: nassi {numbered ja|nein} Titel`.
+  - `numbered`: statt der Texte Nummern in den Kästen (in Lesereihenfolge: Schleifenkopf vor dem Körper, Bedingung vor den Seiten) – das leere Struktogramm für „Ordne die Programmteile den Kästchen zu“ (dazu ein `::: match`).
+  - An den Seiten einer Verzweigung steht `true`/`false`; `ja|nein` (oder andere zwei Wörter) ändert das.
+  - Ohne Klammern geht es auch, wenn hinter `nassi` nur Einstellungen stehen: `::: nassi numbered`.
 - Die Größe folgt der Schrift des Texts; ist die Spalte zu schmal, wird das Struktogramm kleiner.
 - `{{…}}`, `alt` und Gruppen gehen in den Zeilen wie überall auf Tests und ILIAS-Fragen.
-- Fehler mit Zeile: eine Zeile, die tiefer eingerückt ist, ohne unter `repeat`/`if`/… zu stehen; ein `else` ohne `if`.
+- Fehler mit Zeile: eine Zeile, die tiefer eingerückt ist, ohne unter `repeat`/`if`/… zu stehen; ein `else` ohne `if`; eine unbekannte Einstellung in den Klammern.
 
 ## Aussagen
 
